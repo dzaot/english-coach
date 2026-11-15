@@ -43,12 +43,13 @@ Para Akrit o Mann (publik):
 3. **Saldo gratis de $0,05:** una práctica hace unas 6 a 12 llamadas de chat, más transcripción, voz y feedback. Estimo (I) que el saldo gratis se acaba dentro de la primera práctica y el usuario ve el aviso de recarga. ¿Pueden dar más saldo inicial a los usuarios de fellows? Mientras tanto, `REPLY_TIER=fast` abarata las respuestas.
 4. **Compute:** ¿cuenta para el leaderboard el gasto en audio (transcripción y voz), que publik cobra sin margen?
 5. **Hosting:** ¿publik aloja apps `hosted_web` o cada fellow pone su servidor?
+6. **"Gratis":** ¿pueden los créditos de David cubrir el uso de sus usuarios? La interfaz dice "Gratis" en el inicio y en el título; si la respuesta es no, hay que cambiar esos textos (riesgo marcado también en `marketing/STATUS.md` según el segundo cerebro).
 
 Para David:
 
-6. ¿Nombre final? (tabla de arriba).
-7. ¿Licencia MIT está bien?
-8. ¿Dónde desplegar? Necesita disco persistente (ver `PUBLIK-SETUP.md`).
+7. ¿Nombre final? (tabla de arriba).
+8. ¿Licencia MIT está bien?
+9. ¿Dónde desplegar? Necesita disco persistente (ver `PUBLIK-SETUP.md`).
 
 ## Bloqueado por David (no se puede hacer sin él)
 

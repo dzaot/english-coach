@@ -9,6 +9,7 @@
 - **Audio:** en iPhone, mantén presionado el botón de grabar pantalla en el Centro de control y activa el micrófono, para que se oiga tu voz y la de Sarah.
 - **Ensayo:** haz 2 o 3 prácticas antes, para que la racha muestre más de 1 día (de verdad, en días distintos) y "Frases para repasar" tenga contenido. No inventes rachas.
 - **Respuesta preparada:** una frase con un error típico real, por ejemplo "I have five years of experience in sales and I am agree with the goals". Así el feedback muestra una corrección clara.
+- **"Gratis":** la sesión de marketing marcó no decir "free/gratis" hasta que Akrit confirme si los créditos de David pueden cubrir el uso de sus usuarios (publik solo regala $0,05). La interfaz dice "Gratis" en el inicio; si Akrit dice que no, hay que cambiar ese texto y el de la toma 1.
 - **Precio de Speak:** $39.99/mes viene de `02-opportunities.md` (App Store de EE. UU., marcado P, dato menos firme). Verifícalo el día que publiques.
 
 ## Lista de tomas
