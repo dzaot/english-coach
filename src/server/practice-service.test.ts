@@ -120,6 +120,9 @@ describe("progress and phrases", () => {
     expect(progress.history[0]).toMatchObject({ scenarioId: "job_interview", score: 72 });
     expect(progress.phrases).toHaveLength(3);
     expect(progress.toReview).toBe(3);
+    expect(progress.week).toHaveLength(7);
+    expect(progress.week[6]).toEqual({ day: "2026-11-15", practiced: true });
+    expect(progress.week[5].practiced).toBe(false);
 
     const marked = markPhrase(ctx, SID, progress.phrases[0].id, { reviewed: true });
     expect(marked.reviewedAt).not.toBeNull();

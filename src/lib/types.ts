@@ -1,0 +1,32 @@
+/** Shapes the browser receives from the API. Type-only imports: nothing from the server ships to the client. */
+import type { Feedback } from "@/domain/feedback";
+import type { Streak } from "@/domain/streak";
+import type { SpeechAudio } from "@/server/ai/provider";
+import type { HistoryItem, PracticeView, TurnResult } from "@/server/practice-service";
+import type { GateState } from "@/server/publik/gate";
+
+export type { Feedback, GateState, HistoryItem, PracticeView, SpeechAudio, Streak, TurnResult };
+
+export interface Phrase {
+  readonly id: string;
+  readonly practiceId: string;
+  readonly original: string;
+  readonly better: string;
+  readonly whyEs: string;
+  readonly createdAt: string;
+  readonly reviewedAt: string | null;
+}
+
+export interface Progress {
+  readonly streak: Streak;
+  readonly week: readonly { readonly day: string; readonly practiced: boolean }[];
+  readonly history: readonly HistoryItem[];
+  readonly phrases: readonly Phrase[];
+  readonly toReview: number;
+}
+
+export interface FinishResult {
+  readonly practice: PracticeView;
+  readonly feedback: Feedback;
+  readonly streak: Streak;
+}

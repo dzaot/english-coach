@@ -10,7 +10,7 @@ import {
 import { FeedbackParseError, parseFeedback, type Feedback } from "@/domain/feedback";
 import { counterpartSystemPrompt, feedbackMessages } from "@/domain/prompts";
 import { INDUSTRY_IDS, SCENARIO_IDS, buildOpener, getIndustry, getScenario } from "@/domain/scenarios";
-import { computeStreak, localDay, type Streak } from "@/domain/streak";
+import { addDays, computeStreak, localDay, type Streak } from "@/domain/streak";
 import type { AiProvider, SpeechAudio, Tier } from "./ai/provider";
 import type { AppContext } from "./context";
 import type { PhraseRecord, PracticeRecord } from "./db/store";
@@ -22,6 +22,7 @@ export const MAX_AUDIO_BYTES = 4_000_000; // publik's multipart transcription li
 const REPLY_MAX_TOKENS = 160;
 const FEEDBACK_MAX_TOKENS = 900;
 const HISTORY_LIMIT = 30;
+const WEEK_DAYS = 7;
 
 export interface PracticeView {
   readonly id: string;
@@ -37,8 +38,23 @@ export interface PracticeView {
 }
 
 function view(p: PracticeRecord): PracticeView {
-  const { sid: _sid, localDay: _day, ...rest } = p;
-  return { ...rest, canFinish: canFinish(p.turns), limitReached: isTurnLimitReached(p.turns) };
+  return {
+    id: p.id,
+    scenarioId: p.scenarioId,
+    industryId: p.industryId,
+    startedAt: p.startedAt,
+    finishedAt: p.finishedAt,
+    turns: p.turns,
+    feedback: p.feedback,
+    score: p.score,
+    canFinish: canFinish(p.turns),
+    limitReached: isTurnLimitReached(p.turns),
+  };
+}
+
+/** A phrase without the owner's session id. */
+function publicPhrase(p: PhraseRecord) {
+  return { id: p.id, practiceId: p.practiceId, original: p.original, better: p.better, whyEs: p.whyEs, createdAt: p.createdAt, reviewedAt: p.reviewedAt };
 }
 
 function load(ctx: AppContext, sid: string, id: string): PracticeRecord {
@@ -153,10 +169,17 @@ export function getProgress(ctx: AppContext, sid: string, tzOffset: unknown) {
     .filter((p) => p.finishedAt)
     .map((p) => ({ id: p.id, scenarioId: p.scenarioId, industryId: p.industryId, finishedAt: p.finishedAt!, score: p.score }));
   const phrases: PhraseRecord[] = ctx.store.listPhrases(sid);
+  const practiced = new Set(ctx.store.practiceDays(sid));
+  const today = localDay(ctx.now(), tz);
+  const week = Array.from({ length: WEEK_DAYS }, (_, i) => addDays(today, i - (WEEK_DAYS - 1))).map((day) => ({
+    day,
+    practiced: practiced.has(day),
+  }));
   return {
     streak: streakFor(ctx, sid, tz),
+    week,
     history,
-    phrases: phrases.map(({ sid: _sid, ...p }) => p),
+    phrases: phrases.map(publicPhrase),
     toReview: phrases.filter((p) => !p.reviewedAt).length,
   };
 }
@@ -168,6 +191,5 @@ export function markPhrase(ctx: AppContext, sid: string, id: string, input: unkn
   if (!parsed.success) throw new AppError("invalid_input");
   const phrase = ctx.store.markPhrase(sid, id, parsed.data.reviewed, ctx.now().toISOString());
   if (!phrase) throw new AppError("not_found");
-  const { sid: _sid, ...rest } = phrase;
-  return rest;
+  return publicPhrase(phrase);
 }

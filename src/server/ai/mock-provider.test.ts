@@ -33,6 +33,7 @@ describe("mock provider", () => {
     const fb = parseFeedback(raw);
     expect(fb.betterPhrases.map((p) => p.original)).toContain("I am agree with the plan.");
     expect(fb.betterPhrases).toHaveLength(3);
+    expect(new Set(fb.betterPhrases.map((p) => p.better)).size).toBe(3);
   });
 
   it("uses the browser voice (no audio)", async () => {

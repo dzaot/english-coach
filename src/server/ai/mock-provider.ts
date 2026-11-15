@@ -38,12 +38,12 @@ function improve(line: string): { original: string; better: string; whyEs: strin
 }
 
 function mockFeedback(transcript: string): string {
-  const lines = userLines(transcript);
-  const picked = [...lines.slice(-3), ...SAMPLE_ANSWERS].slice(0, 3);
+  const candidates = [...userLines(transcript).slice(-3), ...SAMPLE_ANSWERS].map(improve);
+  const picked = candidates.filter((c, i) => candidates.findIndex((o) => o.better === c.better) === i).slice(0, 3);
   return JSON.stringify({
     summaryEs: "Te comunicaste con claridad y mantuviste la conversación. Con unos ajustes de gramática vas a sonar todavía más seguro.",
     wellDone: ["Respondiste cada pregunta sin quedarte callado", "Diste ejemplos concretos con cifras"],
-    betterPhrases: picked.map(improve),
+    betterPhrases: picked,
     vocabulary: [
       { term: "cut (time) by", meaningEs: "reducir (el tiempo) en" },
       { term: "I tend to", meaningEs: "suelo, tiendo a" },
