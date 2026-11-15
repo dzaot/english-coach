@@ -112,7 +112,7 @@ export async function takeTurn(
   if (!check.ok) throw new AppError(input.audio ? "transcription_empty" : "invalid_input");
   const withUser = appendTurn(practice.turns, { role: "user", text: check.text });
   const system = counterpartSystemPrompt(getScenario(practice.scenarioId), getIndustry(practice.industryId));
-  const replyText = await ai.chat(toChatMessages(system, withUser), { tier: "balanced", maxTokens: REPLY_MAX_TOKENS });
+  const replyText = await ai.chat(toChatMessages(system, withUser), { tier: ctx.config.replyTier, maxTokens: REPLY_MAX_TOKENS });
   const saved = ctx.store.savePracticeTurns(sid, id, appendTurn(withUser, { role: "counterpart", text: replyText }));
   return { userText: check.text, replyText, audio: await ai.speak(replyText), practice: view(saved) };
 }

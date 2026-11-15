@@ -9,6 +9,8 @@ describe("loadConfig", () => {
     expect(c.databasePath).toBe("./data/coach.db");
     expect(c.publikOrigin).toBe("https://publikhq.com");
     expect(c.speechModel).toBe("tts-1");
+    expect(c.replyTier).toBe("balanced");
+    expect(loadConfig({ REPLY_TIER: "fast" }).replyTier).toBe("fast");
   });
 
   it("turns the gate on for the publik provider and requires its secrets", () => {
