@@ -20,7 +20,7 @@ export function FeedbackView({ practice, feedback, streak, onPracticeAgain, onHo
   const speaker = useSpeaker();
   return (
     <div className="animate-rise space-y-4">
-      <TopBar title="Tu feedback" onBack={onHome} backLabel="Volver al inicio" />
+      <TopBar title="Tu feedback" onBack={onHome} />
 
       <Card>
         <p className="mb-3 text-sm font-semibold text-muted">{scenarioTitle(practice.scenarioId)}</p>

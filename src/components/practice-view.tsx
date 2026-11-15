@@ -83,7 +83,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
+      const target = e.target instanceof Element ? e.target : null;
       const inField = !!target?.closest("input, textarea, button, a, select");
       if (e.key === "Escape" && recorder.status === "recording") recorder.cancel();
       if (e.code === "Space" && !inField && !typing && phase === "ready") {
