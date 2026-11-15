@@ -1,0 +1,173 @@
+import { z } from "zod";
+import {
+  appendTurn,
+  canFinish,
+  isTurnLimitReached,
+  toChatMessages,
+  validateUserText,
+  type Turn,
+} from "@/domain/conversation";
+import { FeedbackParseError, parseFeedback, type Feedback } from "@/domain/feedback";
+import { counterpartSystemPrompt, feedbackMessages } from "@/domain/prompts";
+import { INDUSTRY_IDS, SCENARIO_IDS, buildOpener, getIndustry, getScenario } from "@/domain/scenarios";
+import { computeStreak, localDay, type Streak } from "@/domain/streak";
+import type { AiProvider, SpeechAudio, Tier } from "./ai/provider";
+import type { AppContext } from "./context";
+import type { PhraseRecord, PracticeRecord } from "./db/store";
+import { AppError } from "./errors";
+
+/** Use cases of a practice session. Route handlers only parse HTTP and call these. */
+
+export const MAX_AUDIO_BYTES = 4_000_000; // publik's multipart transcription limit is about 4 MB
+const REPLY_MAX_TOKENS = 160;
+const FEEDBACK_MAX_TOKENS = 900;
+const HISTORY_LIMIT = 30;
+
+export interface PracticeView {
+  readonly id: string;
+  readonly scenarioId: PracticeRecord["scenarioId"];
+  readonly industryId: PracticeRecord["industryId"];
+  readonly startedAt: string;
+  readonly finishedAt: string | null;
+  readonly turns: readonly Turn[];
+  readonly feedback: Feedback | null;
+  readonly score: number | null;
+  readonly canFinish: boolean;
+  readonly limitReached: boolean;
+}
+
+function view(p: PracticeRecord): PracticeView {
+  const { sid: _sid, localDay: _day, ...rest } = p;
+  return { ...rest, canFinish: canFinish(p.turns), limitReached: isTurnLimitReached(p.turns) };
+}
+
+function load(ctx: AppContext, sid: string, id: string): PracticeRecord {
+  const p = ctx.store.getPractice(sid, id);
+  if (!p) throw new AppError("not_found");
+  return p;
+}
+
+const StartSchema = z.object({ scenarioId: z.enum(SCENARIO_IDS), industryId: z.enum(INDUSTRY_IDS) });
+const TzSchema = z.number().int().min(-840).max(840);
+
+export async function startPractice(ctx: AppContext, ai: AiProvider, sid: string, input: unknown) {
+  const parsed = StartSchema.safeParse(input);
+  if (!parsed.success) throw new AppError("invalid_input");
+  const opener = buildOpener(getScenario(parsed.data.scenarioId), getIndustry(parsed.data.industryId));
+  const now = ctx.now().toISOString();
+  ctx.store.getOrCreateUser(sid, now);
+  const practice = ctx.store.createPractice({ sid, ...parsed.data, startedAt: now, turns: [{ role: "counterpart", text: opener }] });
+  return { practice: view(practice), audio: await ai.speak(opener) };
+}
+
+export function getPractice(ctx: AppContext, sid: string, id: string): PracticeView {
+  return view(load(ctx, sid, id));
+}
+
+async function userTextFrom(ai: AiProvider, input: { audio?: Blob | null; text?: string | null }): Promise<string> {
+  if (input.audio) {
+    if (input.audio.size === 0) throw new AppError("audio_empty");
+    if (input.audio.size > MAX_AUDIO_BYTES) throw new AppError("audio_too_large");
+    const ext = input.audio.type.includes("mp4") ? "mp4" : input.audio.type.includes("ogg") ? "ogg" : "webm";
+    return ai.transcribe(input.audio, `turn.${ext}`);
+  }
+  if (typeof input.text === "string") return input.text;
+  throw new AppError("invalid_input");
+}
+
+export interface TurnResult {
+  readonly userText: string;
+  readonly replyText: string;
+  readonly audio: SpeechAudio | null;
+  readonly practice: PracticeView;
+}
+
+export async function takeTurn(
+  ctx: AppContext,
+  ai: AiProvider,
+  sid: string,
+  id: string,
+  input: { audio?: Blob | null; text?: string | null },
+): Promise<TurnResult> {
+  const practice = load(ctx, sid, id);
+  if (practice.finishedAt) throw new AppError("session_finished");
+  if (isTurnLimitReached(practice.turns)) throw new AppError("turn_limit");
+  const check = validateUserText(await userTextFrom(ai, input));
+  if (!check.ok) throw new AppError(input.audio ? "transcription_empty" : "invalid_input");
+  const withUser = appendTurn(practice.turns, { role: "user", text: check.text });
+  const system = counterpartSystemPrompt(getScenario(practice.scenarioId), getIndustry(practice.industryId));
+  const replyText = await ai.chat(toChatMessages(system, withUser), { tier: "balanced", maxTokens: REPLY_MAX_TOKENS });
+  const saved = ctx.store.savePracticeTurns(sid, id, appendTurn(withUser, { role: "counterpart", text: replyText }));
+  return { userText: check.text, replyText, audio: await ai.speak(replyText), practice: view(saved) };
+}
+
+async function generateFeedback(ai: AiProvider, practice: PracticeRecord): Promise<Feedback> {
+  const messages = feedbackMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), practice.turns);
+  const tiers: Tier[] = ["balanced", "fast"];
+  for (const tier of tiers) {
+    try {
+      return parseFeedback(await ai.chat(messages, { tier, maxTokens: FEEDBACK_MAX_TOKENS }));
+    } catch (e) {
+      if (!(e instanceof FeedbackParseError)) throw e;
+    }
+  }
+  throw new AppError("feedback_invalid");
+}
+
+function streakFor(ctx: AppContext, sid: string, tzOffset: number): Streak {
+  return computeStreak(ctx.store.practiceDays(sid), localDay(ctx.now(), tzOffset));
+}
+
+function parseTz(value: unknown): number {
+  const tz = TzSchema.safeParse(value);
+  if (!tz.success) throw new AppError("invalid_input");
+  return tz.data;
+}
+
+export async function finishPractice(ctx: AppContext, ai: AiProvider, sid: string, id: string, input: { tzOffset: unknown }) {
+  const tzOffset = parseTz(input.tzOffset);
+  const practice = load(ctx, sid, id);
+  if (practice.finishedAt && practice.feedback) {
+    return { practice: view(practice), feedback: practice.feedback, streak: streakFor(ctx, sid, tzOffset) };
+  }
+  if (!canFinish(practice.turns)) throw new AppError("not_enough_turns");
+  const feedback = await generateFeedback(ai, practice);
+  const now = ctx.now();
+  const done = ctx.store.finishPractice(sid, id, { feedback, finishedAt: now.toISOString(), localDay: localDay(now, tzOffset) });
+  ctx.store.addPhrases(sid, id, feedback.betterPhrases, now.toISOString());
+  return { practice: view(done), feedback, streak: streakFor(ctx, sid, tzOffset) };
+}
+
+export interface HistoryItem {
+  readonly id: string;
+  readonly scenarioId: PracticeRecord["scenarioId"];
+  readonly industryId: PracticeRecord["industryId"];
+  readonly finishedAt: string;
+  readonly score: number | null;
+}
+
+export function getProgress(ctx: AppContext, sid: string, tzOffset: unknown) {
+  const tz = parseTz(tzOffset);
+  const history: HistoryItem[] = ctx.store
+    .listPractices(sid, HISTORY_LIMIT)
+    .filter((p) => p.finishedAt)
+    .map((p) => ({ id: p.id, scenarioId: p.scenarioId, industryId: p.industryId, finishedAt: p.finishedAt!, score: p.score }));
+  const phrases: PhraseRecord[] = ctx.store.listPhrases(sid);
+  return {
+    streak: streakFor(ctx, sid, tz),
+    history,
+    phrases: phrases.map(({ sid: _sid, ...p }) => p),
+    toReview: phrases.filter((p) => !p.reviewedAt).length,
+  };
+}
+
+const MarkSchema = z.object({ reviewed: z.boolean() });
+
+export function markPhrase(ctx: AppContext, sid: string, id: string, input: unknown) {
+  const parsed = MarkSchema.safeParse(input);
+  if (!parsed.success) throw new AppError("invalid_input");
+  const phrase = ctx.store.markPhrase(sid, id, parsed.data.reviewed, ctx.now().toISOString());
+  if (!phrase) throw new AppError("not_found");
+  const { sid: _sid, ...rest } = phrase;
+  return rest;
+}
