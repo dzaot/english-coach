@@ -10,6 +10,7 @@ const CATALOG = {
   turn_limit: { status: 409, es: "Llegaste al máximo de respuestas. Pide tu feedback." },
   not_enough_turns: { status: 409, es: "Responde al menos dos veces para recibir feedback." },
   gate_required: { status: 403, es: "Inicia sesión con publik para practicar." },
+  forbidden: { status: 403, es: "Esta solicitud no está permitida." },
   own_key_invalid: { status: 400, es: "Esa clave no parece válida. Revisa que esté completa." },
   ai_balance: { status: 402, es: "Se acabó tu saldo de IA en publik." },
   ai_rate_limited: { status: 429, es: "Vas muy rápido. Espera unos segundos e inténtalo de nuevo." },
