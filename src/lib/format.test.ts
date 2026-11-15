@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysLabel, formatClock, formatDay, weekdayInitial } from "./format";
+import { daysLabel, formatClock, formatDay, weekdayInitial, weekdayName } from "./format";
 
 describe("format helpers", () => {
   it("formats a timer", () => {
@@ -11,6 +11,10 @@ describe("format helpers", () => {
   it("gives Spanish weekday initials", () => {
     expect(weekdayInitial("2026-11-15")).toBe("D");
     expect(weekdayInitial("2026-11-16")).toBe("L");
+  });
+
+  it("names the weekday for screen readers", () => {
+    expect(weekdayName("2026-11-15")).toBe("domingo 15");
   });
 
   it("pluralizes days", () => {

@@ -19,3 +19,8 @@ export function weekdayInitial(day: string): string {
 export function daysLabel(n: number): string {
   return n === 1 ? "1 día" : `${n} días`;
 }
+
+/** "2026-11-15" -> "domingo 15". For screen readers. */
+export function weekdayName(day: string): string {
+  return new Intl.DateTimeFormat("es", { weekday: "long", day: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
+}

@@ -1,5 +1,5 @@
 import { Check, Flame } from "lucide-react";
-import { daysLabel, weekdayInitial } from "@/lib/format";
+import { daysLabel, weekdayInitial, weekdayName } from "@/lib/format";
 import type { Progress } from "@/lib/types";
 
 /** Daily streak with the last 7 days. Practiced days use a check mark, not color alone. */
@@ -37,7 +37,7 @@ export function StreakCard({ progress }: { progress: Pick<Progress, "streak" | "
               {d.practiced ? <Check aria-hidden="true" className="size-4" strokeWidth={3} /> : null}
             </span>
             <span aria-hidden="true" className="opacity-80">{weekdayInitial(d.day)}</span>
-            <span className="sr-only">{`${d.day}: ${d.practiced ? "practicaste" : "sin práctica"}`}</span>
+            <span className="sr-only">{`${weekdayName(d.day)}: ${d.practiced ? "practicaste" : "sin práctica"}`}</span>
           </li>
         ))}
       </ol>
