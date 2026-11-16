@@ -1,6 +1,6 @@
 # Análisis competitivo: Dilo frente a Speak y compañía
 
-> Resumen: el rival a vencer es **Speak**. Su ciclo es casi el de Dilo (situación, conversación, feedback, repaso de tus errores, racha), se lanzó oficialmente en México en abril de 2026 y cobra MXN 199 a 399 al mes, solo en móvil y sin plan gratis. Nos gana en voz más fluida, repaso con repetición espaciada, ejercicios de "repite después de mí" y pulido. Le podemos ganar en lo que Speak no puede: gratis, en el navegador sin instalar nada, con la interfaz y las explicaciones en español y con situaciones de trabajo para quien no paga. La mejora con más impacto en usuarios semanales es **decir en voz alta la frase corregida y repasarla al día siguiente** (Speak lo cobra; Praktika no lo tiene y sus usuarios lo piden). La segunda es **"¿Qué digo?"** para no quedarse callado. Las dos quedaron implementadas en esta sesión, junto con otras de esfuerzo bajo (ver el final).
+> Resumen: el rival a vencer es **Speak**. Su ciclo es casi el de Dilo (situación, conversación, feedback, repaso de tus errores, racha), se lanzó oficialmente en México en abril de 2026 y cobra MXN 199 a 399 al mes, solo en móvil y sin plan gratis. Nos gana en voz más fluida, repaso con repetición espaciada, ejercicios de "repite después de mí" y pulido. Le podemos ganar en lo que Speak no puede: gratis, en el navegador sin instalar nada, con la interfaz y las explicaciones en español y con situaciones de trabajo para quien no paga. La mejora con más impacto en usuarios semanales es **decir en voz alta la frase corregida y repasarla al día siguiente** (Speak lo cobra; Praktika no lo tiene y sus usuarios lo piden). La segunda es **"Help me"** para no quedarse callado. Las dos quedaron implementadas en esta sesión, junto con otras de esfuerzo bajo (ver el final). Después, por decisión de David, la interfaz pasó a inglés con nivel elegible y se agregaron 4 compañeros con foto realista.
 
 Fecha: 2026-11-15. Solo fuentes públicas, sin registros ni compras. **V** = página del propio proveedor leída hoy. **P** = tercero (tiendas de apps, reseñas, prensa). Las fuentes S1 a S27 están al final.
 
@@ -17,17 +17,18 @@ Fecha: 2026-11-15. Solo fuentes públicas, sin registros ni compras. **V** = pá
 |---|---|---|---|---|
 | Precio | Gratis en publik (el usuario paga la IA con su plan de publik o su propia clave; la cuenta nueva trae $0,05) | Sin plan gratis. EE. UU.: $17,99 a $39,99/mes (S4, P). México: MXN 199 a 399/mes (S5, P) | Plan gratis limitado. EE. UU.: $19,99/mes (S16, P). México: MXN 160/mes (S17, P) | Gratis limitado. Cerca de $8/mes según el proveedor (S9, V); $9,99/mes en la App Store (S11, P) |
 | Plataforma | **Web en el teléfono, sin instalar** | iOS y Android; en la web solo vimos registro (S1, S2) | iOS y Android; la web solo trae demos (S14) | iOS y Android (S9, S11) |
-| Interfaz y explicaciones en español | Sí, todo | Interfaz en español (S4) | Tutor bilingüe que explica en español (S15) | Sí, con tutores de acento latino (S10, S11) |
+| Idioma y apoyo en español | Interfaz en inglés; el usuario elige nivel: Beginner con tips y traducciones en español, Advanced solo inglés | Interfaz en español (S4) | Tutor bilingüe que explica en español (S15) | Sí, con tutores de acento latino (S10, S11) |
 | Situaciones de trabajo | 5 situaciones × 6 industrias | Escenarios a tu medida; los de tu puesto real solo en la versión para empresas (S1, S7) | La más profunda: entrevista, ventas, negociación, liderazgo (S16, S17) | Entrevista, negocios, ensayo con tu CV (S11) |
 | Voz | Por turnos: pulsas para hablar | Tiempo real y modo "audio-first" (S4, S7) | No encontrado | Botón de micrófono, por turnos (S13) |
 | Pronunciación | No se mide (solo si la transcripción coincide) | Coach de pronunciación (S3) | Su fuerte: puntaje por sonido y nivel IELTS/CEFR (S15, S17) | Feedback de pronunciación declarado (S11) |
 | Feedback | Puntaje, lo que hiciste bien, 3 frases mejores con el porqué, vocabulario | Resumen corto de errores (S6); reseñas lo llaman "laxo" (S6) | Por fluidez, entonación, gramática (S15) | Botón por frase, sin resumen final (S12) |
-| Ayuda si te trabas | **"¿Qué digo?": traducción + respuesta sugerida + tip** | No verificado | No verificado | Sugiere frases a mitad de conversación (S10) |
-| Repetir la corrección | **"Dilo tú": dices la frase mejorada y la app comprueba que la dijiste** | Ejercicios "repite después de mí" (S7) | Sí, por sonidos (S15) | No: es una queja de sus usuarios (S13) |
-| Repaso | **Frases para repasar con fechas (1, 3 y 7 días) y "Repaso de hoy"** | Smart Review con repetición espaciada (S6, S7) | Plan de estudio (S15) | Sin repetición espaciada (S12) |
+| Ayuda si te trabas | **"Help me": traducción + respuesta sugerida + tip** | No verificado | No verificado | Sugiere frases a mitad de conversación (S10) |
+| Repetir la corrección | **"Say it": dices la frase mejorada y la app comprueba que la dijiste** | Ejercicios "repite después de mí" (S7) | Sí, por sonidos (S15) | No: es una queja de sus usuarios (S13) |
+| Repaso | **Frases para repasar con fechas (1, 3 y 7 días) y "Today's review"** | Smart Review con repetición espaciada (S6, S7) | Plan de estudio (S15) | Sin repetición espaciada (S12) |
 | Racha | Sí, con los últimos 7 días | Sí, con ligas y recordatorios (S1) | Retos (S15) | Sí (S11) |
 | Recordatorios | No (pendiente) | Sí (S1) | Sí | Sí |
-| Voz más lenta | **Sí ("Más lento")** | No verificado | No verificado | No verificado |
+| Voz más lenta | **Sí ("Slower", y Beginner habla más lento)** | No verificado | No verificado | No verificado |
+| Compañero con cara | **4 avatares con foto realista, voz propia y anillo que indica quién habla** (sin movimiento de labios) | Tutor animado (S7) | No verificado | Avatares animados (S9) |
 
 ## 3. Dónde nos ganan
 
@@ -43,7 +44,7 @@ Fecha: 2026-11-15. Solo fuentes públicas, sin registros ni compras. **V** = pá
 |---|---|
 | Gratis en publik | Ninguno de los cuatro es gratis sin límites. El reel puede comparar precio en pesos y en dólares (verificar el día que se publique) |
 | App web alojada | Se abre desde el link del reel en el teléfono, sin tienda ni instalación. Ninguno de los cinco con IA tiene práctica completa en el navegador verificada |
-| Interfaz en español primero | Feedback, traducciones y tips en español neutro latino, no traducidos del inglés |
+| Interfaz en inglés con apoyo por nivel | Inmersión en inglés para todos, y apoyo en español solo para quien lo pide (Beginner, Intermediate). Nadie se queda fuera por su nivel |
 | Situaciones de trabajo | El "rol de tu trabajo real" que Speak vende a empresas, gratis para la persona |
 | Costos de publik API | Un turno cuesta unos $0,004 y una práctica de 10 minutos unos $0,05 (medido, ver `STATUS.md`). Lo barato (traducciones, sugerencias) va en `publik-fast` |
 | Por turnos | Las reseñas de Praktika piden tiempo para pensar (S13). Pulsar para hablar da ese tiempo |
@@ -55,8 +56,8 @@ Puntaje = 50 % impacto en usuarios semanales (volver otro día o 25 minutos en u
 
 | # | Mejora | Inspirada en | Semanales | Reel | Facilidad | Puntaje | Estado |
 |---|---|---|---|---|---|---|---|
-| 1 | **"Dilo tú" + repaso espaciado:** di en voz alta la frase mejorada, la app comprueba que la dijiste y la agenda para 1, 3 y 7 días; "Repaso de hoy" en el inicio | Speak Smart Review y "repite después de mí" (S6, S7); queja de Praktika (S13) | 5 | 5 | 3 | **92** | Hecho |
-| 2 | **"¿Qué digo?":** traducción de lo que te dijeron, respuesta sugerida y un tip | Praktika (S10), Duolingo (S21) | 4 | 4 | 5 | **84** | Hecho |
+| 1 | **"Say it" + repaso espaciado:** di en voz alta la frase mejorada, la app comprueba que la dijiste y la agenda para 1, 3 y 7 días; "Today's review" en el inicio | Speak Smart Review y "repite después de mí" (S6, S7); queja de Praktika (S13) | 5 | 5 | 3 | **92** | Hecho |
+| 2 | **"Help me":** traducción de lo que te dijeron, respuesta sugerida y un tip | Praktika (S10), Duolingo (S21) | 4 | 4 | 5 | **84** | Hecho |
 | 3 | Escenario propio: pegas tu CV o "mañana tengo reunión con..." y la práctica se arma con eso | Praktika con CV (S11), Speak empresas (S7) | 4 | 5 | 2 | 78 | Siguiente |
 | 4 | **Respuesta más rápida:** el texto aparece antes y la voz se pide aparte | Queja general de latencia; Praktika anunció respuestas más rápidas (S11) | 4 | 3 | 3 | 70 | Hecho |
 | 5 | Objetivos visibles: 3 tareas por situación, marcadas al final | Speak, 3 tareas por rol (S6) | 3 | 4 | 3 | 66 | Siguiente |
@@ -64,8 +65,10 @@ Puntaje = 50 % impacto en usuarios semanales (volver otro día o 25 minutos en u
 | 7 | Voz en tiempo real (v2) | Speak, Loora, Duolingo (S4, S23, S20) | 3 | 5 | 1 | 64 | Documentado en `README.md` |
 | 8 | Estadísticas de fluidez: palabras por minuto, palabras distintas | Cambly (S27) | 2 | 4 | 4 | 60 | Pendiente |
 | 9 | Reintentar la misma pregunta tras la corrección | Loora (S24) | 3 | 3 | 3 | 60 | Cubierto en parte por la #1 |
-| 10 | **"Más lento":** volver a escuchar a menor velocidad | Duolingo Lily (S20) | 2 | 2 | 5 | 52 | Hecho |
-| 11 | Nivel y exigencia de la corrección (suave, normal, estricta) | Praktika (S10) | 2 | 1 | 4 | 42 | Pendiente |
+| 10 | **"Slower":** volver a escuchar a menor velocidad | Duolingo Lily (S20) | 2 | 2 | 5 | 52 | Hecho |
+| 11 | Nivel del alumno (Beginner, Intermediate, Advanced) | Praktika (S10, S12) | 3 | 2 | 4 | 62 | Hecho, pedido por David |
+| 12 | Compañero con cara: 4 avatares con foto realista y voz propia | Praktika (S9), Speak (S7) | 3 | 5 | 3 | 72 | Hecho, pedido por David |
+| 13 | Avatar con labios sincronizados (video en tiempo real) | Praktika, Duolingo (S9, S20) | 3 | 5 | 1 | 64 | Pendiente: requiere un servicio de pago (por ejemplo D-ID o HeyGen); costo por minuto sin verificar |
 
 ## Fuentes
 

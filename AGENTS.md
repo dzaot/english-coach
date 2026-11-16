@@ -3,9 +3,9 @@
 Free spoken English practice for work, for Spanish-speaking professionals. Next.js App Router, TypeScript, SQLite (`node:sqlite`), Vitest. Read `README.md` first, then `STATUS.md`.
 
 ## Rules
-- UI text in neutral Latin American Spanish; the role-play is in English. Never use the em dash character.
+- UI text in English. Learners pick a level: beginner gets Spanish support (tips, translations), advanced is English only. Never use the em dash character.
 - TDD: write the test first. Keep coverage at 80% or more (`npm run test:coverage`).
-- Small files (200 to 400 lines, 800 max), immutable updates, explicit errors with friendly Spanish messages (`src/server/errors.ts`), validation at every boundary (zod).
+- Small files (200 to 400 lines, 800 max), immutable updates, explicit errors with friendly messages (`src/server/errors.ts`), validation at every boundary (zod).
 - Keys never reach the browser. No secrets in code; `.env.example` holds names only.
 - WCAG 2.1 AA, mobile first from 375px, Lucide icons (no emoji icons), `prefers-reduced-motion`.
 - Conventional commits, no AI attribution lines.

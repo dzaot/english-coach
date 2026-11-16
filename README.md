@@ -6,11 +6,12 @@ Dilo (working name, Spanish for "say it") is a free daily speaking practice for 
 
 1. Pick a scenario: job interview, team meeting, client call, presentation or salary negotiation.
 2. Pick your industry: general, sales, customer support, healthcare admin, construction or tech.
-3. Talk out loud with an AI counterpart for 5 to 10 minutes (push to talk, or type if you have no mic).
+3. Talk out loud with your chosen partner for 5 to 10 minutes (push to talk, or type if you have no mic). Stuck? "Help me" explains the question and suggests an answer.
 4. Get feedback: what you did well, 3 phrases to say more naturally (with the better version), vocabulary to keep, and a score.
-5. Come back tomorrow: daily streak, session history and a "phrases to review" list.
+5. "Say it": say each better phrase out loud; the app checks it and brings it back 1, 3 and 7 days later in "Today's review".
+6. Come back tomorrow: daily streak, session history and phrases to review.
 
-The interface is in Spanish (neutral Latin American). The conversation is in English.
+The interface and the conversation are in English. Each learner picks a level: **Beginner** (simpler English, slower voice, tips and translations in Spanish), **Intermediate** (tips in English, translations in Spanish) or **Advanced** (natural speed, English only). They also pick a practice partner: four photo avatars (AI-generated portraits of fictional people, made with Blotato), each with its own voice.
 
 ## Run it locally
 
@@ -21,7 +22,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. With no environment variables the app runs in **demo mode**: the AI is a deterministic mock, the counterpart speaks with your browser's English voice, and the whole flow (practice, feedback, streak, phrases, history) works offline. A small "Modo demo: IA simulada" chip says so on the home screen.
+Open http://localhost:3000. With no environment variables the app runs in **demo mode**: the AI is a deterministic mock, the counterpart speaks with your browser's English voice, and the whole flow (practice, feedback, streak, phrases, history) works offline. A small "Demo mode: simulated AI" chip says so on the home screen.
 
 Other commands:
 
@@ -42,12 +43,15 @@ Browser (Next.js client components)            Server (Next.js route handlers, N
 -----------------------------------            ----------------------------------------------
 MediaRecorder (push to talk)  --audio-->  POST /api/practice/:id/turn
                                              1. /audio/transcriptions (whisper-1)
-                                             2. /chat/completions (publik-balanced) as the counterpart
-                                             3. /audio/speech for the reply audio
+                                             2. /chat/completions (publik-balanced) as the counterpart -> text shown at once
+                                          POST /api/practice/:id/speech  { turnIndex }
+                                             /audio/speech (tts-1, the avatar's voice), cached in the page
 Audio element or speechSynthesis  <--base64 mp3 or null (browser voice fallback)
+                                          POST /api/practice/:id/help   ("Help me", publik-fast)
                                           POST /api/practice/:id/finish
                                              /chat/completions (publik-balanced, retry on publik-fast) -> JSON feedback
-                                          GET  /api/progress  (streak, last 7 days, history, phrases)
+                                          POST /api/phrases/:id/drill    ("Say it": whisper-1, then 1/3/7-day schedule)
+                                          GET  /api/progress  (streak, last 7 days, history, phrases, due today)
                                           GET/POST /api/gate  (Sign in with publik)
                                           POST /api/telemetry (app_opened, active_session)
 ```
@@ -60,7 +64,7 @@ Layers (each file is small and has its own tests):
 | `src/server/ai/` | The AI port (`AiProvider`), an OpenAI-compatible client used for publik API and for a user's own key, and the offline mock |
 | `src/server/publik/` | `publik.ts` (installs, wallet, gate words, telemetry; adapted from publik's reference module) and `gate.ts` (Sign in with publik per browser session) |
 | `src/server/db/` | The `Store` interface and its SQLite implementation |
-| `src/server/` | Config (validated env), errors with friendly Spanish messages, sealed keys (AES-256-GCM), session cookie, rate limit, use cases (`practice-service.ts`) |
+| `src/server/` | Config (validated env), errors with friendly messages, sealed keys (AES-256-GCM), session cookie, rate limit, use cases (`practice-service.ts`) |
 | `src/app/api/` | Thin route handlers |
 | `src/components/`, `src/lib/` | UI, typed API client, browser hooks (recorder, speaker, gate polling, telemetry) |
 
@@ -69,8 +73,8 @@ Layers (each file is small and has its own tests):
 - **Every key stays on the server.** The browser only holds a random session id in an HttpOnly cookie. publik install keys (`pk_`) and a user's own OpenAI key are stored sealed with AES-256-GCM (`APP_SECRET`) and never sent to the browser.
 - **AI behind an interface.** Tests and local demo use the mock provider; the real publik client is chosen by config (`AI_PROVIDER=publik`). Model tiers only (`publik-fast`, `publik-balanced`), never vendor model names, for publik.
 - **Sign in with publik for a hosted web app.** publik's TypeScript module keeps one install per computer in a file. A hosted app serves many people, so `gate.ts` gives each browser session its own install (`POST /api/v1/installs`), shows the same gate screens with publik's exact words, and sends `app_opened` and `active_session` with that install's key. This adaptation is documented as an open question for publik in [STATUS.md](STATUS.md).
-- **Push to talk, turn based** (v1). Simple, works on every phone browser, and each turn is a clear unit to transcribe, answer and speak. If the reply audio fails or the browser blocks autoplay, the browser's own English voice reads it, and every counterpart bubble has an "Escuchar" button.
-- **Errors** are mapped once (`src/server/errors.ts`) to friendly Spanish messages. A 402 from publik shows its message and exactly one link (the top-up URL), as publik asks.
+- **Push to talk, turn based** (v1). Simple, works on every phone browser, and each turn is a clear unit to transcribe, answer and speak. If the reply audio fails or the browser blocks autoplay, the browser's own English voice reads it, and every counterpart bubble has a "Listen" button.
+- **Errors** are mapped once (`src/server/errors.ts`) to friendly messages. A 402 from publik shows its message and exactly one link (the top-up URL), as publik asks.
 
 ### Why SQLite (`node:sqlite`)
 
