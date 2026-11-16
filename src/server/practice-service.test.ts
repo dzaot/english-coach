@@ -37,6 +37,13 @@ describe("takeTurn", () => {
     expect(getPractice(ctx, SID, practice.id).turns).toHaveLength(3);
   });
 
+  it("removes em dashes from the counterpart's reply", async () => {
+    const { ctx, practice } = await started();
+    const dashy: AiProvider = { ...ai, chat: async () => "Great — tell me more." };
+    const out = await takeTurn(ctx, dashy, SID, practice.id, { text: "Hi" });
+    expect(out.replyText).toBe("Great, tell me more.");
+  });
+
   it("accepts typed text instead of audio", async () => {
     const { ctx, practice } = await started();
     const out = await takeTurn(ctx, ai, SID, practice.id, { text: "  I sold software for three years. " });
@@ -134,5 +141,17 @@ describe("progress and phrases", () => {
 
   it("hides another user's practice", () => {
     expect(() => getPractice(testContext(), SID, "x")).toThrow(expect.objectContaining({ code: "not_found" }));
+  });
+});
+
+describe("audioExtension", () => {
+  it("names browser recordings the way the transcription service accepts them", async () => {
+    const { audioExtension } = await import("./practice-service");
+    expect(audioExtension("audio/mp4")).toBe("m4a"); // Safari on iPhone
+    expect(audioExtension("audio/webm;codecs=opus")).toBe("webm"); // Chrome, Firefox
+    expect(audioExtension("audio/ogg;codecs=opus")).toBe("ogg");
+    expect(audioExtension("audio/mpeg")).toBe("mp3");
+    expect(audioExtension("audio/wav")).toBe("wav");
+    expect(audioExtension("")).toBe("webm");
   });
 });

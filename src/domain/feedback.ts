@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cleanDashes } from "./text";
 
 /** Feedback the coach returns at the end of a session. Explanations in Spanish, phrases in English. */
 export const FeedbackSchema = z.object({
@@ -48,8 +49,12 @@ export function parseFeedback(raw: string): Feedback {
   if (!parsed.success) throw new FeedbackParseError(parsed.error.issues[0]?.message ?? "wrong shape");
   const fb = parsed.data;
   return {
-    ...fb,
-    betterPhrases: fb.betterPhrases.slice(0, MAX_BETTER_PHRASES),
+    summaryEs: cleanDashes(fb.summaryEs),
+    wellDone: fb.wellDone.map(cleanDashes),
+    betterPhrases: fb.betterPhrases
+      .slice(0, MAX_BETTER_PHRASES)
+      .map((p) => ({ original: p.original, better: cleanDashes(p.better), whyEs: cleanDashes(p.whyEs) })),
+    vocabulary: fb.vocabulary.map((v) => ({ term: cleanDashes(v.term), meaningEs: cleanDashes(v.meaningEs) })),
     score: Math.min(100, Math.max(0, Math.round(fb.score))),
   };
 }

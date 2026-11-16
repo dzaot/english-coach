@@ -9,6 +9,7 @@ import {
 } from "@/domain/conversation";
 import { FeedbackParseError, parseFeedback, type Feedback } from "@/domain/feedback";
 import { counterpartSystemPrompt, feedbackMessages } from "@/domain/prompts";
+import { cleanDashes } from "@/domain/text";
 import { INDUSTRY_IDS, SCENARIO_IDS, buildOpener, getIndustry, getScenario } from "@/domain/scenarios";
 import { addDays, computeStreak, localDay, type Streak } from "@/domain/streak";
 import type { AiProvider, SpeechAudio, Tier } from "./ai/provider";
@@ -80,11 +81,21 @@ export function getPractice(ctx: AppContext, sid: string, id: string): PracticeV
   return view(load(ctx, sid, id));
 }
 
+/** File extension the transcription service expects for a browser recording's MIME type. */
+export function audioExtension(mime: string): string {
+  const type = mime.toLowerCase();
+  if (type.includes("mp4") || type.includes("m4a") || type.includes("aac")) return "m4a";
+  if (type.includes("ogg") || (type.includes("opus") && !type.includes("webm"))) return "ogg";
+  if (type.includes("mpeg") || type.includes("mp3")) return "mp3";
+  if (type.includes("wav")) return "wav";
+  return "webm";
+}
+
 async function userTextFrom(ai: AiProvider, input: { audio?: Blob | null; text?: string | null }): Promise<string> {
   if (input.audio) {
     if (input.audio.size === 0) throw new AppError("audio_empty");
     if (input.audio.size > MAX_AUDIO_BYTES) throw new AppError("audio_too_large");
-    const ext = input.audio.type.includes("mp4") ? "mp4" : input.audio.type.includes("ogg") ? "ogg" : "webm";
+    const ext = audioExtension(input.audio.type);
     return ai.transcribe(input.audio, `turn.${ext}`);
   }
   if (typeof input.text === "string") return input.text;
@@ -112,7 +123,7 @@ export async function takeTurn(
   if (!check.ok) throw new AppError(input.audio ? "transcription_empty" : "invalid_input");
   const withUser = appendTurn(practice.turns, { role: "user", text: check.text });
   const system = counterpartSystemPrompt(getScenario(practice.scenarioId), getIndustry(practice.industryId));
-  const replyText = await ai.chat(toChatMessages(system, withUser), { tier: ctx.config.replyTier, maxTokens: REPLY_MAX_TOKENS });
+  const replyText = cleanDashes(await ai.chat(toChatMessages(system, withUser), { tier: ctx.config.replyTier, maxTokens: REPLY_MAX_TOKENS }));
   const saved = ctx.store.savePracticeTurns(sid, id, appendTurn(withUser, { role: "counterpart", text: replyText }));
   return { userText: check.text, replyText, audio: await ai.speak(replyText), practice: view(saved) };
 }

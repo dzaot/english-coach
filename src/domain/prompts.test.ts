@@ -9,6 +9,7 @@ describe("counterpartSystemPrompt", () => {
     expect(p).toContain("construction");
     expect(p).toMatch(/only in English/i);
     expect(p).toMatch(/one question/i);
+    expect(p).toMatch(/never use the em dash/i);
   });
 });
 
@@ -21,6 +22,8 @@ describe("feedbackMessages", () => {
     expect(msgs[0].role).toBe("system");
     expect(msgs[0].content).toMatch(/JSON/);
     expect(msgs[0].content).toMatch(/betterPhrases/);
+    expect(msgs[0].content).toMatch(/"tú"/);
+    expect(msgs[0].content).toMatch(/never use the em dash/i);
     expect(msgs[1].content).toContain("USER: I finish the API yesterday.");
     expect(msgs[1].content).toContain("COUNTERPART: What's your update?");
   });

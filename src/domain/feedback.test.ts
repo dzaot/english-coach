@@ -33,6 +33,13 @@ describe("parseFeedback", () => {
     expect(parseFeedback(JSON.stringify({ ...valid, score: 66.6 })).score).toBe(67);
   });
 
+  it("removes em dashes the model writes", () => {
+    const raw = JSON.stringify({ ...valid, summaryEs: "Bien — sigue así", betterPhrases: [{ original: "a", better: "I agree — fully", whyEs: "x — y" }] });
+    const fb = parseFeedback(raw);
+    expect(JSON.stringify(fb)).not.toContain("—");
+    expect(fb.betterPhrases[0].better).toBe("I agree, fully");
+  });
+
   it("rejects text without JSON", () => {
     expect(() => parseFeedback("no json here")).toThrow(/feedback/);
   });

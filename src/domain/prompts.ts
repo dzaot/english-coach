@@ -14,22 +14,25 @@ export function counterpartSystemPrompt(scenario: Scenario, industry: Industry):
     "- Ask one question at a time and react to what they actually said.",
     "- Stay in character. Do not correct their English during the role-play; feedback comes later.",
     "- Use clear, natural workplace English at a normal pace.",
+    "- Never use the em dash character; use commas or periods.",
   ].join("\n");
 }
 
 const FEEDBACK_SPEC = `Return ONLY a JSON object with this exact shape, no prose:
 {
-  "summaryEs": "2 sentences in neutral Latin American Spanish about how it went",
-  "wellDone": ["2 or 3 specific things they did well, in Spanish"],
+  "summaryEs": "2 short sentences in neutral Latin American Spanish about how it went",
+  "wellDone": ["2 or 3 specific things they did well, in Spanish, max 15 words each"],
   "betterPhrases": [
-    {"original": "an exact sentence the USER said", "better": "a more natural way a native professional would say it", "whyEs": "short reason in Spanish"}
+    {"original": "an exact sentence the USER said", "better": "a more natural way a native professional would say it, max 25 words", "whyEs": "one short reason in Spanish, max 20 words"}
   ],
   "vocabulary": [{"term": "useful English word or phrase for this situation", "meaningEs": "meaning in Spanish"}],
   "score": 0-100
 }
 betterPhrases: exactly 3 items, taken from what the USER said (never from the counterpart). If the user's English is already natural, suggest more idiomatic or more confident versions.
 vocabulary: 3 to 5 items.
-score: overall spoken workplace English in this conversation (clarity, grammar, vocabulary, confidence). Be encouraging but honest.`;
+score: overall spoken workplace English in this conversation (clarity, grammar, vocabulary, confidence). Be encouraging but honest.
+All Spanish text speaks directly to the user as "tú" (for example "Diste un ejemplo concreto"), never "el candidato" or "el usuario".
+Never use the em dash character; use commas or periods.`;
 
 /** Messages for the end-of-session feedback call. */
 export function feedbackMessages(scenario: Scenario, industry: Industry, turns: readonly Turn[]): ChatMessage[] {
