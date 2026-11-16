@@ -31,6 +31,8 @@ export function useRecorder(opts: { onAutoStop?: (blob: Blob) => void; maxMs?: n
   const { onAutoStop, maxMs = MAX_RECORDING_MS } = opts;
   const [status, setStatus] = useState<RecorderStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  /** The live microphone while recording (for a level meter). */
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -47,6 +49,7 @@ export function useRecorder(opts: { onAutoStop?: (blob: Blob) => void; maxMs?: n
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     recorderRef.current = null;
+    setStream(null);
     setStatus("idle");
   }, []);
 
@@ -81,6 +84,7 @@ export function useRecorder(opts: { onAutoStop?: (blob: Blob) => void; maxMs?: n
         if (e.data.size > 0) chunksRef.current = [...chunksRef.current, e.data];
       };
       streamRef.current = stream;
+      setStream(stream);
       recorderRef.current = recorder;
       startedAtRef.current = Date.now();
       recorder.start();
@@ -109,5 +113,5 @@ export function useRecorder(opts: { onAutoStop?: (blob: Blob) => void; maxMs?: n
 
   useEffect(() => cancel, [cancel]);
 
-  return { status, error, start, stop, cancel, clearError: () => setError(null) };
+  return { status, error, stream, start, stop, cancel, clearError: () => setError(null) };
 }

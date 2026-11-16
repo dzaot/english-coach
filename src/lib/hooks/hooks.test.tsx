@@ -5,6 +5,7 @@ import { installAudioStub, installRecorderStub, installSpeechStub, removeRecorde
 import { api } from "@/lib/api";
 import { RECORDER_ERRORS, useRecorder } from "./use-recorder";
 import { SLOW_RATE, useSpeaker } from "./use-speaker";
+import { useMicLevel } from "./use-mic-level";
 import { useTelemetry, ACTIVE_SESSION_MS } from "./use-telemetry";
 import { useElapsedSeconds } from "./use-elapsed";
 import { GATE_POLL_LIMIT_MS, GATE_POLL_MS, useGate } from "./use-gate";
@@ -113,6 +114,48 @@ describe("useSpeaker", () => {
     expect(result.current.speakingId).toBeNull();
   });
 
+  it("reports playback progress for live captions", () => {
+    const audios = installAudioStub();
+    installSpeechStub();
+    const { result } = renderHook(() => useSpeaker());
+    act(() => result.current.play("a", "Hello there", { base64: "AAA", mime: "audio/mpeg" }));
+    expect(result.current.progress).toEqual({ id: "a", ratio: 0 });
+    const el = audios[0] as unknown as { currentTime: number; duration: number; ontimeupdate: (() => void) | null };
+    el.currentTime = 1;
+    el.duration = 4;
+    act(() => el.ontimeupdate?.());
+    expect(result.current.progress).toEqual({ id: "a", ratio: 0.25 });
+    act(() => audios[0].onended?.());
+    expect(result.current.progress).toBeNull();
+  });
+
+  it("follows the browser voice word by word", () => {
+    const speech = installSpeechStub();
+    speech.speak.mockImplementation(() => undefined);
+    const { result } = renderHook(() => useSpeaker());
+    act(() => result.current.play("b", "Hello there"));
+    const utterance = speech.speak.mock.calls[0][0] as unknown as { onboundary: ((e: { charIndex: number }) => void) | null };
+    act(() => utterance.onboundary?.({ charIndex: 6 }));
+    expect(result.current.progress?.ratio).toBeCloseTo(6 / 11);
+  });
+
+  it("moves captions by time when the browser sends no word events", () => {
+    vi.useFakeTimers();
+    const t = clock();
+    const speech = installSpeechStub();
+    speech.speak.mockImplementation(() => undefined);
+    const { result } = renderHook(() => useSpeaker());
+    act(() => result.current.play("c", "x".repeat(140)));
+    t.advance(5000);
+    act(() => vi.advanceTimersByTime(300));
+    expect(result.current.progress?.ratio).toBeGreaterThan(0.4);
+    t.advance(60_000);
+    act(() => vi.advanceTimersByTime(300));
+    expect(result.current.progress?.ratio).toBe(0.97);
+    act(() => result.current.stop());
+    expect(result.current.progress).toBeNull();
+  });
+
   it("replays slower on request", () => {
     const audios = installAudioStub();
     const speech = installSpeechStub();
@@ -142,6 +185,40 @@ describe("useSpeaker", () => {
     const second = renderHook(() => useSpeaker());
     act(() => second.result.current.play("c", "Hi"));
     expect(second.result.current.speakingId).toBeNull();
+  });
+});
+
+describe("useMicLevel", () => {
+  it("is 0 without a stream or without Web Audio", () => {
+    const { result } = renderHook(() => useMicLevel(null));
+    expect(result.current).toBe(0);
+    vi.stubGlobal("AudioContext", undefined);
+    const { result: r2 } = renderHook(() => useMicLevel({} as MediaStream));
+    expect(r2.current).toBe(0);
+  });
+
+  it("follows the loudness of the microphone and cleans up", () => {
+    const close = vi.fn().mockResolvedValue(undefined);
+    const disconnect = vi.fn();
+    let frame: FrameRequestCallback | null = null;
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      frame = cb;
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    class FakeContext {
+      createMediaStreamSource = () => ({ connect: vi.fn(), disconnect });
+      createAnalyser = () => ({ fftSize: 0, getByteTimeDomainData: (d: Uint8Array) => d.fill(192) });
+      close = close;
+    }
+    vi.stubGlobal("AudioContext", FakeContext);
+    const stream = {} as MediaStream;
+    const { result, unmount } = renderHook(() => useMicLevel(stream));
+    act(() => frame?.(0));
+    expect(result.current).toBeGreaterThan(0.5);
+    unmount();
+    expect(disconnect).toHaveBeenCalled();
+    expect(close).toHaveBeenCalled();
   });
 });
 

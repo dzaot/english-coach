@@ -9,10 +9,12 @@ import { getScenario } from "@/domain/scenarios";
 import { ApiError, api } from "@/lib/api";
 import { formatClock } from "@/lib/format";
 import { useElapsedSeconds } from "@/lib/hooks/use-elapsed";
+import { useMicLevel } from "@/lib/hooks/use-mic-level";
 import { useRecorder } from "@/lib/hooks/use-recorder";
 import { SLOW_RATE, useSpeaker } from "@/lib/hooks/use-speaker";
 import type { FinishResult, Help, PracticeView as Practice, SpeechAudio } from "@/lib/types";
-import { AvatarPortrait, type PortraitState } from "./avatar-portrait";
+import type { PortraitState } from "./avatar-portrait";
+import { CallStage } from "./call-stage";
 import { ChatBubble } from "./chat-bubble";
 import { HelpCard } from "./help-card";
 import { RecordButton, micLabel, type MicState } from "./record-button";
@@ -91,6 +93,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
   );
 
   const recorder = useRecorder({ onAutoStop: (audio) => void submit({ audio }) });
+  const micLevel = useMicLevel(recorder.stream);
 
   useEffect(() => {
     void voice(0, initial.turns[0]?.text ?? "");
@@ -153,6 +156,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
   };
 
   const answered = countUserTurns(practice.turns);
+  const lastLine = practice.turns.findLastIndex((t) => t.role === "counterpart");
   const counterpartSpeaking = speaker.speakingId !== null && speaker.speakingId.startsWith("turn-");
   const portraitState: PortraitState = recorder.status === "recording" ? "listening" : counterpartSpeaking ? "speaking" : "idle";
   const micState: MicState = phase !== "ready" ? "busy" : recorder.status;
@@ -175,17 +179,17 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
         }
       />
 
-      <div className="mb-4 flex flex-col items-center gap-2 rounded-3xl border border-border bg-surface px-4 pb-4 pt-5 text-center shadow-card">
-        <AvatarPortrait avatar={avatar} size={144} state={portraitState} />
-        <p className="mt-1 text-xl font-bold">{name}</p>
-        <p className="text-sm text-muted">
-          {roleEn} · {industryLabel(practice.industryId)}
-        </p>
-        <p className="text-sm font-semibold" aria-live="polite">
-          {portraitState === "speaking" ? `${name} is talking…` : portraitState === "listening" ? `${name} is listening…` : `Your turn · ${answered}/${MAX_USER_TURNS} answers`}
-        </p>
-      </div>
+      <CallStage
+        avatar={avatar}
+        role={`${roleEn.charAt(0).toUpperCase()}${roleEn.slice(1)} · ${industryLabel(practice.industryId)}`}
+        state={portraitState}
+        caption={practice.turns[lastLine]?.text ?? ""}
+        captionProgress={speaker.progress?.id === turnKey(lastLine) ? speaker.progress.ratio : null}
+        micLevel={micLevel}
+        status={portraitState === "speaking" ? `${name} is talking…` : portraitState === "listening" ? `${name} is listening…` : `Your turn · ${answered}/${MAX_USER_TURNS} answers`}
+      />
 
+      <h2 className="mb-2 mt-5 text-sm font-semibold uppercase tracking-wide text-muted">Transcript</h2>
       <ol className="flex-1 space-y-3 pb-4" aria-label="Conversation">
         {practice.turns.map((t, i) => (
           <ChatBubble
@@ -254,7 +258,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
             <Button variant="ghost" onClick={() => setTyping(true)} disabled={busy || recorder.status === "recording"} className="justify-self-start whitespace-nowrap px-2 text-sm">
               <Keyboard aria-hidden="true" className="size-4" /> Type
             </Button>
-            <RecordButton state={micState} onPress={() => void pressMic()} showLabel={false} />
+            <RecordButton state={micState} onPress={() => void pressMic()} showLabel={false} level={micLevel} />
             <Button variant="ghost" onClick={() => void askHelp()} disabled={busy || recorder.status === "recording"} className="justify-self-end whitespace-nowrap px-2 text-sm">
               <LifeBuoy aria-hidden="true" className="size-4" /> {phase === "helping" ? "Thinking…" : "Help me"}
             </Button>

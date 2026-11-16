@@ -9,6 +9,9 @@ const LABELS: Record<MicState, string> = {
   busy: "One moment…",
 };
 
+/** How much the ring grows at full loudness. */
+const VOICE_RING_SCALE = 0.6;
+
 export function micLabel(state: MicState): string {
   return LABELS[state];
 }
@@ -19,18 +22,28 @@ export function RecordButton({
   onPress,
   disabled,
   showLabel = true,
+  level = 0,
 }: {
   state: MicState;
   onPress: () => void;
   disabled?: boolean;
   /** false when the parent shows micLabel() itself, for example below a toolbar. */
   showLabel?: boolean;
+  /** Microphone loudness 0 to 1: the ring follows your voice while recording. */
+  level?: number;
 }) {
   const recording = state === "recording";
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="relative">
-        {recording ? <span aria-hidden="true" className="animate-ring absolute inset-0 rounded-full bg-primary" /> : null}
+        {recording && level > 0 ? (
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 rounded-full bg-primary/40 transition-transform duration-100"
+            style={{ transform: `scale(${1 + level * VOICE_RING_SCALE})` }}
+          />
+        ) : null}
+        {recording && level === 0 ? <span aria-hidden="true" className="animate-ring absolute inset-0 rounded-full bg-primary" /> : null}
         <button
           type="button"
           onClick={onPress}

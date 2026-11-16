@@ -13,6 +13,7 @@ export function installSpeechStub() {
     voice: unknown = null;
     onend: (() => void) | null = null;
     onerror: (() => void) | null = null;
+    onboundary: ((e: { charIndex: number }) => void) | null = null;
     constructor(text: string) {
       this.text = text;
     }
@@ -30,6 +31,9 @@ export function installAudioStub(play: () => Promise<void> = () => Promise.resol
     play = vi.fn(play);
     pause = vi.fn();
     onended: (() => void) | null = null;
+    ontimeupdate: (() => void) | null = null;
+    currentTime = 0;
+    duration = Number.NaN;
     constructor(src: string) {
       this.src = src;
       created.push(this);
