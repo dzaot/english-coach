@@ -1,0 +1,6 @@
+.env*
+!.env.example
+data/
+coverage/
+.next/
+node_modules/
