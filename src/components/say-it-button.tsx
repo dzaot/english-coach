@@ -24,7 +24,7 @@ interface SayItProps {
 }
 
 const bareGuide = (text: string): WordGuide[] =>
-  text.split(/\s+/).filter(Boolean).map((w) => ({ text: w, key: w.toLowerCase(), respelling: null, syllables: 0, stressed: null, tips: [] }));
+  text.split(/\s+/).filter(Boolean).map((w) => ({ text: w, key: w.toLowerCase(), respelling: null, syllables: 0, stressed: null, tips: [], focus: false }));
 
 function paceNote(wpm: number): string {
   if (wpm < PACE_SLOW) return "a little slow, keep it flowing";
@@ -115,7 +115,7 @@ export function SayItButton({ phraseId, text, tipsInSpanish = false, onDrilled }
   return (
     <div className="space-y-3">
       <p className="flex items-center gap-1.5 text-sm font-semibold text-muted">
-        <AudioWaveform aria-hidden="true" className="size-4" /> Sound check · tap a word to hear how it sounds
+        <AudioWaveform aria-hidden="true" className="size-4" /> Sound check · tap any word
       </p>
       <SoundWords words={guide} checks={result?.words ?? null} selected={selected} onSelect={(i) => setSelected(i === selected ? null : i)} />
       {word && selected !== null ? (

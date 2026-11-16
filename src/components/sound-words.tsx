@@ -15,6 +15,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 function wordLabel(word: WordGuide, check: WordCheck | undefined): string {
   const parts = [word.text];
   if (check) parts.push(check.status === "clear" ? "understood" : "not understood");
+  if (word.focus) parts.push("practice this one");
   if (word.tips.length > 0) parts.push(plural(word.tips.length, "sound to watch", "sounds to watch"));
   return `${parts.join(": ")}. Show how to say it`;
 }
@@ -29,8 +30,8 @@ export function SoundWords({ words, checks, selected, onSelect }: SoundWordsProp
             ? "bg-accent-soft text-accent-ink"
             : check?.status === "missed"
               ? "bg-error-soft text-error underline decoration-wavy decoration-2 underline-offset-4"
-              : w.tips.length > 0
-                ? "bg-surface-2 underline decoration-warn decoration-dotted decoration-2 underline-offset-[6px]"
+              : w.focus
+                ? "bg-warn-soft text-warn underline decoration-dotted decoration-2 underline-offset-[6px]"
                 : "bg-surface-2";
         return (
           <li key={`${w.text}-${i}`}>

@@ -33,11 +33,15 @@ export interface WordGuide {
   /** Index of the stressed syllable. */
   readonly stressed: number | null;
   readonly tips: readonly SoundTip[];
+  /** One of the few words worth practicing first in this sentence. */
+  readonly focus: boolean;
 }
 
 export type Lookup = (word: string) => string | null;
 
 export const MAX_TIPS_PER_WORD = 2;
+/** Words highlighted per sentence: coaching a few sounds beats flagging everything. */
+export const FOCUS_WORDS = 3;
 
 const VOWELS = new Set(["AA", "AE", "AH", "AO", "AW", "AY", "EH", "ER", "EY", "IH", "IY", "OW", "OY", "UH", "UW"]);
 const base = (phone: string) => phone.replace(/\d/g, "");
@@ -45,7 +49,7 @@ const isVowel = (phone: string) => VOWELS.has(base(phone));
 const stressOf = (phone: string) => Number(phone.match(/\d/)?.[0] ?? 0);
 
 const SPELL: Record<string, string> = {
-  AA: "ah", AE: "a", AH: "uh", AO: "aw", AW: "ow", AY: "y", EH: "eh", ER: "er", EY: "ay", IH: "ih", IY: "ee",
+  AA: "ah", AE: "a", AH: "uh", AO: "aw", AW: "ow", AY: "y", EH: "eh", ER: "er", EY: "ay", IH: "i", IY: "ee",
   OW: "oh", OY: "oy", UH: "u", UW: "oo", B: "b", CH: "ch", D: "d", DH: "th", F: "f", G: "g", HH: "h", JH: "j",
   K: "k", L: "l", M: "m", N: "n", NG: "ng", P: "p", R: "r", S: "s", SH: "sh", T: "t", TH: "th", V: "v", W: "w",
   Y: "y", Z: "z", ZH: "zh",
@@ -146,7 +150,7 @@ const toKey = (text: string) => text.toLowerCase().replace(/[‘’]/g, "'").rep
 export function guideWord(text: string, lookup: Lookup): WordGuide {
   const key = toKey(text);
   const pronunciation = key ? lookup(key) : null;
-  if (!pronunciation) return { text, key, respelling: null, syllables: 0, stressed: null, tips: [] };
+  if (!pronunciation) return { text, key, respelling: null, syllables: 0, stressed: null, tips: [], focus: false };
   const phones = pronunciation.trim().split(/\s+/);
   const syllables = syllabify(phones);
   const stressed = syllables.findIndex((s) => s.stress === 1);
@@ -157,9 +161,26 @@ export function guideWord(text: string, lookup: Lookup): WordGuide {
     syllables: syllables.length,
     stressed: stressed === -1 ? null : stressed,
     tips: soundTipsFor(key, phones),
+    focus: false,
   };
 }
 
+const RANK = new Map(DETECTORS.map(([id], i) => [id, i]));
+
+/** The words to practice first: best-ranked sound, one word per sound, in sentence order of importance. */
+function focusIndexes(words: readonly WordGuide[]): Set<number> {
+  const ranked = words
+    .flatMap((w, i) => (w.tips.length ? [{ i, id: w.tips[0].id, rank: RANK.get(w.tips[0].id) ?? Infinity }] : []))
+    .sort((a, b) => a.rank - b.rank || a.i - b.i);
+  const picked: { i: number; id: SoundId }[] = [];
+  for (const r of ranked) {
+    if (picked.length < FOCUS_WORDS && !picked.some((p) => p.id === r.id)) picked.push(r);
+  }
+  return new Set(picked.map((p) => p.i));
+}
+
 export function guideText(sentence: string, lookup: Lookup): WordGuide[] {
-  return sentence.split(/\s+/).filter(Boolean).map((w) => guideWord(w, lookup));
+  const words = sentence.split(/\s+/).filter(Boolean).map((w) => guideWord(w, lookup));
+  const focus = focusIndexes(words);
+  return words.map((w, i) => (focus.has(i) ? { ...w, focus: true } : w));
 }

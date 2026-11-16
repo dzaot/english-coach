@@ -15,7 +15,7 @@ vi.mock("@/lib/api", async (orig) => {
 const mocked = vi.mocked(api);
 const phrase = progress().phrases[1]; // "Set up a meeting"
 
-const plain = (text: string): WordGuide => ({ text, key: text.toLowerCase(), respelling: text.toUpperCase(), syllables: 1, stressed: 0, tips: [] });
+const plain = (text: string): WordGuide => ({ text, key: text.toLowerCase(), respelling: text.toUpperCase(), syllables: 1, stressed: 0, tips: [], focus: false });
 const guide: WordGuide[] = [
   plain("Set"),
   plain("up"),
@@ -26,6 +26,7 @@ const guide: WordGuide[] = [
     respelling: "MEE-ding",
     syllables: 2,
     stressed: 0,
+    focus: true,
     tips: [{ id: "flap_t", label: "Soft t", example: "water", tipEs: "Entre vocales la t suena suave.", tipEn: "Between vowels the t is soft." }],
   },
 ];
@@ -66,7 +67,7 @@ describe("SayItButton (sound check)", () => {
   it("shows how each word sounds and which sounds to watch", async () => {
     render(<SayItButton phraseId={phrase.id} text={phrase.better} tipsInSpanish />);
     const word = await screen.findByRole("button", { name: /meeting/ });
-    expect(word).toHaveAccessibleName(/1 sound to watch/);
+    expect(word).toHaveAccessibleName(/practice this one: 1 sound to watch/);
     await userEvent.click(word);
     expect(screen.getByText("MEE-ding")).toBeInTheDocument();
     expect(screen.getByText("Entre vocales la t suena suave.")).toBeInTheDocument();

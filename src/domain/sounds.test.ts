@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_TIPS_PER_WORD, guideText, guideWord, respell, soundTipsFor, syllabify } from "./sounds";
+import { FOCUS_WORDS, MAX_TIPS_PER_WORD, guideText, guideWord, respell, soundTipsFor, syllabify } from "./sounds";
 
 const dict: Record<string, string> = {
   authority: "AH0 TH AO1 R AH0 T IY0",
@@ -48,6 +48,11 @@ describe("respell", () => {
 
   it("handles one-syllable words", () => {
     expect(respell("S P IY1 K")).toBe("SPEEK");
+  });
+
+  it("writes the short i as i, so ship and sheep look different", () => {
+    expect(respell("SH IH1 P")).toBe("SHIP");
+    expect(respell("SH IY1 P")).toBe("SHEEP");
   });
 });
 
@@ -113,6 +118,13 @@ describe("guideText", () => {
     const g = guideText("I speak with the team.", lookup);
     expect(g.map((w) => w.text)).toEqual(["I", "speak", "with", "the", "team."]);
     expect(g[1].tips[0].id).toBe("s_cluster");
+  });
+
+  it("picks a few focus words, most important sounds first and each with a different sound", () => {
+    const g = guideText("I speak with the team about the very important experience", (w) => ({ ...dict, with: "W IH1 DH", about: "AH0 B AW1 T", important: "IH2 M P AO1 R T AH0 N T" })[w] ?? null);
+    const focus = g.filter((w) => w.focus).map((w) => w.text);
+    expect(focus).toHaveLength(FOCUS_WORDS);
+    expect(focus).toEqual(["speak", "with", "very"]);
   });
 
   it("returns nothing for an empty sentence", () => {
