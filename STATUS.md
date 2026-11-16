@@ -7,6 +7,15 @@
 > - Abre con **Sign in with publik**. Sin sesión, la práctica responde `gate_required`.
 > - El token de la app (`PUBLIK_APP_TOKEN`) solo está en Vercel; publik respondió `installs: 201`.
 
+> **Cambios del 2026-11-16 (noche), tras la primera prueba de David en producción:**
+> - **Turnos más rápidos.** Un solo pedido en streaming: tus palabras aparecen a los ~2,5 s (antes ~7 s) y la respuesta llega junto con su voz a los ~7 a 8 s (antes ~10 a 11 s). Las respuestas usan `publik-fast` (antes `publik-balanced`, 2 s más lento). El cuello de botella que queda es la voz HD de publik: 2,3 a 4,8 s por llamada, sin streaming real.
+> - **Tus errores se ven.** whisper-1 corregía tu gramática ("I have work" volvía como "worked"). Ahora se le pasa un prompt con errores típicos y transcribe palabra por palabra. Cada respuesta se revisa en paralelo (`publik-fast`, con un ejemplo resuelto en el prompt): gramática y palabras en rojo, corregidas **letra por letra** dentro de tu frase (verde bien, rojo sobra, amarillo falta), frases poco naturales en amarillo, la razón de cada una y **2 formas más de decirlo** con su voz.
+> - **Tu situación real.** En el inicio: link o texto de la oferta de trabajo para la entrevista, detalles para cualquier escenario y un escenario nuevo, "Your situation" (por ejemplo, una reunión con tu abogado). Un link se lee en el servidor con protecciones contra redes privadas y se resume; la primera frase del compañero se escribe para tu caso.
+> - **Sound check letra por letra:** las letras del sonido difícil en amarillo antes de hablar; después, verde lo que se oyó, rojo lo que sobró y amarillo lo que faltó.
+> - Lo que **no** hace: medir tu acento sonido por sonido. Las letras comparan lo que la IA **oyó** con la forma correcta; el amarillo de los sonidos difíciles es una guía por la ortografía. Para puntaje fonético real haría falta Azure Speech o un modelo en el navegador.
+> - Costo por turno medido: $0,005 a $0,006 (transcripción $0,0009, respuesta $0,0001, revisión $0,0004 a $0,0005, voz HD $0,004 a $0,005). La práctica sigue en unos $0,07 a $0,09.
+> - 345 tests, 96,9% de líneas y 88,5% de ramas.
+
 > Resumen: MVP completo y probado **con la IA real de publik** en local (clave de desarrollador, gate apagado). Una práctica de 10 minutos cuesta unos **$0,07 a $0,09** con voces HD (`tts-1-hd`, elegidas por David el 2026-11-16). El 2026-11-16 se agregaron:
 > - una marca propia (`BRAND.md`);
 > - la práctica como videollamada con subtítulos en vivo;

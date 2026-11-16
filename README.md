@@ -1,14 +1,15 @@
-# Dilo: practice your work English out loud, free
+# Dilo: practice your work English out loud
 
-> "Practice your job interview in English, out loud, free."
+> "Practice your job interview in English, out loud, for cents per practice."
 
-Dilo (working name, Spanish for "say it") is a free daily speaking practice for Spanish-speaking professionals who work or job-hunt in English. It is the free version of Speak ($39.99/mo), Praktika and Cambly, focused on work.
+Dilo (Spanish for "say it") is a daily speaking practice for Spanish-speaking professionals who work or job-hunt in English. No subscription: you pay only the AI you use through publik, about $0.07 to $0.09 for a 10-minute practice. It focuses on work, where apps like Speak, Praktika and Cambly are general.
 
-1. Pick a scenario: job interview, team meeting, client call, presentation or salary negotiation.
+1. Pick a scenario: job interview, team meeting, client call, presentation, salary negotiation, or your own situation (a meeting with your lawyer, a call with your landlord). Add details to make it real: paste the job post link or text, or describe the meeting.
 2. Pick your industry: general, sales, customer support, healthcare admin, construction or tech.
-3. Talk out loud on a video-call style screen with your chosen partner for 5 to 10 minutes (push to talk, or type if you have no mic). Their lines are captioned live, word by word. Stuck? "Help me" explains the question and suggests an answer.
+3. Talk out loud on a video-call style screen with your chosen partner for 5 to 10 minutes (push to talk, or type if you have no mic). Their lines are captioned live, word by word. Stuck? "Help me" explains the question and suggests an answer. Your words appear about 2.5 seconds after you stop, exactly as you said them (mistakes included), and your partner's reply arrives together with its voice.
+   - Each answer is checked live: mistakes are corrected letter by letter inside your sentence (green right, red remove, yellow add), phrasing that doesn't sound natural is marked, and you get two other ways to say it, which you can hear.
 4. Get feedback: what you did well, 3 phrases to say more naturally (with the better version), vocabulary to keep, and a score.
-5. "Say it" with a sound check: each better phrase shows how its words sound in General American English (respelling, strong syllable, the three sounds Spanish speakers should focus on). Say it out loud and see which words the AI understood, your pace and your own voice word by word. It comes back 1, 3 and 7 days later in "Today's review".
+5. "Say it" with a sound check: each better phrase shows how its words sound in General American English (respelling, strong syllable, the three sounds Spanish speakers should focus on). Say it out loud and see, letter by letter, what the AI heard, your pace and your own voice word by word. It comes back 1, 3 and 7 days later in "Today's review".
 6. Come back tomorrow: daily streak, your results (words spoken in English, phrases learned, score trend), session history and phrases to review.
 
 The interface and the conversation are in English. Each learner picks a level: **Beginner** (simpler English, slower voice, tips and translations in Spanish), **Intermediate** (tips in English, translations in Spanish) or **Advanced** (natural speed, English only). They also pick a practice partner: four photo avatars (AI-generated portraits of fictional people, made with Blotato), each with its own voice.
