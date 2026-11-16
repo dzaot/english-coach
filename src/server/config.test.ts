@@ -23,6 +23,13 @@ describe("loadConfig", () => {
     expect(c.publikAppToken).toBe("pat_x");
   });
 
+  it("uses a hosted libSQL database when a URL is set, with Turso's variable names too", () => {
+    expect(loadConfig({}).database).toEqual({ url: null, authToken: null });
+    expect(loadConfig({ DATABASE_URL: "libsql://dilo.turso.io", DATABASE_AUTH_TOKEN: "t1" }).database).toEqual({ url: "libsql://dilo.turso.io", authToken: "t1" });
+    expect(loadConfig({ TURSO_DATABASE_URL: "libsql://x.turso.io", TURSO_AUTH_TOKEN: "t2" }).database).toEqual({ url: "libsql://x.turso.io", authToken: "t2" });
+    expect(() => loadConfig({ DATABASE_URL: "postgres://nope" })).toThrow(/DATABASE_URL/);
+  });
+
   it("rejects an unknown provider", () => {
     expect(() => loadConfig({ AI_PROVIDER: "openai" })).toThrow(/AI_PROVIDER/);
   });

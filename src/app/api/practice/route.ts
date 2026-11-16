@@ -7,8 +7,11 @@ export async function POST(request: Request) {
     request,
     async ({ ctx, sid }) => {
       const body = await readJson(request);
-      return startPractice(ctx, resolveAi(ctx, sid), sid, body);
+      return startPractice(ctx, await resolveAi(ctx, sid), sid, body);
     },
     { usesAi: true },
   );
 }
+
+/** AI calls (transcription, feedback) can take longer than a serverless default. */
+export const maxDuration = 60;

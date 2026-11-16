@@ -8,7 +8,7 @@ export async function POST(request: Request, { params }: IdParams) {
   return handle(
     request,
     async ({ ctx, sid }) => {
-      const ai = resolveAi(ctx, sid);
+      const ai = await resolveAi(ctx, sid);
       let form: FormData;
       try {
         form = await request.formData();
@@ -25,3 +25,6 @@ export async function POST(request: Request, { params }: IdParams) {
     { usesAi: true },
   );
 }
+
+/** AI calls (transcription, feedback) can take longer than a serverless default. */
+export const maxDuration = 60;

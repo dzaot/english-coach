@@ -22,7 +22,7 @@ describe("getGateState", () => {
     const ctx = testContext({ env: GATE_ENV, fetch });
     const state = await getGateState(ctx, SID);
     expect(state).toMatchObject({ state: "screen", screen: { id: "sign_in" }, links: { signIn: "https://publikhq.com/claim/1" } });
-    const user = ctx.store.getOrCreateUser(SID, "t");
+    const user = await ctx.store.getOrCreateUser(SID, "t");
     expect(user.installKeySealed).toBeTruthy();
     expect(user.installKeySealed).not.toContain("pk_live_abc");
     expect(JSON.stringify(state)).not.toContain("pk_live_abc");
@@ -43,7 +43,7 @@ describe("getGateState", () => {
     const ctx = testContext({ env: GATE_ENV, fetch });
     const state = await applyGateAction(ctx, SID, { action: "own_key", key: "sk-" + "x".repeat(40) });
     expect(state).toMatchObject({ state: "ready", mode: "own_key" });
-    expect(ctx.store.getOrCreateUser(SID, "t").ownKeySealed).not.toContain("sk-");
+    expect((await ctx.store.getOrCreateUser(SID, "t")).ownKeySealed).not.toContain("sk-");
   });
 
   it("rejects a malformed own key and an unknown action", async () => {
@@ -80,8 +80,8 @@ describe("getGateState", () => {
       "/api/v1/wallet": () => (++walletCalls === 1 ? json({ error: { message: "revoked" } }, 401) : anonymous.clone()),
     });
     const ctx = testContext({ env: GATE_ENV, fetch });
-    ctx.store.getOrCreateUser(SID, "t");
-    ctx.store.updateUser(SID, { installKeySealed: seal("pk_live_old", GATE_ENV.APP_SECRET), choice: "publik" });
+    await ctx.store.getOrCreateUser(SID, "t");
+    await ctx.store.updateUser(SID, { installKeySealed: seal("pk_live_old", GATE_ENV.APP_SECRET), choice: "publik" });
     expect(await getGateState(ctx, SID)).toMatchObject({ screen: { id: "sign_in" } });
     expect(calls.filter((c) => c.url.includes("/installs"))).toHaveLength(1);
   });
@@ -94,13 +94,13 @@ describe("getGateState", () => {
 
 describe("resolveAi", () => {
   it("gives the mock provider in demo mode", async () => {
-    const ai = resolveAi(testContext(), SID);
+    const ai = await resolveAi(testContext(), SID);
     expect(await ai.speak("x")).toBeNull();
   });
 
-  it("requires the gate before any AI call", () => {
+  it("requires the gate before any AI call", async () => {
     const ctx = testContext({ env: GATE_ENV });
-    expect(() => resolveAi(ctx, SID)).toThrow(expect.objectContaining({ code: "gate_required" }));
+    await expect(resolveAi(ctx, SID)).rejects.toThrow(expect.objectContaining({ code: "gate_required" }));
   });
 
   it("uses the install key with publik API after Connect", async () => {
@@ -111,7 +111,7 @@ describe("resolveAi", () => {
     });
     const ctx = testContext({ env: GATE_ENV, fetch });
     await applyGateAction(ctx, SID, { action: "connect" });
-    expect(await resolveAi(ctx, SID).chat([], { tier: "fast" })).toBe("Hi!");
+    expect(await (await resolveAi(ctx, SID)).chat([], { tier: "fast" })).toBe("Hi!");
     const chat = calls.find((c) => c.url.includes("/chat/completions"))!;
     expect(chat.url).toBe("https://publikhq.com/api/v1/chat/completions");
     expect((chat.init?.headers as Record<string, string>).authorization).toBe("Bearer pk_live_abc");
@@ -126,21 +126,21 @@ describe("resolveAi", () => {
     });
     const ctx = testContext({ env: GATE_ENV, fetch });
     await applyGateAction(ctx, SID, { action: "own_key", key: "sk-" + "k".repeat(40) });
-    await resolveAi(ctx, SID).chat([], { tier: "balanced" });
+    (await resolveAi(ctx, SID)).chat([], { tier: "balanced" });
     expect(JSON.parse(String(calls.at(-1)?.init?.body)).model).toBe("gpt-4o-mini");
   });
 
   it("uses PUBLIK_API_KEY in development when the gate is off", async () => {
     const { fetch, calls } = fakeFetch({ "/chat/completions": json({ choices: [{ message: { content: "ok" } }] }) });
     const ctx = testContext({ env: { AI_PROVIDER: "publik", PUBLIK_GATE: "off", PUBLIK_API_KEY: "pk_dev" }, fetch });
-    await resolveAi(ctx, SID).chat([], { tier: "fast" });
+    (await resolveAi(ctx, SID)).chat([], { tier: "fast" });
     expect((calls[0].init?.headers as Record<string, string>).authorization).toBe("Bearer pk_dev");
     expect(await getGateState(ctx, SID)).toMatchObject({ state: "ready", mode: "publik" });
   });
 
-  it("fails clearly when publik is chosen with no key at all", () => {
+  it("fails clearly when publik is chosen with no key at all", async () => {
     const ctx = testContext({ env: { AI_PROVIDER: "publik", PUBLIK_GATE: "off" } });
-    expect(() => resolveAi(ctx, SID)).toThrow(expect.objectContaining({ code: "internal" }));
+    await expect(resolveAi(ctx, SID)).rejects.toThrow(expect.objectContaining({ code: "internal" }));
   });
 });
 
@@ -165,6 +165,6 @@ describe("recordTelemetry", () => {
     const sent = calls.filter((c) => c.url.includes("/telemetry"));
     expect(sent).toHaveLength(1);
     expect(JSON.parse(String(sent[0].init?.body)).event).toBe("app_opened");
-    expect(ctx.store.getOrCreateUser(SID, "t").telemetryId).toMatch(/^[0-9a-f-]{36}$/);
+    expect((await ctx.store.getOrCreateUser(SID, "t")).telemetryId).toMatch(/^[0-9a-f-]{36}$/);
   });
 });

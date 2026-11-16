@@ -62,28 +62,33 @@ export interface PhraseRecord {
   readonly dueDay: string | null;
 }
 
+/** Persistence. Async so it can run on a local SQLite file or a hosted database. */
 export interface Store {
-  getOrCreateUser(sid: string, now: string): UserRecord;
-  updateUser(sid: string, patch: UserPatch): UserRecord;
-  createPractice(input: NewPractice): PracticeRecord;
-  getPractice(sid: string, id: string): PracticeRecord | null;
-  savePracticeTurns(sid: string, id: string, turns: readonly Turn[]): PracticeRecord;
+  getOrCreateUser(sid: string, now: string): Promise<UserRecord>;
+  updateUser(sid: string, patch: UserPatch): Promise<UserRecord>;
+  createPractice(input: NewPractice): Promise<PracticeRecord>;
+  getPractice(sid: string, id: string): Promise<PracticeRecord | null>;
+  savePracticeTurns(sid: string, id: string, turns: readonly Turn[]): Promise<PracticeRecord>;
   finishPractice(
     sid: string,
     id: string,
     result: { feedback: Feedback; finishedAt: string; localDay: string },
-  ): PracticeRecord;
-  listPractices(sid: string, limit: number): PracticeRecord[];
-  practiceDays(sid: string): string[];
+  ): Promise<PracticeRecord>;
+  listPractices(sid: string, limit: number): Promise<PracticeRecord[]>;
+  practiceDays(sid: string): Promise<string[]>;
   addPhrases(
     sid: string,
     practiceId: string,
     phrases: readonly { original: string; better: string; why: string }[],
     now: string,
     dueDay: string,
-  ): PhraseRecord[];
-  getPhrase(sid: string, id: string): PhraseRecord | null;
-  schedulePhrase(sid: string, id: string, schedule: { step: number; dueDay: string | null; reviewedAt: string | null }): PhraseRecord | null;
-  listPhrases(sid: string): PhraseRecord[];
-  markPhrase(sid: string, id: string, reviewed: boolean, now: string): PhraseRecord | null;
+  ): Promise<PhraseRecord[]>;
+  getPhrase(sid: string, id: string): Promise<PhraseRecord | null>;
+  schedulePhrase(
+    sid: string,
+    id: string,
+    schedule: { step: number; dueDay: string | null; reviewedAt: string | null },
+  ): Promise<PhraseRecord | null>;
+  listPhrases(sid: string): Promise<PhraseRecord[]>;
+  markPhrase(sid: string, id: string, reviewed: boolean, now: string): Promise<PhraseRecord | null>;
 }

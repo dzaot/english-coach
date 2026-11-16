@@ -82,8 +82,8 @@ function publicPhrase(p: PhraseRecord) {
   };
 }
 
-function load(ctx: AppContext, sid: string, id: string): PracticeRecord {
-  const p = ctx.store.getPractice(sid, id);
+async function load(ctx: AppContext, sid: string, id: string): Promise<PracticeRecord> {
+  const p = await ctx.store.getPractice(sid, id);
   if (!p) throw new AppError("not_found");
   return p;
 }
@@ -101,14 +101,14 @@ export async function startPractice(ctx: AppContext, ai: AiProvider, sid: string
   if (!parsed.success) throw new AppError("invalid_input");
   const opener = buildOpener(getScenario(parsed.data.scenarioId), getIndustry(parsed.data.industryId), getAvatar(parsed.data.avatarId));
   const now = ctx.now().toISOString();
-  ctx.store.getOrCreateUser(sid, now);
-  const practice = ctx.store.createPractice({ sid, ...parsed.data, startedAt: now, turns: [{ role: "counterpart", text: opener }] });
+  await ctx.store.getOrCreateUser(sid, now);
+  const practice = await ctx.store.createPractice({ sid, ...parsed.data, startedAt: now, turns: [{ role: "counterpart", text: opener }] });
   // Speech is fetched separately (speakTurn) so the text shows without waiting for audio.
   return { practice: view(practice), audio: null };
 }
 
-export function getPractice(ctx: AppContext, sid: string, id: string): PracticeView {
-  return view(load(ctx, sid, id));
+export async function getPractice(ctx: AppContext, sid: string, id: string): Promise<PracticeView> {
+  return view(await load(ctx, sid, id));
 }
 
 /** File extension the transcription service expects for a browser recording's MIME type. */
@@ -151,7 +151,7 @@ export async function takeTurn(
   id: string,
   input: { audio?: Blob | null; text?: string | null },
 ): Promise<TurnResult> {
-  const practice = load(ctx, sid, id);
+  const practice = await load(ctx, sid, id);
   if (practice.finishedAt) throw new AppError("session_finished");
   if (isTurnLimitReached(practice.turns)) throw new AppError("turn_limit");
   const check = validateUserText(await userTextFrom(ai, input));
@@ -164,13 +164,13 @@ export async function takeTurn(
     getLevel(practice.level),
   );
   const replyText = cleanDashes(await ai.chat(toChatMessages(system, withUser), { tier: ctx.config.replyTier, maxTokens: REPLY_MAX_TOKENS }));
-  const saved = ctx.store.savePracticeTurns(sid, id, appendTurn(withUser, { role: "counterpart", text: replyText }));
+  const saved = await ctx.store.savePracticeTurns(sid, id, appendTurn(withUser, { role: "counterpart", text: replyText }));
   return { userText: check.text, replyText, audio: null, practice: view(saved) };
 }
 
 /** "Help me": translation of the last line and a suggested answer (fast tier). */
 export async function getHelp(ctx: AppContext, ai: AiProvider, sid: string, id: string): Promise<Help> {
-  const practice = load(ctx, sid, id);
+  const practice = await load(ctx, sid, id);
   if (practice.finishedAt) throw new AppError("session_finished");
   const messages = helpMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), getLevel(practice.level), practice.turns);
   try {
@@ -185,7 +185,7 @@ const SpeakSchema = z.object({ turnIndex: z.number().int().min(0) });
 
 /** Voice for one counterpart line, asked for after the text is on screen. Only lines the app generated. */
 export async function speakTurn(ctx: AppContext, ai: AiProvider, sid: string, id: string, input: unknown) {
-  const practice = load(ctx, sid, id);
+  const practice = await load(ctx, sid, id);
   const parsed = SpeakSchema.safeParse(input);
   const turn = parsed.success ? practice.turns[parsed.data.turnIndex] : undefined;
   if (!turn || turn.role !== "counterpart") throw new AppError("invalid_input");
@@ -205,8 +205,8 @@ async function generateFeedback(ai: AiProvider, practice: PracticeRecord): Promi
   throw new AppError("feedback_invalid");
 }
 
-function streakFor(ctx: AppContext, sid: string, tzOffset: number): Streak {
-  return computeStreak(ctx.store.practiceDays(sid), localDay(ctx.now(), tzOffset));
+async function streakFor(ctx: AppContext, sid: string, tzOffset: number): Promise<Streak> {
+  return computeStreak(await ctx.store.practiceDays(sid), localDay(ctx.now(), tzOffset));
 }
 
 function parseTz(value: unknown): number {
@@ -217,16 +217,16 @@ function parseTz(value: unknown): number {
 
 export async function finishPractice(ctx: AppContext, ai: AiProvider, sid: string, id: string, input: { tzOffset: unknown }) {
   const tzOffset = parseTz(input.tzOffset);
-  const practice = load(ctx, sid, id);
+  const practice = await load(ctx, sid, id);
   if (practice.finishedAt && practice.feedback) {
-    return { practice: view(practice), feedback: practice.feedback, streak: streakFor(ctx, sid, tzOffset) };
+    return { practice: view(practice), feedback: practice.feedback, streak: await streakFor(ctx, sid, tzOffset) };
   }
   if (!canFinish(practice.turns)) throw new AppError("not_enough_turns");
   const feedback = await generateFeedback(ai, practice);
   const now = ctx.now();
-  const done = ctx.store.finishPractice(sid, id, { feedback, finishedAt: now.toISOString(), localDay: localDay(now, tzOffset) });
-  ctx.store.addPhrases(sid, id, feedback.betterPhrases, now.toISOString(), addDays(localDay(now, tzOffset), 1));
-  return { practice: view(done), feedback, streak: streakFor(ctx, sid, tzOffset) };
+  const done = await ctx.store.finishPractice(sid, id, { feedback, finishedAt: now.toISOString(), localDay: localDay(now, tzOffset) });
+  await ctx.store.addPhrases(sid, id, feedback.betterPhrases, now.toISOString(), addDays(localDay(now, tzOffset), 1));
+  return { practice: view(done), feedback, streak: await streakFor(ctx, sid, tzOffset) };
 }
 
 export interface HistoryItem {
@@ -262,24 +262,28 @@ function statsFor(practices: readonly PracticeRecord[], phrases: readonly Phrase
   };
 }
 
-export function getProgress(ctx: AppContext, sid: string, tzOffset: unknown) {
+export async function getProgress(ctx: AppContext, sid: string, tzOffset: unknown) {
   const tz = parseTz(tzOffset);
-  const history: HistoryItem[] = ctx.store
-    .listPractices(sid, HISTORY_LIMIT)
+  const [practices, phrases, days] = await Promise.all([
+    ctx.store.listPractices(sid, STATS_LIMIT),
+    ctx.store.listPhrases(sid),
+    ctx.store.practiceDays(sid),
+  ]);
+  const history: HistoryItem[] = practices
+    .slice(0, HISTORY_LIMIT)
     .filter((p) => p.finishedAt)
     .map((p) => ({ id: p.id, scenarioId: p.scenarioId, industryId: p.industryId, finishedAt: p.finishedAt!, score: p.score }));
-  const phrases: PhraseRecord[] = ctx.store.listPhrases(sid);
-  const practiced = new Set(ctx.store.practiceDays(sid));
+  const practiced = new Set(days);
   const today = localDay(ctx.now(), tz);
   const week = Array.from({ length: WEEK_DAYS }, (_, i) => addDays(today, i - (WEEK_DAYS - 1))).map((day) => ({
     day,
     practiced: practiced.has(day),
   }));
   return {
-    streak: streakFor(ctx, sid, tz),
+    streak: computeStreak(days, today),
     week,
     history,
-    stats: statsFor(ctx.store.listPractices(sid, STATS_LIMIT), phrases),
+    stats: statsFor(practices, phrases),
     phrases: phrases.map(publicPhrase),
     toReview: phrases.filter((p) => !p.reviewedAt).length,
     dueToday: phrases.filter((p) => isDue(p, today)).length,
@@ -288,10 +292,10 @@ export function getProgress(ctx: AppContext, sid: string, tzOffset: unknown) {
 
 const MarkSchema = z.object({ reviewed: z.boolean() });
 
-export function markPhrase(ctx: AppContext, sid: string, id: string, input: unknown) {
+export async function markPhrase(ctx: AppContext, sid: string, id: string, input: unknown) {
   const parsed = MarkSchema.safeParse(input);
   if (!parsed.success) throw new AppError("invalid_input");
-  const phrase = ctx.store.markPhrase(sid, id, parsed.data.reviewed, ctx.now().toISOString());
+  const phrase = await ctx.store.markPhrase(sid, id, parsed.data.reviewed, ctx.now().toISOString());
   if (!phrase) throw new AppError("not_found");
   return publicPhrase(phrase);
 }
@@ -305,7 +309,7 @@ export async function drillPhrase(
   input: { audio: Blob | null; tzOffset: unknown },
 ) {
   const tzOffset = parseTz(input.tzOffset);
-  const phrase = ctx.store.getPhrase(sid, id);
+  const phrase = await ctx.store.getPhrase(sid, id);
   if (!phrase) throw new AppError("not_found");
   if (!input.audio) throw new AppError("invalid_input");
   checkAudio(input.audio);
@@ -316,8 +320,11 @@ export async function drillPhrase(
     const now = ctx.now();
     const next = nextSchedule(phrase, localDay(now, tzOffset));
     updated =
-      ctx.store.schedulePhrase(sid, id, { step: next.step, dueDay: next.dueDay, reviewedAt: next.learned ? now.toISOString() : phrase.reviewedAt }) ??
-      phrase;
+      (await ctx.store.schedulePhrase(sid, id, {
+        step: next.step,
+        dueDay: next.dueDay,
+        reviewedAt: next.learned ? now.toISOString() : phrase.reviewedAt,
+      })) ?? phrase;
   }
   return {
     said,

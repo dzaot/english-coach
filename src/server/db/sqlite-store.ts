@@ -1,10 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import { isAvatarId } from "@/domain/avatars";
 import type { Feedback } from "@/domain/feedback";
 import { isLevelId } from "@/domain/levels";
+import type { Row, SqlDb } from "./sql";
 import type { NewPractice, PhraseRecord, PracticeRecord, Store, UserPatch, UserRecord } from "./store";
 
 const SCHEMA = `
@@ -36,16 +34,14 @@ const MIGRATIONS: Record<"phrases" | "practices", Record<string, string>> = {
   },
 };
 
-function migrate(db: DatabaseSync): void {
+async function migrate(db: SqlDb): Promise<void> {
   for (const [table, columns] of Object.entries(MIGRATIONS)) {
-    const existing = new Set((db.prepare(`PRAGMA table_info(${table})`).all() as Row[]).map((c) => String(c.name)));
+    const existing = new Set((await db.all(`PRAGMA table_info(${table})`)).map((c) => String(c.name)));
     for (const [column, sql] of Object.entries(columns)) {
-      if (!existing.has(column)) db.exec(sql);
+      if (!existing.has(column)) await db.exec(sql);
     }
   }
 }
-
-type Row = Record<string, unknown>;
 const str = (v: unknown): string | null => (typeof v === "string" ? v : null);
 
 function toUser(r: Row): UserRecord {
@@ -74,7 +70,7 @@ function toPractice(r: Row): PracticeRecord {
     localDay: str(r.local_day),
     turns: JSON.parse(String(r.turns)),
     feedback: r.feedback ? (JSON.parse(String(r.feedback)) as Feedback) : null,
-    score: typeof r.score === "number" ? r.score : null,
+    score: r.score === null || r.score === undefined ? null : Number(r.score),
   };
 }
 
@@ -88,7 +84,7 @@ function toPhrase(r: Row): PhraseRecord {
     why: String(r.why_es),
     createdAt: String(r.created_at),
     reviewedAt: str(r.reviewed_at),
-    step: typeof r.step === "number" ? r.step : Number(r.step ?? 0),
+    step: Number(r.step ?? 0),
     dueDay: str(r.due_day),
   };
 }
@@ -102,104 +98,123 @@ const USER_COLUMNS: Record<keyof UserPatch, string> = {
   telemetryId: "telemetry_id",
 };
 
-export function createSqliteStore(path: string): Store {
-  if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
-  const db = new DatabaseSync(path);
-  db.exec("PRAGMA journal_mode = WAL;");
-  db.exec(SCHEMA);
-  migrate(db);
-  const phraseRow = (sid: string, id: string) =>
-    db.prepare("SELECT * FROM phrases WHERE id = ? AND sid = ?").get(id, sid) as Row | undefined;
+/** The store on any SqlDb. Schema and migrations run once, before the first query. */
+export function createSqlStore(open: SqlDb | Promise<SqlDb>): Store {
+  const ready = (async () => {
+    const db = await open;
+    await db.exec(SCHEMA);
+    await migrate(db);
+    return db;
+  })();
 
-  const getUser = (sid: string) => db.prepare("SELECT * FROM users WHERE sid = ?").get(sid) as Row | undefined;
-  const getPracticeRow = (sid: string, id: string) =>
-    db.prepare("SELECT * FROM practices WHERE id = ? AND sid = ?").get(id, sid) as Row | undefined;
-  const requirePractice = (sid: string, id: string): PracticeRecord => {
-    const row = getPracticeRow(sid, id);
+  const getUser = async (sid: string) => (await ready).get("SELECT * FROM users WHERE sid = ?", [sid]);
+  const phraseRow = async (sid: string, id: string) => (await ready).get("SELECT * FROM phrases WHERE id = ? AND sid = ?", [id, sid]);
+  const practiceRow = async (sid: string, id: string) => (await ready).get("SELECT * FROM practices WHERE id = ? AND sid = ?", [id, sid]);
+  const requirePractice = async (sid: string, id: string): Promise<PracticeRecord> => {
+    const row = await practiceRow(sid, id);
     if (!row) throw new Error("practice not found");
     return toPractice(row);
   };
+  const requireUser = async (sid: string): Promise<UserRecord> => {
+    const row = await getUser(sid);
+    if (!row) throw new Error("user not found");
+    return toUser(row);
+  };
 
   return {
-    getOrCreateUser(sid, now) {
-      db.prepare("INSERT OR IGNORE INTO users (sid, created_at) VALUES (?, ?)").run(sid, now);
-      return toUser(getUser(sid)!);
+    async getOrCreateUser(sid, now) {
+      await (await ready).run("INSERT OR IGNORE INTO users (sid, created_at) VALUES (?, ?)", [sid, now]);
+      return requireUser(sid);
     },
-    updateUser(sid, patch) {
-      if (!getUser(sid)) throw new Error("user not found");
-      const keys = Object.keys(patch) as (keyof UserPatch)[];
-      for (const key of keys) {
-        db.prepare(`UPDATE users SET ${USER_COLUMNS[key]} = ? WHERE sid = ?`).run(patch[key] ?? null, sid);
+    async updateUser(sid, patch) {
+      await requireUser(sid);
+      const db = await ready;
+      for (const key of Object.keys(patch) as (keyof UserPatch)[]) {
+        await db.run(`UPDATE users SET ${USER_COLUMNS[key]} = ? WHERE sid = ?`, [patch[key] ?? null, sid]);
       }
-      return toUser(getUser(sid)!);
+      return requireUser(sid);
     },
-    createPractice(input: NewPractice) {
+    async createPractice(input: NewPractice) {
       const id = randomUUID();
-      db.prepare(
+      await (await ready).run(
         "INSERT INTO practices (id, sid, scenario_id, industry_id, level, avatar_id, started_at, turns) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      ).run(id, input.sid, input.scenarioId, input.industryId, input.level, input.avatarId, input.startedAt, JSON.stringify(input.turns));
+        [id, input.sid, input.scenarioId, input.industryId, input.level, input.avatarId, input.startedAt, JSON.stringify(input.turns)],
+      );
       return requirePractice(input.sid, id);
     },
-    getPractice(sid, id) {
-      const row = getPracticeRow(sid, id);
+    async getPractice(sid, id) {
+      const row = await practiceRow(sid, id);
       return row ? toPractice(row) : null;
     },
-    savePracticeTurns(sid, id, turns) {
-      requirePractice(sid, id);
-      db.prepare("UPDATE practices SET turns = ? WHERE id = ? AND sid = ?").run(JSON.stringify(turns), id, sid);
+    async savePracticeTurns(sid, id, turns) {
+      await requirePractice(sid, id);
+      await (await ready).run("UPDATE practices SET turns = ? WHERE id = ? AND sid = ?", [JSON.stringify(turns), id, sid]);
       return requirePractice(sid, id);
     },
-    finishPractice(sid, id, result) {
-      requirePractice(sid, id);
-      db.prepare(
+    async finishPractice(sid, id, result) {
+      await requirePractice(sid, id);
+      await (await ready).run(
         "UPDATE practices SET feedback = ?, score = ?, finished_at = ?, local_day = ? WHERE id = ? AND sid = ?",
-      ).run(JSON.stringify(result.feedback), result.feedback.score, result.finishedAt, result.localDay, id, sid);
+        [JSON.stringify(result.feedback), result.feedback.score, result.finishedAt, result.localDay, id, sid],
+      );
       return requirePractice(sid, id);
     },
-    listPractices(sid, limit) {
-      const rows = db
-        .prepare("SELECT * FROM practices WHERE sid = ? ORDER BY started_at DESC LIMIT ?")
-        .all(sid, limit) as Row[];
+    async listPractices(sid, limit) {
+      const rows = await (await ready).all("SELECT * FROM practices WHERE sid = ? ORDER BY started_at DESC LIMIT ?", [sid, limit]);
       return rows.map(toPractice);
     },
-    practiceDays(sid) {
-      const rows = db
-        .prepare("SELECT DISTINCT local_day FROM practices WHERE sid = ? AND local_day IS NOT NULL ORDER BY local_day")
-        .all(sid) as Row[];
+    async practiceDays(sid) {
+      const rows = await (await ready).all(
+        "SELECT DISTINCT local_day FROM practices WHERE sid = ? AND local_day IS NOT NULL ORDER BY local_day",
+        [sid],
+      );
       return rows.map((r) => String(r.local_day));
     },
-    addPhrases(sid, practiceId, phrases, now, dueDay) {
-      const insert = db.prepare(
-        "INSERT INTO phrases (id, sid, practice_id, original, better, why_es, created_at, due_day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      );
-      const ids = phrases.map((p) => {
+    async addPhrases(sid, practiceId, phrases, now, dueDay) {
+      const db = await ready;
+      const ids: string[] = [];
+      for (const p of phrases) {
         const id = randomUUID();
-        insert.run(id, sid, practiceId, p.original, p.better, p.why, now, dueDay);
-        return id;
-      });
-      return ids.map((id) => toPhrase(db.prepare("SELECT * FROM phrases WHERE id = ?").get(id) as Row));
+        await db.run(
+          "INSERT INTO phrases (id, sid, practice_id, original, better, why_es, created_at, due_day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+          [id, sid, practiceId, p.original, p.better, p.why, now, dueDay],
+        );
+        ids.push(id);
+      }
+      const rows = await Promise.all(ids.map((id) => phraseRow(sid, id)));
+      return rows.flatMap((r) => (r ? [toPhrase(r)] : []));
     },
-    getPhrase(sid, id) {
-      const row = phraseRow(sid, id);
+    async getPhrase(sid, id) {
+      const row = await phraseRow(sid, id);
       return row ? toPhrase(row) : null;
     },
-    schedulePhrase(sid, id, schedule) {
-      const result = db
-        .prepare("UPDATE phrases SET step = ?, due_day = ?, reviewed_at = ? WHERE id = ? AND sid = ?")
-        .run(schedule.step, schedule.dueDay, schedule.reviewedAt, id, sid);
-      if (Number(result.changes) === 0) return null;
-      return toPhrase(phraseRow(sid, id)!);
+    async schedulePhrase(sid, id, schedule) {
+      const r = await (await ready).run("UPDATE phrases SET step = ?, due_day = ?, reviewed_at = ? WHERE id = ? AND sid = ?", [
+        schedule.step,
+        schedule.dueDay,
+        schedule.reviewedAt,
+        id,
+        sid,
+      ]);
+      if (r.changes === 0) return null;
+      const row = await phraseRow(sid, id);
+      return row ? toPhrase(row) : null;
     },
-    listPhrases(sid) {
-      const rows = db.prepare("SELECT * FROM phrases WHERE sid = ? ORDER BY created_at DESC").all(sid) as Row[];
+    async listPhrases(sid) {
+      const rows = await (await ready).all("SELECT * FROM phrases WHERE sid = ? ORDER BY created_at DESC", [sid]);
       return rows.map(toPhrase);
     },
-    markPhrase(sid, id, reviewed, now) {
-      const result = db
-        .prepare("UPDATE phrases SET reviewed_at = ? WHERE id = ? AND sid = ?")
-        .run(reviewed ? now : null, id, sid);
-      if (Number(result.changes) === 0) return null;
-      return toPhrase(db.prepare("SELECT * FROM phrases WHERE id = ?").get(id) as Row);
+    async markPhrase(sid, id, reviewed, now) {
+      const r = await (await ready).run("UPDATE phrases SET reviewed_at = ? WHERE id = ? AND sid = ?", [reviewed ? now : null, id, sid]);
+      if (r.changes === 0) return null;
+      const row = await phraseRow(sid, id);
+      return row ? toPhrase(row) : null;
     },
   };
+}
+
+/** A local SQLite file, or ":memory:" in tests. */
+export function createSqliteStore(path: string): Store {
+  // Loaded lazily so a host that uses a hosted database never loads node:sqlite.
+  return createSqlStore(import("./sqlite-db").then((m) => m.openSqliteDb(path)));
 }

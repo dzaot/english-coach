@@ -14,6 +14,10 @@ const EnvSchema = z.object({
   REPLY_TIER: z.enum(["fast", "balanced"]).default("balanced"),
   PUBLIK_COST_LOG: z.enum(["0", "1"]).default("0"),
   DATABASE_PATH: z.string().min(1).default("./data/coach.db"),
+  DATABASE_URL: z.string().regex(/^(libsql|https?|wss?):\/\//).optional(),
+  DATABASE_AUTH_TOKEN: z.string().min(1).optional(),
+  TURSO_DATABASE_URL: z.string().regex(/^(libsql|https?|wss?):\/\//).optional(),
+  TURSO_AUTH_TOKEN: z.string().min(1).optional(),
   NODE_ENV: z.string().optional(),
 });
 
@@ -33,6 +37,8 @@ export interface AppConfig {
   /** Log what publik charged for each call (server log, no keys, no content). */
   readonly costLog: boolean;
   readonly databasePath: string;
+  /** A hosted libSQL database (Turso). When set, it is used instead of the local file. */
+  readonly database: { readonly url: string | null; readonly authToken: string | null };
   readonly isProduction: boolean;
 }
 
@@ -65,6 +71,10 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     replyTier: e.REPLY_TIER,
     costLog: e.PUBLIK_COST_LOG === "1",
     databasePath: e.DATABASE_PATH,
+    database: {
+      url: e.DATABASE_URL ?? e.TURSO_DATABASE_URL ?? null,
+      authToken: e.DATABASE_AUTH_TOKEN ?? e.TURSO_AUTH_TOKEN ?? null,
+    },
     isProduction: e.NODE_ENV === "production",
   };
 }

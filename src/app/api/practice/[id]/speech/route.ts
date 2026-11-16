@@ -6,7 +6,10 @@ import { resolveAi } from "@/server/publik/gate";
 export async function POST(request: Request, { params }: IdParams) {
   return handle(
     request,
-    async ({ ctx, sid }) => speakTurn(ctx, resolveAi(ctx, sid), sid, (await params).id, await readJson(request)),
+    async ({ ctx, sid }) => speakTurn(ctx, await resolveAi(ctx, sid), sid, (await params).id, await readJson(request)),
     { usesAi: true },
   );
 }
+
+/** AI calls (transcription, feedback) can take longer than a serverless default. */
+export const maxDuration = 60;

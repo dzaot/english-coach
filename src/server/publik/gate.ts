@@ -29,7 +29,7 @@ function secretOf(ctx: AppContext): string {
 async function connectWallet(ctx: AppContext, sid: string): Promise<{ wallet: Wallet | null; message: string | null }> {
   const { config, store } = ctx;
   for (let attempt = 0; attempt < 2; attempt++) {
-    const user = store.getOrCreateUser(sid, ctx.now().toISOString());
+    const user = await store.getOrCreateUser(sid, ctx.now().toISOString());
     let key = user.installKeySealed ? unseal(user.installKeySealed, secretOf(ctx)) : null;
     if (!key) {
       const cred = await provisionInstall(ctx.fetch, {
@@ -38,12 +38,12 @@ async function connectWallet(ctx: AppContext, sid: string): Promise<{ wallet: Wa
         installId: user.installId ?? randomUUID(),
         os: config.installOs,
       });
-      store.updateUser(sid, { installKeySealed: seal(cred.key, secretOf(ctx)), installId: cred.installId, claimUrl: cred.claimUrl });
+      await store.updateUser(sid, { installKeySealed: seal(cred.key, secretOf(ctx)), installId: cred.installId, claimUrl: cred.claimUrl });
       key = cred.key;
     }
     const r = await readWallet(ctx.fetch, config.publikOrigin, key);
     if (r.status === 401) {
-      store.updateUser(sid, { installKeySealed: null, choice: null }); // a revoked key: provision again
+      await store.updateUser(sid, { installKeySealed: null, choice: null }); // a revoked key: provision again
       continue;
     }
     return { wallet: r.wallet, message: r.message };
@@ -63,7 +63,7 @@ export async function getGateState(ctx: AppContext, sid: string): Promise<GateSt
   }
   const w = result.wallet;
   if (!w) return unreachable(result.message ? new Error(result.message) : undefined);
-  const user = ctx.store.getOrCreateUser(sid, ctx.now().toISOString());
+  const user = await ctx.store.getOrCreateUser(sid, ctx.now().toISOString());
   if (w.claim_state !== "claimed") {
     const signIn = w.claim_url ?? user.claimUrl ?? `${ctx.config.publikOrigin}/wallet`;
     return { state: "screen", screen: gateScreen("sign_in", w), links: { signIn } };
@@ -86,26 +86,26 @@ export async function applyGateAction(ctx: AppContext, sid: string, input: unkno
   const parsed = ActionSchema.safeParse(input);
   if (!parsed.success) throw new AppError("invalid_input");
   const action = parsed.data;
-  ctx.store.getOrCreateUser(sid, ctx.now().toISOString());
+  await ctx.store.getOrCreateUser(sid, ctx.now().toISOString());
   if (action.action === "own_key") {
     const key = action.key.trim();
     if (!OWN_KEY_RE.test(key)) throw new AppError("own_key_invalid");
-    ctx.store.updateUser(sid, { ownKeySealed: seal(key, secretOf(ctx)), choice: "own_key" });
+    await ctx.store.updateUser(sid, { ownKeySealed: seal(key, secretOf(ctx)), choice: "own_key" });
   } else {
-    ctx.store.updateUser(sid, { choice: action.action === "connect" ? "publik" : null });
+    await ctx.store.updateUser(sid, { choice: action.action === "connect" ? "publik" : null });
   }
   return getGateState(ctx, sid);
 }
 
 /** The AI client for this person. Throws gate_required until the gate is passed. */
-export function resolveAi(ctx: AppContext, sid: string): AiProvider {
+export async function resolveAi(ctx: AppContext, sid: string): Promise<AiProvider> {
   const { config } = ctx;
   if (!config.gateEnabled) {
     if (config.aiProvider === "mock") return createMockProvider();
     if (!config.publikApiKeyOverride) throw new AppError("internal", { detail: "AI_PROVIDER=publik with the gate off needs PUBLIK_API_KEY" });
     return publikProvider(config, config.publikApiKeyOverride, ctx.fetch);
   }
-  const user = ctx.store.getOrCreateUser(sid, ctx.now().toISOString());
+  const user = await ctx.store.getOrCreateUser(sid, ctx.now().toISOString());
   const sealed = user.choice === "own_key" ? user.ownKeySealed : user.choice === "publik" ? user.installKeySealed : null;
   const key = sealed ? unseal(sealed, secretOf(ctx)) : null;
   if (!key) throw new AppError("gate_required");
@@ -123,14 +123,14 @@ export function resetTelemetryThrottle(): void {
 /** Usage counting after the gate: app_opened on load, active_session every 30 minutes (sent by the page). */
 export async function recordTelemetry(ctx: AppContext, sid: string, event: TelemetryEvent): Promise<"sent" | "skipped" | "throttled"> {
   if (!ctx.config.gateEnabled) return "skipped";
-  const user = ctx.store.getOrCreateUser(sid, ctx.now().toISOString());
+  const user = await ctx.store.getOrCreateUser(sid, ctx.now().toISOString());
   const key = user.installKeySealed && user.choice ? unseal(user.installKeySealed, secretOf(ctx)) : null;
   if (!key) return "skipped";
   const throttleKey = `${sid}:${event}`;
   const now = ctx.now().getTime();
   if (now - (lastSent.get(throttleKey) ?? -Infinity) < MIN_INTERVAL_MS[event]) return "throttled";
   lastSent.set(throttleKey, now);
-  const telemetryId = user.telemetryId ?? ctx.store.updateUser(sid, { telemetryId: randomUUID() }).telemetryId!;
+  const telemetryId = user.telemetryId ?? (await ctx.store.updateUser(sid, { telemetryId: randomUUID() })).telemetryId!;
   await sendTelemetry(ctx.fetch, { origin: ctx.config.publikOrigin, key, telemetryId, event, os: ctx.config.installOs });
   return "sent";
 }

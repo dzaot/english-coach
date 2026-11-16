@@ -6,10 +6,13 @@ export async function POST(request: Request, { params }: IdParams) {
   return handle(
     request,
     async ({ ctx, sid }) => {
-      const ai = resolveAi(ctx, sid);
+      const ai = await resolveAi(ctx, sid);
       const body = (await readJson(request)) as { tzOffset?: unknown } | null;
       return finishPractice(ctx, ai, sid, (await params).id, { tzOffset: body?.tzOffset });
     },
     { usesAi: true },
   );
 }
+
+/** AI calls (transcription, feedback) can take longer than a serverless default. */
+export const maxDuration = 60;

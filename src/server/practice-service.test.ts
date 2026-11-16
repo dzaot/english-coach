@@ -44,7 +44,7 @@ describe("takeTurn", () => {
     const out = await takeTurn(ctx, ai, SID, practice.id, { audio: new Blob([new Uint8Array(5)], { type: "audio/webm" }) });
     expect(out.userText.length).toBeGreaterThan(5);
     expect(out.replyText).toMatch(/\?$/);
-    expect(getPractice(ctx, SID, practice.id).turns).toHaveLength(3);
+    expect((await getPractice(ctx, SID, practice.id)).turns).toHaveLength(3);
   });
 
   it("removes em dashes from the counterpart's reply", async () => {
@@ -73,7 +73,7 @@ describe("takeTurn", () => {
   it("stops at the turn limit", async () => {
     const { ctx, practice } = await started();
     const turns = Array.from({ length: 24 }, (_, i) => ({ role: i % 2 ? "counterpart" : "user", text: "x" }) as const);
-    ctx.store.savePracticeTurns(SID, practice.id, turns);
+    await ctx.store.savePracticeTurns(SID, practice.id, turns);
     await expect(takeTurn(ctx, ai, SID, practice.id, { text: "hi" })).rejects.toMatchObject({ code: "turn_limit" });
   });
 });
@@ -91,11 +91,11 @@ describe("finishPractice", () => {
     const out = await finishPractice(ctx, ai, SID, practice.id, { tzOffset: 480 });
     expect(out.feedback.betterPhrases).toHaveLength(3);
     expect(out.streak).toEqual({ current: 1, best: 1, practicedToday: true });
-    expect(ctx.store.listPhrases(SID)).toHaveLength(3);
+    expect(await ctx.store.listPhrases(SID)).toHaveLength(3);
     // finishing twice is safe and adds nothing
     const again = await finishPractice(ctx, ai, SID, practice.id, { tzOffset: 480 });
     expect(again.feedback).toEqual(out.feedback);
-    expect(ctx.store.listPhrases(SID)).toHaveLength(3);
+    expect(await ctx.store.listPhrases(SID)).toHaveLength(3);
     await expect(takeTurn(ctx, ai, SID, practice.id, { text: "more" })).rejects.toMatchObject({ code: "session_finished" });
   });
 
@@ -132,7 +132,7 @@ describe("progress and phrases", () => {
     await finishPractice(ctx, ai, SID, practice.id, { tzOffset: 480 });
     const next = await startPractice(ctx, ai, SID, { scenarioId: "team_meeting", industryId: "tech" });
     await takeTurn(ctx, ai, SID, next.practice.id, { text: "not finished yet" });
-    const progress = getProgress(ctx, SID, 480);
+    const progress = await getProgress(ctx, SID, 480);
     expect(progress.stats).toEqual({ wordsSpoken: 10, practices: 1, phrasesLearned: 0, scores: [72] });
     expect(progress.streak.current).toBe(1);
     expect(progress.history).toHaveLength(1);
@@ -143,16 +143,16 @@ describe("progress and phrases", () => {
     expect(progress.week[6]).toEqual({ day: "2026-11-15", practiced: true });
     expect(progress.week[5].practiced).toBe(false);
 
-    const marked = markPhrase(ctx, SID, progress.phrases[0].id, { reviewed: true });
+    const marked = await markPhrase(ctx, SID, progress.phrases[0].id, { reviewed: true });
     expect(marked.reviewedAt).not.toBeNull();
-    expect(getProgress(ctx, SID, 480).toReview).toBe(2);
-    expect(() => markPhrase(ctx, SID, "nope", { reviewed: true })).toThrow(expect.objectContaining({ code: "not_found" }));
-    expect(() => markPhrase(ctx, SID, progress.phrases[0].id, { reviewed: "yes" })).toThrow(expect.objectContaining({ code: "invalid_input" }));
-    expect(() => getProgress(ctx, SID, Number.NaN)).toThrow(expect.objectContaining({ code: "invalid_input" }));
+    expect((await getProgress(ctx, SID, 480)).toReview).toBe(2);
+    await expect(markPhrase(ctx, SID, "nope", { reviewed: true })).rejects.toThrow(expect.objectContaining({ code: "not_found" }));
+    await expect(markPhrase(ctx, SID, progress.phrases[0].id, { reviewed: "yes" })).rejects.toThrow(expect.objectContaining({ code: "invalid_input" }));
+    await expect(getProgress(ctx, SID, Number.NaN)).rejects.toThrow(expect.objectContaining({ code: "invalid_input" }));
   });
 
-  it("hides another user's practice", () => {
-    expect(() => getPractice(testContext(), SID, "x")).toThrow(expect.objectContaining({ code: "not_found" }));
+  it("hides another user's practice", async () => {
+    await expect(getPractice(testContext(), SID, "x")).rejects.toThrow(expect.objectContaining({ code: "not_found" }));
   });
 });
 
@@ -199,7 +199,7 @@ describe("drillPhrase (Dilo tú)", () => {
     await takeTurn(ctx, ai, SID, practice.id, { text: "I am agree with the plan." });
     await takeTurn(ctx, ai, SID, practice.id, { text: "two" });
     await finishPractice(ctx, ai, SID, practice.id, { tzOffset: 0 });
-    return { ctx, phrase: ctx.store.listPhrases(SID)[0] };
+    return { ctx, phrase: (await ctx.store.listPhrases(SID))[0] };
   }
   const saying = (text: string): AiProvider => ({
     ...ai,
@@ -211,9 +211,9 @@ describe("drillPhrase (Dilo tú)", () => {
   it("schedules new phrases for tomorrow and counts what is due", async () => {
     const { ctx, phrase } = await withPhrases();
     expect(phrase.dueDay).toBe("2026-11-16");
-    expect(getProgress(ctx, SID, 0).dueToday).toBe(0);
-    ctx.store.schedulePhrase(SID, phrase.id, { step: 0, dueDay: "2026-11-15", reviewedAt: null });
-    expect(getProgress(ctx, SID, 0).dueToday).toBe(1);
+    expect((await getProgress(ctx, SID, 0)).dueToday).toBe(0);
+    await ctx.store.schedulePhrase(SID, phrase.id, { step: 0, dueDay: "2026-11-15", reviewedAt: null });
+    expect((await getProgress(ctx, SID, 0)).dueToday).toBe(1);
   });
 
   it("moves the phrase ahead when it was said right", async () => {
@@ -238,7 +238,7 @@ describe("drillPhrase (Dilo tú)", () => {
 
   it("marks the phrase learned after the last review", async () => {
     const { ctx, phrase } = await withPhrases();
-    ctx.store.schedulePhrase(SID, phrase.id, { step: 3, dueDay: "2026-11-15", reviewedAt: null });
+    await ctx.store.schedulePhrase(SID, phrase.id, { step: 3, dueDay: "2026-11-15", reviewedAt: null });
     const out = await drillPhrase(ctx, saying(phrase.better), SID, phrase.id, { audio, tzOffset: 0 });
     expect(out.phrase.reviewedAt).not.toBeNull();
     expect(out.phrase.dueDay).toBeNull();
