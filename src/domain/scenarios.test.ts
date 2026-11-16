@@ -33,8 +33,8 @@ describe("scenarios catalog", () => {
 
   it("gives every scenario Spanish copy and an English counterpart", () => {
     for (const s of SCENARIOS) {
-      expect(s.titleEs.length).toBeGreaterThan(3);
-      expect(s.descriptionEs.length).toBeGreaterThan(10);
+      expect(s.title.length).toBeGreaterThan(3);
+      expect(s.description.length).toBeGreaterThan(10);
       expect(s.counterpart.name.length).toBeGreaterThan(1);
       expect(s.counterpart.roleEn.length).toBeGreaterThan(3);
     }

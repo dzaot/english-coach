@@ -1,14 +1,14 @@
 import type { Feedback, FinishResult, PracticeView, Progress } from "@/lib/types";
 
 export const feedback: Feedback = {
-  summaryEs: "Te comunicaste con claridad.",
+  summary: "Te comunicaste con claridad.",
   wellDone: ["Diste ejemplos concretos", "Saludaste con naturalidad"],
   betterPhrases: [
-    { original: "I am agree", better: "I agree", whyEs: "Agree es verbo." },
-    { original: "I make a process", better: "I created a process", whyEs: "Pasado de create." },
-    { original: "I have 5 years", better: "I bring five years", whyEs: "Suena más seguro." },
+    { original: "I am agree", better: "I agree", why: "Agree es verbo." },
+    { original: "I make a process", better: "I created a process", why: "Pasado de create." },
+    { original: "I have 5 years", better: "I bring five years", why: "Suena más seguro." },
   ],
-  vocabulary: [{ term: "follow up", meaningEs: "dar seguimiento" }],
+  vocabulary: [{ term: "follow up", meaning: "dar seguimiento" }],
   score: 78,
 };
 
@@ -39,8 +39,8 @@ export const progress = (over: Partial<Progress> = {}): Progress => ({
   week: Array.from({ length: 7 }, (_, i) => ({ day: `2026-11-${String(9 + i).padStart(2, "0")}`, practiced: i >= 5 })),
   history: [{ id: "h1", scenarioId: "client_call", industryId: "tech", finishedAt: "2026-11-14T18:00:00Z", score: 81 }],
   phrases: [
-    { id: "ph1", practiceId: "h1", original: "I am agree", better: "I agree", whyEs: "Verbo", createdAt: "2026-11-14T18:00:00Z", reviewedAt: "2026-11-15T10:00:00Z", step: 4, dueDay: null },
-    { id: "ph2", practiceId: "h1", original: "Make a meeting", better: "Set up a meeting", whyEs: "Colocación", createdAt: "2026-11-14T18:00:00Z", reviewedAt: null, step: 0, dueDay: "2026-11-15" },
+    { id: "ph1", practiceId: "h1", original: "I am agree", better: "I agree", why: "Verbo", createdAt: "2026-11-14T18:00:00Z", reviewedAt: "2026-11-15T10:00:00Z", step: 4, dueDay: null },
+    { id: "ph2", practiceId: "h1", original: "Make a meeting", better: "Set up a meeting", why: "Colocación", createdAt: "2026-11-14T18:00:00Z", reviewedAt: null, step: 0, dueDay: "2026-11-15" },
   ],
   toReview: 1,
   dueToday: 1,

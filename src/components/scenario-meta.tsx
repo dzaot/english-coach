@@ -10,9 +10,9 @@ export const SCENARIO_ICONS: Record<ScenarioId, LucideIcon> = {
 };
 
 export function scenarioTitle(id: ScenarioId): string {
-  return SCENARIOS.find((s) => s.id === id)?.titleEs ?? id;
+  return SCENARIOS.find((s) => s.id === id)?.title ?? id;
 }
 
 export function industryLabel(id: IndustryId): string {
-  return INDUSTRIES.find((i) => i.id === id)?.labelEs ?? id;
+  return INDUSTRIES.find((i) => i.id === id)?.label ?? id;
 }

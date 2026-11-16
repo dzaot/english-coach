@@ -9,7 +9,7 @@ export function HelpCard({ help, onListen, onClose }: { help: Help; onListen: ()
         <Lightbulb aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-accent-ink" />
         <p className="flex-1 text-sm">
           <span className="font-semibold">Te preguntó: </span>
-          {help.translationEs}
+          {help.translation}
         </p>
         <button
           type="button"
@@ -21,8 +21,8 @@ export function HelpCard({ help, onListen, onClose }: { help: Help; onListen: ()
         </button>
       </div>
       <p className="text-sm font-semibold text-accent-ink">Puedes decir:</p>
-      <p lang="en" className="text-lg font-semibold leading-snug">{help.suggestionEn}</p>
-      <p className="text-sm text-muted">{help.tipEs}</p>
+      <p lang="en" className="text-lg font-semibold leading-snug">{help.suggestion}</p>
+      <p className="text-sm text-muted">{help.tip}</p>
       <button
         type="button"
         onClick={onListen}

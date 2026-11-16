@@ -18,11 +18,11 @@ const FOLLOW_UPS = [
   "Thanks for sharing. Do you have any questions for me?",
 ];
 
-const BETTER: Record<string, { better: string; whyEs: string }> = {
-  agree: { better: "I agree with the plan, but I'd like more details on the deadline.", whyEs: "\"Agree\" ya es verbo: no lleva \"am\"." },
-  make: { better: "In my last role, I created a new returns process that cut handling time by 40%.", whyEs: "\"Create\" o \"set up\" un proceso suena más natural que \"make\", y el pasado es \"created\"." },
-  perfect: { better: "I tend to be a perfectionist, so I'm learning to prioritize and move faster.", whyEs: "Más directo y muestra que ya estás trabajando en ello." },
-  default: { better: "I bring five years of customer service experience, and I work really well with people.", whyEs: "\"I bring\" suena más seguro en una entrevista." },
+const BETTER: Record<string, { better: string; why: string }> = {
+  agree: { better: "I agree with the plan, but I'd like more details on the deadline.", why: "\"Agree\" ya es verbo: no lleva \"am\"." },
+  make: { better: "In my last role, I created a new returns process that cut handling time by 40%.", why: "\"Create\" o \"set up\" un proceso suena más natural que \"make\", y el pasado es \"created\"." },
+  perfect: { better: "I tend to be a perfectionist, so I'm learning to prioritize and move faster.", why: "Más directo y muestra que ya estás trabajando en ello." },
+  default: { better: "I bring five years of customer service experience, and I work really well with people.", why: "\"I bring\" suena más seguro en una entrevista." },
 };
 
 function userLines(transcript: string): string[] {
@@ -32,7 +32,7 @@ function userLines(transcript: string): string[] {
     .map((l) => l.slice("USER: ".length).trim());
 }
 
-function improve(line: string): { original: string; better: string; whyEs: string } {
+function improve(line: string): { original: string; better: string; why: string } {
   const key = Object.keys(BETTER).find((k) => k !== "default" && line.toLowerCase().includes(k)) ?? "default";
   return { original: line, ...BETTER[key] };
 }
@@ -41,22 +41,22 @@ function mockFeedback(transcript: string): string {
   const candidates = [...userLines(transcript).slice(-3), ...SAMPLE_ANSWERS].map(improve);
   const picked = candidates.filter((c, i) => candidates.findIndex((o) => o.better === c.better) === i).slice(0, 3);
   return JSON.stringify({
-    summaryEs: "Te comunicaste con claridad y mantuviste la conversación. Con unos ajustes de gramática vas a sonar todavía más seguro.",
+    summary: "Te comunicaste con claridad y mantuviste la conversación. Con unos ajustes de gramática vas a sonar todavía más seguro.",
     wellDone: ["Respondiste cada pregunta sin quedarte callado", "Diste ejemplos concretos con cifras"],
     betterPhrases: picked,
     vocabulary: [
-      { term: "cut (time) by", meaningEs: "reducir (el tiempo) en" },
-      { term: "I tend to", meaningEs: "suelo, tiendo a" },
-      { term: "hands-on", meaningEs: "práctico, que se involucra" },
+      { term: "cut (time) by", meaning: "reducir (el tiempo) en" },
+      { term: "I tend to", meaning: "suelo, tiendo a" },
+      { term: "hands-on", meaning: "práctico, que se involucra" },
     ],
     score: 72,
   });
 }
 
 const MOCK_HELP = JSON.stringify({
-  translationEs: "¿Puedes darme un ejemplo concreto de un resultado del que estés orgulloso?",
-  suggestionEn: "Sure. Last year I improved our returns process and cut handling time by forty percent.",
-  tipEs: "Da una cifra concreta: hace tu respuesta más creíble.",
+  translation: "¿Puedes darme un ejemplo concreto de un resultado del que estés orgulloso?",
+  suggestion: "Sure. Last year I improved our returns process and cut handling time by forty percent.",
+  tip: "Da una cifra concreta: hace tu respuesta más creíble.",
 });
 
 export function createMockProvider(): AiProvider {

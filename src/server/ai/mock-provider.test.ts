@@ -38,8 +38,8 @@ describe("mock provider", () => {
 
   it("answers help requests with valid help JSON", async () => {
     const { parseHelp } = await import("@/domain/help");
-    const raw = await ai.chat([{ role: "system", content: "HELP_JSON translationEs suggestionEn" }, { role: "user", content: "x" }], { tier: "fast" });
-    expect(parseHelp(raw).suggestionEn.length).toBeGreaterThan(5);
+    const raw = await ai.chat([{ role: "system", content: "HELP_JSON translation suggestion" }, { role: "user", content: "x" }], { tier: "fast" });
+    expect(parseHelp(raw).suggestion.length).toBeGreaterThan(5);
   });
 
   it("uses the browser voice (no audio)", async () => {

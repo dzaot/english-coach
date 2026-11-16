@@ -8,10 +8,10 @@ import type { Store } from "./store";
 
 const SID = "user-1";
 const feedback = {
-  summaryEs: "Bien",
+  summary: "Bien",
   wellDone: ["Claro"],
-  betterPhrases: [{ original: "I am agree", better: "I agree", whyEs: "Verbo" }],
-  vocabulary: [{ term: "follow up", meaningEs: "seguimiento" }],
+  betterPhrases: [{ original: "I am agree", better: "I agree", why: "Verbo" }],
+  vocabulary: [{ term: "follow up", meaning: "seguimiento" }],
   score: 70,
 };
 
@@ -45,7 +45,7 @@ describe("SQLite store", () => {
     expect(withTurn.turns).toHaveLength(2);
     const done = store.finishPractice(SID, p.id, { feedback, finishedAt: "2026-11-15T10:08:00Z", localDay: "2026-11-15" });
     expect(done.score).toBe(70);
-    expect(done.feedback?.summaryEs).toBe("Bien");
+    expect(done.feedback?.summary).toBe("Bien");
     expect(store.practiceDays(SID)).toEqual(["2026-11-15"]);
     expect(store.listPractices(SID, 10).map((x) => x.id)).toEqual([p.id]);
   });

@@ -161,8 +161,8 @@ describe("getHelp", () => {
     const { ctx, practice } = await started();
     const chat = vi.fn<AiProvider["chat"]>(ai.chat);
     const help = await getHelp(ctx, { ...ai, chat }, SID, practice.id);
-    expect(help.translationEs.length).toBeGreaterThan(3);
-    expect(help.suggestionEn.length).toBeGreaterThan(3);
+    expect(help.translation.length).toBeGreaterThan(3);
+    expect(help.suggestion.length).toBeGreaterThan(3);
     expect(chat.mock.calls[0][1]).toEqual({ tier: "fast", maxTokens: 300 });
   });
 

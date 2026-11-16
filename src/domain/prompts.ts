@@ -20,12 +20,12 @@ export function counterpartSystemPrompt(scenario: Scenario, industry: Industry):
 
 const FEEDBACK_SPEC = `Return ONLY a JSON object with this exact shape, no prose:
 {
-  "summaryEs": "2 short sentences in neutral Latin American Spanish about how it went",
+  "summary": "2 short sentences in neutral Latin American Spanish about how it went",
   "wellDone": ["2 or 3 specific things they did well, in Spanish, max 15 words each"],
   "betterPhrases": [
-    {"original": "an exact sentence the USER said", "better": "a more natural way a native professional would say it, max 25 words", "whyEs": "one short reason in Spanish, max 20 words"}
+    {"original": "an exact sentence the USER said", "better": "a more natural way a native professional would say it, max 25 words", "why": "one short reason in Spanish, max 20 words"}
   ],
-  "vocabulary": [{"term": "useful English word or phrase for this situation", "meaningEs": "meaning in Spanish"}],
+  "vocabulary": [{"term": "useful English word or phrase for this situation", "meaning": "meaning in Spanish"}],
   "score": 0-100
 }
 betterPhrases: exactly 3 items, taken from what the USER said (never from the counterpart). If the user's English is already natural, suggest more idiomatic or more confident versions.
@@ -46,7 +46,7 @@ export function feedbackMessages(scenario: Scenario, industry: Industry, turns: 
     },
     {
       role: "user",
-      content: `Scenario: ${scenario.titleEs} (${scenario.counterpart.roleEn}). Industry: ${industry.labelEs}.\nTranscript (speech-to-text, ignore small transcription errors):\n${transcript}`,
+      content: `Scenario: ${scenario.title} (${scenario.counterpart.roleEn}). Industry: ${industry.label}.\nTranscript (speech-to-text, ignore small transcription errors):\n${transcript}`,
     },
   ];
 }

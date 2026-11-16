@@ -2,15 +2,15 @@ import { describe, expect, it } from "vitest";
 import { parseFeedback, scoreLabel } from "./feedback";
 
 const valid = {
-  summaryEs: "Buen ritmo y respuestas claras.",
+  summary: "Buen ritmo y respuestas claras.",
   wellDone: ["Diste un ejemplo concreto", "Saludaste con naturalidad"],
   betterPhrases: [
-    { original: "I have 5 years of experience in sales", better: "I've spent five years in sales", whyEs: "Más natural" },
-    { original: "I am agree", better: "I agree", whyEs: "Agree es verbo" },
-    { original: "Make a meeting", better: "Set up a meeting", whyEs: "Colocación común" },
-    { original: "Extra", better: "Extra one", whyEs: "Sobra" },
+    { original: "I have 5 years of experience in sales", better: "I've spent five years in sales", why: "Más natural" },
+    { original: "I am agree", better: "I agree", why: "Agree es verbo" },
+    { original: "Make a meeting", better: "Set up a meeting", why: "Colocación común" },
+    { original: "Extra", better: "Extra one", why: "Sobra" },
   ],
-  vocabulary: [{ term: "follow up", meaningEs: "dar seguimiento" }],
+  vocabulary: [{ term: "follow up", meaning: "dar seguimiento" }],
   score: 78,
 };
 
@@ -24,7 +24,7 @@ describe("parseFeedback", () => {
 
   it("accepts JSON wrapped in a markdown fence with extra prose", () => {
     const raw = "Here you go:\n```json\n" + JSON.stringify(valid) + "\n```\nGood luck!";
-    expect(parseFeedback(raw).summaryEs).toBe(valid.summaryEs);
+    expect(parseFeedback(raw).summary).toBe(valid.summary);
   });
 
   it("clamps and rounds the score", () => {
@@ -34,7 +34,7 @@ describe("parseFeedback", () => {
   });
 
   it("removes em dashes the model writes", () => {
-    const raw = JSON.stringify({ ...valid, summaryEs: "Bien — sigue así", betterPhrases: [{ original: "a", better: "I agree — fully", whyEs: "x — y" }] });
+    const raw = JSON.stringify({ ...valid, summary: "Bien — sigue así", betterPhrases: [{ original: "a", better: "I agree — fully", why: "x — y" }] });
     const fb = parseFeedback(raw);
     expect(JSON.stringify(fb)).not.toContain("—");
     expect(fb.betterPhrases[0].better).toBe("I agree, fully");

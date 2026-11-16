@@ -46,7 +46,7 @@ export interface PhraseRecord {
   readonly practiceId: string;
   readonly original: string;
   readonly better: string;
-  readonly whyEs: string;
+  readonly why: string;
   readonly createdAt: string;
   /** Set when the phrase is learned (manually or after the last spaced review). */
   readonly reviewedAt: string | null;
@@ -72,7 +72,7 @@ export interface Store {
   addPhrases(
     sid: string,
     practiceId: string,
-    phrases: readonly { original: string; better: string; whyEs: string }[],
+    phrases: readonly { original: string; better: string; why: string }[],
     now: string,
     dueDay: string,
   ): PhraseRecord[];

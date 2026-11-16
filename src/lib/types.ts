@@ -13,7 +13,7 @@ export interface Phrase {
   readonly practiceId: string;
   readonly original: string;
   readonly better: string;
-  readonly whyEs: string;
+  readonly why: string;
   readonly createdAt: string;
   readonly reviewedAt: string | null;
   readonly step: number;

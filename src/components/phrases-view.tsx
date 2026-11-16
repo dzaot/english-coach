@@ -66,7 +66,7 @@ export function PhrasesView({ phrases, onToggle, onDrilled, onBack }: Props) {
                     <span className="font-semibold">Antes: </span>
                     <span lang="en">{p.original}</span>
                   </p>
-                  <p className="text-sm text-muted">{p.whyEs}</p>
+                  <p className="text-sm text-muted">{p.why}</p>
                   {!done && !dueNow && p.dueDay ? (
                     <p className="text-sm text-muted">Próximo repaso: {formatDay(`${p.dueDay}T12:00:00Z`)}</p>
                   ) : null}

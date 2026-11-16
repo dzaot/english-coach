@@ -40,7 +40,7 @@ describe("practice flow over HTTP (mock AI)", () => {
     expect(spoken).toEqual({ audio: null });
 
     const helped = await (await help.POST(post(`/api/practice/${id}/help`, {}), params(id))).json();
-    expect(helped.suggestionEn.length).toBeGreaterThan(5);
+    expect(helped.suggestion.length).toBeGreaterThan(5);
 
     const form = new FormData();
     form.append("text", "Sorry about that, let me check your account.");

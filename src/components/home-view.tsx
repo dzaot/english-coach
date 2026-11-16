@@ -76,8 +76,8 @@ export function HomeView({ progress, starting, onStart, onOpenPhrases, onOpenHis
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block font-semibold">{s.titleEs}</span>
-                  <span className="block text-sm text-muted">{s.descriptionEs}</span>
+                  <span className="block font-semibold">{s.title}</span>
+                  <span className="block text-sm text-muted">{s.description}</span>
                 </span>
               </label>
             );
@@ -98,7 +98,7 @@ export function HomeView({ progress, starting, onStart, onOpenPhrases, onOpenHis
                 }`}
               >
                 <input type="radio" name="industry" value={i.id} checked={checked} onChange={() => setIndustryId(i.id)} className="sr-only" />
-                {i.labelEs}
+                {i.label}
               </label>
             );
           })}

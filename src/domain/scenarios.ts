@@ -21,8 +21,8 @@ export type IndustryId = (typeof INDUSTRY_IDS)[number];
 
 export interface Scenario {
   readonly id: ScenarioId;
-  readonly titleEs: string;
-  readonly descriptionEs: string;
+  readonly title: string;
+  readonly description: string;
   readonly counterpart: { readonly name: string; readonly roleEn: string };
   /** What the counterpart is trying to do, for the system prompt. */
   readonly goalEn: string;
@@ -30,7 +30,7 @@ export interface Scenario {
 
 export interface Industry {
   readonly id: IndustryId;
-  readonly labelEs: string;
+  readonly label: string;
   /** The user's job title inside role-plays, e.g. "sales representative". */
   readonly roleEn: string;
   readonly contextEn: string;
@@ -39,63 +39,63 @@ export interface Industry {
 export const SCENARIOS: readonly Scenario[] = [
   {
     id: "job_interview",
-    titleEs: "Entrevista de trabajo",
-    descriptionEs: "Preséntate, habla de tu experiencia y responde preguntas difíciles.",
+    title: "Entrevista de trabajo",
+    description: "Preséntate, habla de tu experiencia y responde preguntas difíciles.",
     counterpart: { name: "Sarah", roleEn: "hiring manager" },
     goalEn: "interview the candidate: background, a concrete achievement, a weakness, why this company",
   },
   {
     id: "team_meeting",
-    titleEs: "Reunión de equipo",
-    descriptionEs: "Da tu actualización, pide ayuda y opina con seguridad.",
+    title: "Reunión de equipo",
+    description: "Da tu actualización, pide ayuda y opina con seguridad.",
     counterpart: { name: "James", roleEn: "team lead" },
     goalEn: "run a weekly stand-up: ask for a status update, blockers, and an opinion on a plan",
   },
   {
     id: "client_call",
-    titleEs: "Llamada con cliente",
-    descriptionEs: "Resuelve una queja, explica opciones y cierra con próximos pasos.",
+    title: "Llamada con cliente",
+    description: "Resuelve una queja, explica opciones y cierra con próximos pasos.",
     counterpart: { name: "Michael", roleEn: "client" },
     goalEn: "be a slightly frustrated client with a problem who wants clear options and next steps",
   },
   {
     id: "presentation",
-    titleEs: "Presentación",
-    descriptionEs: "Presenta una idea en 2 minutos y responde preguntas del público.",
+    title: "Presentación",
+    description: "Presenta una idea en 2 minutos y responde preguntas del público.",
     counterpart: { name: "Priya", roleEn: "director in the audience" },
     goalEn: "listen to a short pitch, then ask follow-up questions about results, cost and timeline",
   },
   {
     id: "salary_negotiation",
-    titleEs: "Negociar salario",
-    descriptionEs: "Pide lo que vales con cifras, sin disculparte.",
+    title: "Negociar salario",
+    description: "Pide lo que vales con cifras, sin disculparte.",
     counterpart: { name: "Linda", roleEn: "HR manager" },
     goalEn: "make a job offer slightly below market and negotiate politely but firmly",
   },
 ];
 
 export const INDUSTRIES: readonly Industry[] = [
-  { id: "general", labelEs: "General", roleEn: "this position", contextEn: "a mid-size company" },
-  { id: "sales", labelEs: "Ventas", roleEn: "sales representative", contextEn: "a B2B sales team with monthly quotas" },
+  { id: "general", label: "General", roleEn: "this position", contextEn: "a mid-size company" },
+  { id: "sales", label: "Ventas", roleEn: "sales representative", contextEn: "a B2B sales team with monthly quotas" },
   {
     id: "customer_support",
-    labelEs: "Atención al cliente",
+    label: "Atención al cliente",
     roleEn: "customer support specialist",
     contextEn: "a support team that handles tickets, calls and refunds",
   },
   {
     id: "healthcare_admin",
-    labelEs: "Administración en salud",
+    label: "Administración en salud",
     roleEn: "medical office administrator",
     contextEn: "a busy clinic: scheduling, insurance, patient intake",
   },
   {
     id: "construction",
-    labelEs: "Construcción",
+    label: "Construcción",
     roleEn: "construction project coordinator",
     contextEn: "a construction company: crews, schedules, safety, change orders",
   },
-  { id: "tech", labelEs: "Tecnología", roleEn: "software developer", contextEn: "a software product team with sprints" },
+  { id: "tech", label: "Tecnología", roleEn: "software developer", contextEn: "a software product team with sprints" },
 ];
 
 export function isScenarioId(value: unknown): value is ScenarioId {

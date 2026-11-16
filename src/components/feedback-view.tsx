@@ -29,7 +29,7 @@ export function FeedbackView({ practice, feedback, streak, phrases = [], onDrill
       <Card>
         <p className="mb-3 text-sm font-semibold text-muted">{scenarioTitle(practice.scenarioId)}</p>
         <ScoreRing score={feedback.score} />
-        <p className="mt-4">{feedback.summaryEs}</p>
+        <p className="mt-4">{feedback.summary}</p>
       </Card>
 
       {streak ? (
@@ -72,7 +72,7 @@ export function FeedbackView({ practice, feedback, streak, phrases = [], onDrill
                 <ArrowRight aria-hidden="true" className="mt-1.5 size-4 shrink-0 text-primary-ink" />
                 <span lang="en">{p.better}</span>
               </p>
-              <p className="text-sm text-muted">{p.whyEs}</p>
+              <p className="text-sm text-muted">{p.why}</p>
               <button
                 type="button"
                 onClick={() => speaker.play(`better-${i}`, p.better)}
@@ -98,7 +98,7 @@ export function FeedbackView({ practice, feedback, streak, phrases = [], onDrill
             {feedback.vocabulary.map((v) => (
               <div key={v.term} className="rounded-2xl bg-surface-2 px-4 py-2.5">
                 <dt lang="en" className="font-semibold">{v.term}</dt>
-                <dd className="text-sm text-muted">{v.meaningEs}</dd>
+                <dd className="text-sm text-muted">{v.meaning}</dd>
               </div>
             ))}
           </dl>

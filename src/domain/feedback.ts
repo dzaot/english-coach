@@ -4,20 +4,20 @@ import { cleanDashes } from "./text";
 
 /** Feedback the coach returns at the end of a session. Explanations in Spanish, phrases in English. */
 export const FeedbackSchema = z.object({
-  summaryEs: z.string().min(1).max(600),
+  summary: z.string().min(1).max(600),
   wellDone: z.array(z.string().min(1).max(300)).min(1).max(5),
   betterPhrases: z
     .array(
       z.object({
         original: z.string().min(1).max(400),
         better: z.string().min(1).max(400),
-        whyEs: z.string().min(1).max(300),
+        why: z.string().min(1).max(300),
       }),
     )
     .min(1)
     .max(6),
   vocabulary: z
-    .array(z.object({ term: z.string().min(1).max(80), meaningEs: z.string().min(1).max(200) }))
+    .array(z.object({ term: z.string().min(1).max(80), meaning: z.string().min(1).max(200) }))
     .max(8),
   score: z.number().finite(),
 });
@@ -45,12 +45,12 @@ export function parseFeedback(raw: string): Feedback {
   if (!parsed.success) throw new FeedbackParseError(parsed.error.issues[0]?.message ?? "wrong shape");
   const fb = parsed.data;
   return {
-    summaryEs: cleanDashes(fb.summaryEs),
+    summary: cleanDashes(fb.summary),
     wellDone: fb.wellDone.map(cleanDashes),
     betterPhrases: fb.betterPhrases
       .slice(0, MAX_BETTER_PHRASES)
-      .map((p) => ({ original: p.original, better: cleanDashes(p.better), whyEs: cleanDashes(p.whyEs) })),
-    vocabulary: fb.vocabulary.map((v) => ({ term: cleanDashes(v.term), meaningEs: cleanDashes(v.meaningEs) })),
+      .map((p) => ({ original: p.original, better: cleanDashes(p.better), why: cleanDashes(p.why) })),
+    vocabulary: fb.vocabulary.map((v) => ({ term: cleanDashes(v.term), meaning: cleanDashes(v.meaning) })),
     score: Math.min(100, Math.max(0, Math.round(fb.score))),
   };
 }

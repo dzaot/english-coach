@@ -73,7 +73,7 @@ function toPhrase(r: Row): PhraseRecord {
     practiceId: String(r.practice_id),
     original: String(r.original),
     better: String(r.better),
-    whyEs: String(r.why_es),
+    why: String(r.why_es),
     createdAt: String(r.created_at),
     reviewedAt: str(r.reviewed_at),
     step: typeof r.step === "number" ? r.step : Number(r.step ?? 0),
@@ -162,7 +162,7 @@ export function createSqliteStore(path: string): Store {
       );
       const ids = phrases.map((p) => {
         const id = randomUUID();
-        insert.run(id, sid, practiceId, p.original, p.better, p.whyEs, now, dueDay);
+        insert.run(id, sid, practiceId, p.original, p.better, p.why, now, dueDay);
         return id;
       });
       return ids.map((id) => toPhrase(db.prepare("SELECT * FROM phrases WHERE id = ?").get(id) as Row));

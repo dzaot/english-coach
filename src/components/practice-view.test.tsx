@@ -63,7 +63,7 @@ describe("PracticeView", () => {
   });
 
   it("helps when the person is stuck: translation, suggested answer and tip", async () => {
-    mocked.help.mockResolvedValueOnce({ translationEs: "Háblame de ti.", suggestionEn: "I'm a sales rep.", tipEs: "Empieza por tu rol." });
+    mocked.help.mockResolvedValueOnce({ translation: "Háblame de ti.", suggestion: "I'm a sales rep.", tip: "Empieza por tu rol." });
     render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /¿Qué digo\?/ }));
     const card = await screen.findByRole("region", { name: "Ayuda para responder" });

@@ -126,7 +126,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
     try {
       const next = await api.help(practice.id);
       setHelp(next);
-      setAnnouncement(`Puedes decir: ${next.suggestionEn}`);
+      setAnnouncement(`Puedes decir: ${next.suggestion}`);
     } catch (e) {
       setError({ message: e instanceof Error ? e.message : String(e), topUpUrl: e instanceof ApiError ? e.topUpUrl : null });
     } finally {
@@ -153,7 +153,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
   return (
     <div className="flex min-h-[calc(100dvh-3rem)] flex-col">
       <TopBar
-        title={scenario.titleEs}
+        title={scenario.title}
         onBack={() => {
           recorder.cancel();
           silence();
@@ -210,7 +210,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
       </p>
 
       <div className="sticky bottom-0 -mx-4 space-y-3 border-t border-border bg-bg/95 px-4 pb-4 pt-3 backdrop-blur">
-        {help ? <HelpCard help={help} onListen={() => speaker.play("help", help.suggestionEn)} onClose={() => setHelp(null)} /> : null}
+        {help ? <HelpCard help={help} onListen={() => speaker.play("help", help.suggestion)} onClose={() => setHelp(null)} /> : null}
         {error || recorder.error ? <ErrorBanner message={error?.message ?? recorder.error ?? ""} topUpUrl={error?.topUpUrl} /> : null}
         {practice.limitReached ? <p className="text-center font-semibold">Llegaste al final de esta práctica. Mira tu feedback.</p> : null}
 

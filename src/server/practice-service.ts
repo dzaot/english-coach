@@ -63,7 +63,7 @@ function publicPhrase(p: PhraseRecord) {
     practiceId: p.practiceId,
     original: p.original,
     better: p.better,
-    whyEs: p.whyEs,
+    why: p.why,
     createdAt: p.createdAt,
     reviewedAt: p.reviewedAt,
     step: p.step,
