@@ -3,10 +3,10 @@ import { Loader2, Mic, Square } from "lucide-react";
 export type MicState = "idle" | "starting" | "recording" | "busy";
 
 const LABELS: Record<MicState, string> = {
-  idle: "Toca para hablar",
-  starting: "Abriendo micrófono…",
-  recording: "Toca para enviar",
-  busy: "Espera un momento…",
+  idle: "Tap to talk",
+  starting: "Opening microphone…",
+  recording: "Tap to send",
+  busy: "One moment…",
 };
 
 export function micLabel(state: MicState): string {
@@ -36,7 +36,7 @@ export function RecordButton({
           onClick={onPress}
           disabled={disabled || state === "busy" || state === "starting"}
           aria-pressed={recording}
-          aria-label={recording ? "Detener y enviar tu respuesta" : "Grabar tu respuesta"}
+          aria-label={recording ? "Stop and send your answer" : "Record your answer"}
           className={`relative flex size-20 cursor-pointer items-center justify-center rounded-full shadow-card transition duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${
             recording ? "bg-ink text-bg" : "bg-primary text-on-primary hover:brightness-110"
           }`}

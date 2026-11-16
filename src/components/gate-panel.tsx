@@ -21,21 +21,21 @@ interface Props {
   onOwnKey: (key: string) => Promise<boolean>;
 }
 
-/** The publik gate. Titles and buttons keep publik's exact English words; the help text is in Spanish. */
-const HELP_ES: Record<Screen["screen"]["id"], string> = {
-  sign_in: "Inicia sesión gratis con tu cuenta de publik (Google o GitHub). Se abre en otra pestaña. Vuelve aquí cuando termines: esta página sigue sola.",
-  unreachable: "No pudimos conectar con publik. Revisa tu conexión e inténtalo de nuevo.",
-  choose: "La práctica usa IA para escucharte y responderte. Usa tu plan de publik o tu propia clave de OpenAI.",
+/** The publik gate. Titles and buttons keep publik's exact words; one helper line below. */
+const HELP: Record<Screen["screen"]["id"], string> = {
+  sign_in: "Sign in for free with your publik account (Google or GitHub). It opens in a new tab. Come back when you are done: this page continues on its own.",
+  unreachable: "We could not reach publik. Check your connection and try again.",
+  choose: "Practice uses AI to listen and answer you. Use your publik plan or your own OpenAI key.",
 };
 
-const NOTES: Record<Waiting, { waiting: [string, string]; timeout: [string, string] }> = {
+const NOTES: Record<Waiting, { waiting: string; timeout: string }> = {
   sign_in: {
-    waiting: ["Waiting for you to sign in in your browser.", "Esperando que inicies sesión en la otra pestaña…"],
-    timeout: ["No sign-in after 10 minutes. Click Sign in with publik to try again.", "Pasaron 10 minutos sin inicio de sesión. Vuelve a intentarlo."],
+    waiting: "Waiting for you to sign in in your browser.",
+    timeout: "No sign-in after 10 minutes. Click Sign in with publik to try again.",
   },
   get_plan: {
-    waiting: ["Waiting for your plan. Finish in your browser.", "Esperando tu plan. Termina en la otra pestaña…"],
-    timeout: ["No plan after 10 minutes. Click Get a plan to try again.", "Pasaron 10 minutos sin plan. Vuelve a intentarlo."],
+    waiting: "Waiting for your plan. Finish in your browser.",
+    timeout: "No plan after 10 minutes. Click Get a plan to try again.",
   },
 };
 
@@ -53,12 +53,11 @@ export function GatePanel({ gate, error, waiting, timedOut, busy, onRetry, onWai
       <BrandMark />
       <Card className="space-y-4">
         <h1 className="text-2xl font-extrabold">{screen.title}</h1>
-        <p lang="en" className="text-muted">{screen.body}</p>
-        <p>{HELP_ES[screen.id]}</p>
+        <p className="text-muted">{screen.body}</p>
+        <p>{HELP[screen.id]}</p>
         {note ? (
           <p role="status" className="rounded-2xl bg-surface-2 p-3 text-sm">
-            <span lang="en" className="block font-semibold">{note[0]}</span>
-            {note[1]}
+            {note}
           </p>
         ) : null}
         {error ? <ErrorBanner message={error} /> : null}
@@ -113,7 +112,7 @@ export function GatePanel({ gate, error, waiting, timedOut, busy, onRetry, onWai
             }}
           >
             <label htmlFor="own-key" className="block font-semibold">
-              Tu clave de OpenAI (empieza con sk-)
+              Your OpenAI key (starts with sk-)
             </label>
             <input
               id="own-key"
@@ -124,13 +123,13 @@ export function GatePanel({ gate, error, waiting, timedOut, busy, onRetry, onWai
               onChange={(e) => setKey(e.target.value)}
               className="min-h-11 w-full rounded-2xl border border-border bg-surface px-3 text-base text-ink"
             />
-            <p className="text-sm text-muted">La guardamos cifrada en el servidor y solo la usamos para tus prácticas.</p>
+            <p className="text-sm text-muted">We store it encrypted on the server and only use it for your practices.</p>
             <div className="flex gap-2">
               <Button type="submit" disabled={busy || key.trim().length === 0} className="flex-1">
-                Guardar clave
+                Save key
               </Button>
               <Button variant="ghost" onClick={() => setShowKeyForm(false)}>
-                Cancelar
+                Cancel
               </Button>
             </div>
           </form>

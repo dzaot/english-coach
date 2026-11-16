@@ -8,7 +8,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
         <AudioLines aria-hidden="true" className={compact ? "size-4" : "size-5"} />
       </span>
       Dilo
-      <span className="sr-only">: práctica de inglés de trabajo</span>
+      <span className="sr-only">: spoken English practice for work</span>
     </p>
   );
 }

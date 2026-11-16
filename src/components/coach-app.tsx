@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { IndustryId, ScenarioId } from "@/domain/scenarios";
 import { ApiError, api } from "@/lib/api";
 import { useGate } from "@/lib/hooks/use-gate";
+import { usePreferences } from "@/lib/hooks/use-preferences";
 import { useTelemetry } from "@/lib/hooks/use-telemetry";
 import { replacePhrase } from "@/lib/progress";
 import type { Feedback, Phrase, PracticeView as Practice, Progress, SpeechAudio, Streak } from "@/lib/types";
@@ -34,6 +35,8 @@ export function CoachApp() {
   const ready = gate.state?.state === "ready";
   useTelemetry(ready);
 
+  const prefs = usePreferences();
+  const { level, avatarId } = prefs;
   const [view, setView] = useState<View>({ name: "home" });
   const [progress, setProgress] = useState<Progress | null>(null);
   const [lastChoice, setLastChoice] = useState<{ scenarioId: ScenarioId; industryId: IndustryId } | null>(null);
@@ -75,7 +78,7 @@ export function CoachApp() {
     setError(null);
     setLastChoice({ scenarioId, industryId });
     try {
-      const { practice, audio } = await api.start(scenarioId, industryId);
+      const { practice, audio } = await api.start({ scenarioId, industryId, level, avatarId });
       setView({ name: "practice", practice, audio });
     } catch (e) {
       setError(toShown(e));
@@ -83,7 +86,7 @@ export function CoachApp() {
     } finally {
       setStarting(false);
     }
-  }, []);
+  }, [avatarId, level]);
 
   const openPractice = useCallback(async (id: string) => {
     setError(null);
@@ -115,7 +118,7 @@ export function CoachApp() {
         <ErrorBanner message={gate.error} onRetry={() => void gate.refresh()} />
       </div>
     ) : (
-      <Spinner label="Cargando…" />
+      <Spinner label="Loading…" />
     );
   }
 
@@ -184,13 +187,16 @@ export function CoachApp() {
           <div className="mb-2 flex items-center justify-between">
             <BrandMark compact />
             {mode.mode === "demo" ? (
-              <span className="rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-muted">Modo demo: IA simulada</span>
+              <span className="rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-muted">Demo mode: simulated AI</span>
             ) : null}
           </div>
           {banner ? <div className="mb-4">{banner}</div> : null}
           <HomeView
             progress={progress}
             starting={starting}
+            level={level}
+            avatarId={avatarId}
+            onChangePrefs={prefs.update}
             onStart={(s, i) => void start(s, i)}
             onOpenPhrases={() => setView({ name: "phrases" })}
             onOpenHistory={() => setView({ name: "history" })}
@@ -204,14 +210,14 @@ export function CoachApp() {
 function AppFooter({ mode, usedPercent, onChangePayment }: { mode: "demo" | "publik" | "own_key"; usedPercent: number | null; onChangePayment: () => void }) {
   return (
     <footer className="mt-8 space-y-2 border-t border-border pt-4 text-sm text-muted">
-      {usedPercent !== null ? <p className="tabular">Usaste {usedPercent}% de tu plan de publik este periodo.</p> : null}
+      {usedPercent !== null ? <p className="tabular">You have used {usedPercent}% of your publik plan this period.</p> : null}
       {mode !== "demo" ? (
         <button type="button" onClick={onChangePayment} className="min-h-11 cursor-pointer font-semibold text-ink underline underline-offset-4">
-          Cambiar cómo pago la IA
+          Change how I pay for AI
         </button>
       ) : null}
       <p>
-        Código abierto. La IA corre con publik. Tu voz se transcribe para la práctica y no se guarda el audio.
+        Open source. AI runs on publik. Your voice is transcribed for the practice; the audio is not stored.
       </p>
     </footer>
   );

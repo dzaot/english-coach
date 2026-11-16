@@ -6,10 +6,10 @@ import type { Progress } from "@/lib/types";
 export function StreakCard({ progress }: { progress: Pick<Progress, "streak" | "week"> }) {
   const { streak, week } = progress;
   const message = streak.practicedToday
-    ? "Ya practicaste hoy. Vuelve mañana para seguir la racha."
+    ? "You practiced today. Come back tomorrow to keep your streak."
     : streak.current > 0
-      ? "Practica hoy para no perder tu racha."
-      : "Practica 5 minutos hoy y empieza tu racha.";
+      ? "Practice today to keep your streak."
+      : "Practice 5 minutes today to start your streak.";
   return (
     <section aria-labelledby="streak-title" className="rounded-3xl bg-ink p-5 text-bg shadow-card">
       <div className="flex items-center gap-4">
@@ -18,17 +18,17 @@ export function StreakCard({ progress }: { progress: Pick<Progress, "streak" | "
         </span>
         <div className="min-w-0">
           <h2 id="streak-title" className="text-sm font-medium uppercase tracking-wide opacity-80">
-            Tu racha
+            Your streak
           </h2>
           <p className="tabular text-3xl font-extrabold leading-tight">{daysLabel(streak.current)}</p>
         </div>
         <p className="tabular ml-auto text-right text-sm opacity-80">
-          Mejor
+          Best
           <br />
           <span className="font-semibold">{daysLabel(streak.best)}</span>
         </p>
       </div>
-      <ol className="mt-4 grid grid-cols-7 gap-1.5" aria-label="Últimos 7 días">
+      <ol className="mt-4 grid grid-cols-7 gap-1.5" aria-label="Last 7 days">
         {week.map((d) => (
           <li key={d.day} className="flex flex-col items-center gap-1 text-xs font-medium">
             <span
@@ -37,7 +37,7 @@ export function StreakCard({ progress }: { progress: Pick<Progress, "streak" | "
               {d.practiced ? <Check aria-hidden="true" className="size-4" strokeWidth={3} /> : null}
             </span>
             <span aria-hidden="true" className="opacity-80">{weekdayInitial(d.day)}</span>
-            <span className="sr-only">{`${weekdayName(d.day)}: ${d.practiced ? "practicaste" : "sin práctica"}`}</span>
+            <span className="sr-only">{`${weekdayName(d.day)}: ${d.practiced ? "practiced" : "no practice"}`}</span>
           </li>
         ))}
       </ol>

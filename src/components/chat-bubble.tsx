@@ -23,7 +23,7 @@ export function ChatBubble({
       <div
         className={`max-w-[85%] rounded-3xl px-4 py-3 ${mine ? "rounded-br-lg bg-primary-soft" : "rounded-bl-lg border border-border bg-surface shadow-card"}`}
       >
-        <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-muted">{mine ? "Tú" : speakerName}</p>
+        <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-muted">{mine ? "You" : speakerName}</p>
         <p lang="en" className="text-[1.0625rem] leading-relaxed">
           {turn.text}
         </p>
@@ -31,11 +31,11 @@ export function ChatBubble({
           <div className="mt-1 -ml-2 flex flex-wrap gap-1">
             <button type="button" onClick={onListen} className={LISTEN_BUTTON}>
               <Volume2 aria-hidden="true" className="size-4" />
-              {speaking ? "Reproduciendo…" : "Escuchar"}
+              {speaking ? "Playing…" : "Listen"}
             </button>
             {onListenSlow ? (
               <button type="button" onClick={onListenSlow} className={LISTEN_BUTTON}>
-                <Snail aria-hidden="true" className="size-4" /> Más lento
+                <Snail aria-hidden="true" className="size-4" /> Slower
               </button>
             ) : null}
           </div>

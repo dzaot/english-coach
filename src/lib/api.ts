@@ -13,7 +13,7 @@ export class ApiError extends Error {
   }
 }
 
-const OFFLINE_MESSAGE = "No hay conexión. Revisa tu internet e inténtalo de nuevo.";
+const OFFLINE_MESSAGE = "No connection. Check your internet and try again.";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -25,7 +25,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const body = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string; topUpUrl?: string | null } } | null;
   if (!res.ok) {
     const e = body?.error;
-    throw new ApiError(e?.code ?? "internal", e?.message ?? "Algo salió mal. Inténtalo de nuevo.", e?.topUpUrl ?? null);
+    throw new ApiError(e?.code ?? "internal", e?.message ?? "Something went wrong. Please try again.", e?.topUpUrl ?? null);
   }
   return body as T;
 }
@@ -44,8 +44,8 @@ export const api = {
     request<GateState>("/api/gate", jsonInit("POST", body)),
   telemetry: (event: "app_opened" | "active_session") =>
     request<{ result: string }>("/api/telemetry", jsonInit("POST", { event })),
-  start: (scenarioId: string, industryId: string) =>
-    request<{ practice: PracticeView; audio: SpeechAudio | null }>("/api/practice", jsonInit("POST", { scenarioId, industryId })),
+  start: (choice: { scenarioId: string; industryId: string; level: string; avatarId: string }) =>
+    request<{ practice: PracticeView; audio: SpeechAudio | null }>("/api/practice", jsonInit("POST", choice)),
   getPractice: (id: string) => request<{ practice: PracticeView }>(`/api/practice/${encodeURIComponent(id)}`),
   turn: (id: string, answer: { audio: Blob } | { text: string }) => {
     const form = new FormData();

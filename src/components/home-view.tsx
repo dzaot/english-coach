@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { BookmarkCheck, CalendarClock, ChevronRight, History, Mic } from "lucide-react";
+import { BookmarkCheck, CalendarClock, Check, ChevronRight, History, Mic } from "lucide-react";
+import { AVATARS, type AvatarId } from "@/domain/avatars";
+import { LEVELS, type LevelId } from "@/domain/levels";
 import { INDUSTRIES, SCENARIOS, type IndustryId, type ScenarioId } from "@/domain/scenarios";
 import type { Progress } from "@/lib/types";
+import { AvatarPortrait } from "./avatar-portrait";
 import { SCENARIO_ICONS } from "./scenario-meta";
 import { StreakCard } from "./streak-card";
 import { Button } from "./ui";
@@ -11,12 +14,17 @@ import { Button } from "./ui";
 interface HomeViewProps {
   progress: Progress | null;
   starting: boolean;
+  level: LevelId;
+  avatarId: AvatarId;
+  onChangePrefs: (patch: { level?: LevelId; avatarId?: AvatarId }) => void;
   onStart: (scenarioId: ScenarioId, industryId: IndustryId) => void;
   onOpenPhrases: () => void;
   onOpenHistory: () => void;
 }
 
-export function HomeView({ progress, starting, onStart, onOpenPhrases, onOpenHistory }: HomeViewProps) {
+const FOCUS_WITHIN = "has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus";
+
+export function HomeView({ progress, starting, level, avatarId, onChangePrefs, onStart, onOpenPhrases, onOpenHistory }: HomeViewProps) {
   const [scenarioId, setScenarioId] = useState<ScenarioId>("job_interview");
   const [industryId, setIndustryId] = useState<IndustryId>("general");
 
@@ -24,12 +32,12 @@ export function HomeView({ progress, starting, onStart, onOpenPhrases, onOpenHis
     <div className="animate-rise space-y-6">
       <header className="space-y-2 pt-2">
         <p className="inline-flex items-center gap-2 rounded-full bg-primary-soft px-3 py-1 text-sm font-semibold text-primary-ink">
-          <Mic aria-hidden="true" className="size-4" /> Gratis · en voz alta · 5 minutos
+          <Mic aria-hidden="true" className="size-4" /> Free · out loud · 5 minutes
         </p>
         <h1 className="text-[2rem] font-extrabold leading-tight tracking-tight">
-          Practica tu inglés de trabajo <span className="text-primary-ink">en voz alta</span>
+          Practice your work English <span className="text-primary-ink">out loud</span>
         </h1>
-        <p className="text-muted">Elige una situación, habla con tu contraparte en inglés y recibe feedback al instante.</p>
+        <p className="text-muted">Pick a situation, talk with your partner in English and get instant feedback.</p>
       </header>
 
       {progress ? <StreakCard progress={progress} /> : null}
@@ -42,17 +50,46 @@ export function HomeView({ progress, starting, onStart, onOpenPhrases, onOpenHis
         >
           <CalendarClock aria-hidden="true" className="size-7 shrink-0 text-primary-ink" />
           <span className="flex-1">
-            <span className="block font-bold">Repaso de hoy</span>
+            <span className="block font-bold">Today&apos;s review</span>
             <span className="block text-sm">
-              {progress.dueToday === 1 ? "1 frase te espera" : `${progress.dueToday} frases te esperan`}. Dilas en voz alta en 1 minuto.
+              {progress.dueToday === 1 ? "1 phrase is waiting" : `${progress.dueToday} phrases are waiting`}. Say them out loud in 1 minute.
             </span>
           </span>
           <ChevronRight aria-hidden="true" className="size-5" />
         </button>
       ) : null}
 
+      <fieldset>
+        <legend className="mb-3 text-lg font-bold">1. Pick your partner</legend>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          {AVATARS.map((a) => {
+            const checked = a.id === avatarId;
+            return (
+              <label
+                key={a.id}
+                className={`relative flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 p-3 text-center transition duration-200 ${FOCUS_WITHIN} ${
+                  checked ? "border-primary bg-primary-soft" : "border-border bg-surface hover:bg-surface-2"
+                }`}
+              >
+                <input type="radio" name="avatar" value={a.id} checked={checked} onChange={() => onChangePrefs({ avatarId: a.id })} className="sr-only" />
+                {checked ? (
+                  <span className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full bg-primary text-on-primary">
+                    <Check aria-hidden="true" className="size-4" strokeWidth={3} />
+                  </span>
+                ) : null}
+                <AvatarPortrait avatar={a} size={72} />
+                <span>
+                  <span className="block font-semibold">{a.name}</span>
+                  <span className="block text-xs text-muted">{a.vibe}</span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
       <fieldset className="space-y-3">
-        <legend className="mb-3 text-lg font-bold">1. ¿Qué quieres practicar?</legend>
+        <legend className="mb-3 text-lg font-bold">2. What do you want to practice?</legend>
         <div className="grid gap-2.5">
           {SCENARIOS.map((s) => {
             const Icon = SCENARIO_ICONS[s.id];
@@ -60,18 +97,11 @@ export function HomeView({ progress, starting, onStart, onOpenPhrases, onOpenHis
             return (
               <label
                 key={s.id}
-                className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 p-3.5 transition duration-200 has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus ${
+                className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 p-3.5 transition duration-200 ${FOCUS_WITHIN} ${
                   checked ? "border-primary bg-primary-soft" : "border-border bg-surface hover:bg-surface-2"
                 }`}
               >
-                <input
-                  type="radio"
-                  name="scenario"
-                  value={s.id}
-                  checked={checked}
-                  onChange={() => setScenarioId(s.id)}
-                  className="sr-only"
-                />
+                <input type="radio" name="scenario" value={s.id} checked={checked} onChange={() => setScenarioId(s.id)} className="sr-only" />
                 <span className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${checked ? "bg-primary text-on-primary" : "bg-surface-2 text-ink"}`}>
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
@@ -86,14 +116,14 @@ export function HomeView({ progress, starting, onStart, onOpenPhrases, onOpenHis
       </fieldset>
 
       <fieldset>
-        <legend className="mb-3 text-lg font-bold">2. Tu industria</legend>
+        <legend className="mb-3 text-lg font-bold">3. Your industry</legend>
         <div className="flex flex-wrap gap-2">
           {INDUSTRIES.map((i) => {
             const checked = i.id === industryId;
             return (
               <label
                 key={i.id}
-                className={`inline-flex min-h-11 cursor-pointer items-center rounded-full border-2 px-4 text-sm font-semibold transition duration-200 has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus ${
+                className={`inline-flex min-h-11 cursor-pointer items-center rounded-full border-2 px-4 text-sm font-semibold transition duration-200 ${FOCUS_WITHIN} ${
                   checked ? "border-ink bg-ink text-bg" : "border-border bg-surface hover:bg-surface-2"
                 }`}
               >
@@ -105,14 +135,38 @@ export function HomeView({ progress, starting, onStart, onOpenPhrases, onOpenHis
         </div>
       </fieldset>
 
+      <fieldset>
+        <legend className="mb-3 text-lg font-bold">4. Your English level</legend>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {LEVELS.map((l) => {
+            const checked = l.id === level;
+            return (
+              <label
+                key={l.id}
+                className={`flex cursor-pointer flex-col rounded-2xl border-2 p-3 transition duration-200 ${FOCUS_WITHIN} ${
+                  checked ? "border-primary bg-primary-soft" : "border-border bg-surface hover:bg-surface-2"
+                }`}
+              >
+                <input type="radio" name="level" value={l.id} checked={checked} onChange={() => onChangePrefs({ level: l.id })} className="sr-only" />
+                <span className="flex items-center gap-1.5 font-semibold">
+                  {checked ? <Check aria-hidden="true" className="size-4 text-primary-ink" strokeWidth={3} /> : null}
+                  {l.label}
+                </span>
+                <span className="text-sm text-muted">{l.description}</span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
       <Button size="lg" className="w-full" disabled={starting} onClick={() => onStart(scenarioId, industryId)}>
         <Mic aria-hidden="true" className="size-5" />
-        {starting ? "Preparando…" : "Empezar a hablar"}
+        {starting ? "Getting ready…" : "Start talking"}
       </Button>
 
-      <nav aria-label="Tu progreso" className="grid gap-2.5">
-        <NavRow icon={<BookmarkCheck aria-hidden="true" className="size-5" />} label="Frases para repasar" count={progress?.toReview ?? 0} onClick={onOpenPhrases} />
-        <NavRow icon={<History aria-hidden="true" className="size-5" />} label="Historial de prácticas" count={progress?.history.length ?? 0} onClick={onOpenHistory} />
+      <nav aria-label="Your progress" className="grid gap-2.5">
+        <NavRow icon={<BookmarkCheck aria-hidden="true" className="size-5" />} label="Phrases to review" count={progress?.toReview ?? 0} onClick={onOpenPhrases} />
+        <NavRow icon={<History aria-hidden="true" className="size-5" />} label="Practice history" count={progress?.history.length ?? 0} onClick={onOpenHistory} />
       </nav>
     </div>
   );

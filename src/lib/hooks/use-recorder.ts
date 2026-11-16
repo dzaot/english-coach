@@ -11,11 +11,11 @@ const MIME_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/
 export type RecorderStatus = "idle" | "starting" | "recording";
 
 export const RECORDER_ERRORS = {
-  unsupported: "Tu navegador no permite grabar audio. Puedes escribir tu respuesta.",
-  denied: "Necesitamos permiso para usar el micrófono. Actívalo en tu navegador o escribe tu respuesta.",
-  noMic: "No encontramos un micrófono. Puedes escribir tu respuesta.",
-  failed: "No pudimos usar el micrófono. Puedes escribir tu respuesta.",
-  tooShort: "La grabación fue muy corta. Toca el micrófono, habla y toca otra vez para enviar.",
+  unsupported: "Your browser cannot record audio. You can type your answer instead.",
+  denied: "We need permission to use the microphone. Allow it in your browser or type your answer.",
+  noMic: "We could not find a microphone. You can type your answer instead.",
+  failed: "We could not use the microphone. You can type your answer instead.",
+  tooShort: "That recording was too short. Tap the mic, talk, then tap again to send.",
 } as const;
 
 function pickMimeType(): string | undefined {

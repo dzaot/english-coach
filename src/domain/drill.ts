@@ -1,6 +1,6 @@
 import { addDays } from "./streak";
 
-/** "Dilo tú": say the better phrase out loud, compare it with what was heard, and schedule the next review. */
+/** "Say it": say the better phrase out loud, compare it with what was heard, and schedule the next review. */
 
 export const PASS_SCORE = 80;
 /** Days until the next review after each successful say-it: 1, then 3, then 7, then learned. */

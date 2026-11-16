@@ -49,16 +49,17 @@ describe("CoachApp", () => {
     mocked.start.mockResolvedValue({ practice: practice({ turns: [{ role: "counterpart", text: "Hi" }, { role: "user", text: "a" }, { role: "counterpart", text: "b?" }, { role: "user", text: "c" }, { role: "counterpart", text: "d?" }], canFinish: true }), audio: null });
     mocked.finish.mockResolvedValue(finishResult);
     render(<CoachApp />);
-    expect(await screen.findByText("Modo demo: IA simulada")).toBeInTheDocument();
+    expect(await screen.findByText("Demo mode: simulated AI")).toBeInTheDocument();
     expect(mocked.telemetry).toHaveBeenCalledWith("app_opened");
-    await screen.findByText("2 días");
-    await userEvent.click(screen.getByRole("button", { name: /Empezar a hablar/ }));
-    await userEvent.click(await screen.findByRole("button", { name: /Terminar y ver mi feedback/ }));
-    expect(await screen.findByText("Tu feedback")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /Practicar otra vez/ }));
+    await screen.findByText("2 days");
+    await userEvent.click(screen.getByRole("button", { name: /Start talking/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /Finish and see my feedback/ }));
+    expect(await screen.findByText("Your feedback")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Practice again/ }));
     await waitFor(() => expect(mocked.start).toHaveBeenCalledTimes(2));
-    await userEvent.click(await screen.findByRole("button", { name: "Salir de la práctica" }));
-    expect(await screen.findByRole("button", { name: /Empezar a hablar/ })).toBeInTheDocument();
+    expect(mocked.start).toHaveBeenLastCalledWith({ scenarioId: "job_interview", industryId: "general", level: "intermediate", avatarId: "sarah" });
+    await userEvent.click(await screen.findByRole("button", { name: "Leave the practice" }));
+    expect(await screen.findByRole("button", { name: /Start talking/ })).toBeInTheDocument();
   });
 
   it("shows the publik gate until the person is signed in", async () => {
@@ -70,8 +71,8 @@ describe("CoachApp", () => {
     mocked.gateAction.mockResolvedValue({ state: "ready", mode: "publik", account: "ana", usedPercent: 12.5 });
     render(<CoachApp />);
     await userEvent.click(await screen.findByRole("button", { name: "Connect your plan" }));
-    expect(await screen.findByText(/Usaste 12.5% de tu plan/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Cambiar cómo pago la IA" }));
+    expect(await screen.findByText(/You have used 12.5% of your publik plan/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Change how I pay for AI" }));
     expect(mocked.gateAction).toHaveBeenLastCalledWith({ action: "reset" });
   });
 
@@ -79,8 +80,8 @@ describe("CoachApp", () => {
     mocked.gate.mockRejectedValueOnce(new Error("No hay conexión.")).mockResolvedValueOnce(demo);
     render(<CoachApp />);
     expect(await screen.findByRole("alert")).toHaveTextContent("No hay conexión.");
-    await userEvent.click(screen.getByRole("button", { name: /Reintentar/ }));
-    expect(await screen.findByRole("button", { name: /Empezar a hablar/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Try again/ }));
+    expect(await screen.findByRole("button", { name: /Start talking/ })).toBeInTheDocument();
   });
 
   it("opens phrases and history, marks a phrase and opens a past feedback", async () => {
@@ -88,30 +89,30 @@ describe("CoachApp", () => {
     mocked.markPhrase.mockResolvedValue({ phrase: { ...progress().phrases[1], reviewedAt: "2026-11-15T12:00:00Z" } });
     mocked.getPractice.mockResolvedValue({ practice: practice({ feedback, score: 78, finishedAt: "2026-11-14T18:00:00Z" }) });
     render(<CoachApp />);
-    await userEvent.click(await screen.findByRole("button", { name: /Frases para repasar/ }));
-    await userEvent.click(screen.getAllByLabelText("Ya la practiqué")[0]);
+    await userEvent.click(await screen.findByRole("button", { name: /Phrases to review/ }));
+    await userEvent.click(screen.getAllByLabelText("I know this one")[0]);
     await waitFor(() => expect(mocked.markPhrase).toHaveBeenCalledWith("ph2", true));
-    expect(await screen.findByText(/Te quedan/)).toHaveTextContent("Te quedan 0 por aprender");
-    await userEvent.click(screen.getByRole("button", { name: "Volver" }));
-    await userEvent.click(await screen.findByRole("button", { name: /Historial/ }));
-    await userEvent.click(screen.getByRole("button", { name: /Llamada con cliente/ }));
-    expect(await screen.findByText("Tu feedback")).toBeInTheDocument();
-    expect(screen.queryByText(/Racha de/)).not.toBeInTheDocument();
+    expect(await screen.findByText(/left to learn/)).toHaveTextContent("0 left to learn");
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Practice history/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Client call/ }));
+    expect(await screen.findByText("Your feedback")).toBeInTheDocument();
+    expect(screen.queryByText(/streak\. Come back/)).not.toBeInTheDocument();
   });
 
   it("invites to today's review from home", async () => {
     mocked.gate.mockResolvedValue(demo);
     render(<CoachApp />);
-    await userEvent.click(await screen.findByRole("button", { name: /Repaso de hoy/ }));
-    expect(await screen.findByText("Para hoy")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Dilo tú/ })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: /Today's review/ }));
+    expect(await screen.findByText("Due today")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Say it/ })).toBeInTheDocument();
   });
 
   it("shows API errors on the home screen", async () => {
     mocked.gate.mockResolvedValue(demo);
     mocked.start.mockRejectedValue(new ApiError("ai_balance", "Se acabó tu saldo de IA en publik.", "https://publikhq.com/wallet"));
     render(<CoachApp />);
-    await userEvent.click(await screen.findByRole("button", { name: /Empezar a hablar/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /Start talking/ }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Se acabó tu saldo");
   });
 
@@ -120,12 +121,12 @@ describe("CoachApp", () => {
     mocked.markPhrase.mockRejectedValue(new Error("No se pudo guardar."));
     mocked.getPractice.mockRejectedValue(new Error("No encontramos esa práctica."));
     render(<CoachApp />);
-    await userEvent.click(await screen.findByRole("button", { name: /Frases para repasar/ }));
-    await userEvent.click(screen.getAllByLabelText("Ya la practiqué")[0]);
+    await userEvent.click(await screen.findByRole("button", { name: /Phrases to review/ }));
+    await userEvent.click(screen.getAllByLabelText("I know this one")[0]);
     expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo guardar.");
-    await userEvent.click(screen.getByRole("button", { name: "Volver" }));
-    await userEvent.click(await screen.findByRole("button", { name: /Historial/ }));
-    await userEvent.click(screen.getByRole("button", { name: /Llamada con cliente/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Practice history/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Client call/ }));
     expect(await screen.findByRole("alert")).toHaveTextContent("No encontramos esa práctica.");
   });
 

@@ -3,7 +3,7 @@ import { handle, type IdParams } from "@/server/http";
 import { drillPhrase } from "@/server/practice-service";
 import { resolveAi } from "@/server/publik/gate";
 
-/** "Dilo tú": multipart "audio" of the person saying a better phrase, plus "tzOffset". */
+/** "Say it": multipart "audio" of the person saying a better phrase, plus "tzOffset". */
 export async function POST(request: Request, { params }: IdParams) {
   return handle(
     request,

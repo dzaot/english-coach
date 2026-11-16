@@ -8,21 +8,21 @@ describe("format helpers", () => {
     expect(formatClock(-3)).toBe("0:00");
   });
 
-  it("gives Spanish weekday initials", () => {
-    expect(weekdayInitial("2026-11-15")).toBe("D");
-    expect(weekdayInitial("2026-11-16")).toBe("L");
+  it("gives weekday initials", () => {
+    expect(weekdayInitial("2026-11-15")).toBe("S");
+    expect(weekdayInitial("2026-11-16")).toBe("M");
   });
 
   it("names the weekday for screen readers", () => {
-    expect(weekdayName("2026-11-15")).toBe("domingo 15");
+    expect(weekdayName("2026-11-15")).toBe("Sunday 15");
   });
 
   it("pluralizes days", () => {
-    expect(daysLabel(1)).toBe("1 día");
-    expect(daysLabel(4)).toBe("4 días");
+    expect(daysLabel(1)).toBe("1 day");
+    expect(daysLabel(4)).toBe("4 days");
   });
 
-  it("formats a date in Spanish", () => {
-    expect(formatDay("2026-11-15T18:00:00Z")).toMatch(/nov/);
+  it("formats a date", () => {
+    expect(formatDay("2026-11-15T18:00:00Z")).toMatch(/Nov/);
   });
 });

@@ -6,7 +6,7 @@ import type { SpeechAudio } from "@/lib/types";
 /** Plays the counterpart's voice: server audio when there is some, else the browser's English voice. */
 
 const SPEECH_RATE = 0.95;
-/** "Más lento": playback rate for a slower replay. */
+/** "Slower": playback rate for a slower replay. */
 export const SLOW_RATE = 0.75;
 
 function englishVoice(): SpeechSynthesisVoice | undefined {

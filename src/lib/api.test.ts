@@ -9,11 +9,11 @@ describe("api client", () => {
   it("posts JSON and returns the body", async () => {
     const fetchMock = vi.fn().mockResolvedValue(ok({ practice: { id: "p1" }, audio: null }));
     vi.stubGlobal("fetch", fetchMock);
-    const out = await api.start("job_interview", "tech");
+    const out = await api.start({ scenarioId: "job_interview", industryId: "tech", level: "beginner", avatarId: "james" });
     expect(out.practice.id).toBe("p1");
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/practice");
-    expect(JSON.parse(init.body)).toEqual({ scenarioId: "job_interview", industryId: "tech" });
+    expect(JSON.parse(init.body)).toEqual({ scenarioId: "job_interview", industryId: "tech", level: "beginner", avatarId: "james" });
   });
 
   it("sends audio as multipart and text as a field", async () => {

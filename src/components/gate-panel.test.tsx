@@ -41,7 +41,7 @@ describe("GatePanel", () => {
     link.addEventListener("click", (e) => e.preventDefault());
     await userEvent.click(link);
     expect(onWait).toHaveBeenCalledWith("sign_in");
-    expect(screen.getByText(/Inicia sesión gratis/)).toBeInTheDocument();
+    expect(screen.getByText(/Sign in for free/)).toBeInTheDocument();
   });
 
   it("shows the waiting and timeout notes in English and Spanish", () => {
@@ -60,14 +60,14 @@ describe("GatePanel", () => {
     await userEvent.click(plan);
     expect(onWait).toHaveBeenCalledWith("get_plan");
     await userEvent.click(screen.getByRole("button", { name: /Use my own key/ }));
-    const input = screen.getByLabelText(/Tu clave de OpenAI/);
+    const input = screen.getByLabelText(/Your OpenAI key/);
     expect(input).toHaveAttribute("type", "password");
     await userEvent.type(input, "sk-test");
-    await userEvent.click(screen.getByRole("button", { name: "Guardar clave" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save key" }));
     expect(onOwnKey).toHaveBeenCalledWith("sk-test");
     expect(input).toHaveValue("");
-    await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-    expect(screen.queryByLabelText(/Tu clave de OpenAI/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByLabelText(/Your OpenAI key/)).not.toBeInTheDocument();
   });
 
   it("connects a plan and retries when publik is unreachable", async () => {

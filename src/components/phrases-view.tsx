@@ -32,23 +32,23 @@ export function PhrasesView({ phrases, onToggle, onDrilled, onBack }: Props) {
 
   return (
     <div className="animate-rise">
-      <TopBar title="Frases para repasar" onBack={onBack} />
+      <TopBar title="Phrases to review" onBack={onBack} />
       {phrases.length === 0 ? (
         <Card className="text-center">
           <BookmarkCheck aria-hidden="true" className="mx-auto mb-2 size-8 text-muted" />
-          <p className="font-semibold">Aún no tienes frases.</p>
-          <p className="text-muted">Termina una práctica y aquí guardamos las 3 frases para decir más natural.</p>
+          <p className="font-semibold">No phrases yet.</p>
+          <p className="text-muted">Finish a practice and we will save the 3 phrases to say more naturally here.</p>
         </Card>
       ) : (
         <>
           <p className="mb-3 text-muted">
-            Te quedan <span className="tabular font-semibold text-ink">{pending}</span> por aprender
+            <span className="tabular font-semibold text-ink">{pending}</span> left to learn
             {due > 0 ? (
               <>
-                {" "}y <span className="tabular font-semibold text-ink">{due}</span> son para hoy
+                {", "}<span className="tabular font-semibold text-ink">{due}</span> due today
               </>
             ) : null}
-            . Escúchalas y dilas en voz alta: cada acierto la agenda para 1, 3 y 7 días después.
+            . Listen and say them out loud: each one you get right comes back 1, 3 and 7 days later.
           </p>
           <ul className="space-y-3">
             {sorted.map((p) => {
@@ -58,17 +58,17 @@ export function PhrasesView({ phrases, onToggle, onDrilled, onBack }: Props) {
                 <Card as="li" key={p.id} className={`space-y-2 ${done ? "opacity-75" : ""} ${dueNow ? "border-2 border-primary" : ""}`}>
                   {dueNow ? (
                     <p className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-bold text-primary-ink">
-                      <CalendarClock aria-hidden="true" className="size-3.5" /> Para hoy
+                      <CalendarClock aria-hidden="true" className="size-3.5" /> Due today
                     </p>
                   ) : null}
                   <p lang="en" className="text-lg font-semibold">{p.better}</p>
                   <p className="text-sm text-muted">
-                    <span className="font-semibold">Antes: </span>
+                    <span className="font-semibold">Before: </span>
                     <span lang="en">{p.original}</span>
                   </p>
                   <p className="text-sm text-muted">{p.why}</p>
                   {!done && !dueNow && p.dueDay ? (
-                    <p className="text-sm text-muted">Próximo repaso: {formatDay(`${p.dueDay}T12:00:00Z`)}</p>
+                    <p className="text-sm text-muted">Next review: {formatDay(`${p.dueDay}T12:00:00Z`)}</p>
                   ) : null}
                   {!done ? <SayItButton phraseId={p.id} onDrilled={onDrilled} /> : null}
                   <div className="flex flex-wrap items-center gap-2">
@@ -77,7 +77,7 @@ export function PhrasesView({ phrases, onToggle, onDrilled, onBack }: Props) {
                       onClick={() => speaker.play(p.id, p.better)}
                       className="-ml-2 inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full px-2 text-sm font-semibold text-primary-ink transition duration-200 hover:bg-surface-2"
                     >
-                      <Volume2 aria-hidden="true" className="size-4" /> Escuchar
+                      <Volume2 aria-hidden="true" className="size-4" /> Listen
                     </button>
                     <label className="ml-auto inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
                       <input
@@ -86,7 +86,7 @@ export function PhrasesView({ phrases, onToggle, onDrilled, onBack }: Props) {
                         onChange={(e) => onToggle(p.id, e.target.checked)}
                         className="size-5 cursor-pointer accent-[var(--accent)]"
                       />
-                      Ya la practiqué
+                      I know this one
                     </label>
                   </div>
                 </Card>

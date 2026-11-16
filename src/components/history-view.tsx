@@ -7,12 +7,12 @@ import { Card, TopBar } from "./ui";
 export function HistoryView({ history, onOpen, onBack }: { history: readonly HistoryItem[]; onOpen: (id: string) => void; onBack: () => void }) {
   return (
     <div className="animate-rise">
-      <TopBar title="Historial de prácticas" onBack={onBack} />
+      <TopBar title="Practice history" onBack={onBack} />
       {history.length === 0 ? (
         <Card className="text-center">
           <History aria-hidden="true" className="mx-auto mb-2 size-8 text-muted" />
-          <p className="font-semibold">Todavía no terminas ninguna práctica.</p>
-          <p className="text-muted">Tu primera práctica aparecerá aquí con su puntaje.</p>
+          <p className="font-semibold">You have not finished a practice yet.</p>
+          <p className="text-muted">Your first practice will show up here with its score.</p>
         </Card>
       ) : (
         <ul className="space-y-2.5">
@@ -34,7 +34,7 @@ export function HistoryView({ history, onOpen, onBack }: { history: readonly His
                       {formatDay(h.finishedAt)} · {industryLabel(h.industryId)}
                     </span>
                   </span>
-                  <span className="tabular text-lg font-extrabold" aria-label={`Puntaje ${h.score ?? 0}`}>
+                  <span className="tabular text-lg font-extrabold" aria-label={`Score ${h.score ?? 0}`}>
                     {h.score ?? 0}
                   </span>
                   <ChevronRight aria-hidden="true" className="size-5 text-muted" />

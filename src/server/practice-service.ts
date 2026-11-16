@@ -159,7 +159,7 @@ export async function takeTurn(
   return { userText: check.text, replyText, audio: null, practice: view(saved) };
 }
 
-/** "¿Qué digo?": translation of the last line and a suggested answer (fast tier). */
+/** "Help me": translation of the last line and a suggested answer (fast tier). */
 export async function getHelp(ctx: AppContext, ai: AiProvider, sid: string, id: string): Promise<Help> {
   const practice = load(ctx, sid, id);
   if (practice.finishedAt) throw new AppError("session_finished");
@@ -261,7 +261,7 @@ export function markPhrase(ctx: AppContext, sid: string, id: string, input: unkn
   return publicPhrase(phrase);
 }
 
-/** "Dilo tú": the person says a better phrase out loud; when it matches, the next review moves 1, 3, then 7 days ahead. */
+/** "Say it": the person says a better phrase out loud; when it matches, the next review moves 1, 3, then 7 days ahead. */
 export async function drillPhrase(
   ctx: AppContext,
   ai: AiProvider,

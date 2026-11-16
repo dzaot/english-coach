@@ -26,10 +26,10 @@ afterEach(() => {
 });
 
 async function sayIt() {
-  await userEvent.click(screen.getByRole("button", { name: /Dilo tú|Otra vez/ }));
-  await screen.findByRole("button", { name: /Toca para terminar/ });
+  await userEvent.click(screen.getByRole("button", { name: /Say it|Try again/ }));
+  await screen.findByRole("button", { name: /Tap to finish/ });
   now += 2000;
-  await userEvent.click(screen.getByRole("button", { name: /Toca para terminar/ }));
+  await userEvent.click(screen.getByRole("button", { name: /Tap to finish/ }));
 }
 
 describe("SayItButton", () => {
@@ -39,18 +39,18 @@ describe("SayItButton", () => {
     const onDrilled = vi.fn();
     render(<SayItButton phraseId={phrase.id} onDrilled={onDrilled} />);
     await sayIt();
-    expect(await screen.findByText(/¡Bien dicho!/)).toBeInTheDocument();
+    expect(await screen.findByText(/Well said!/)).toBeInTheDocument();
     expect(mocked.drill).toHaveBeenCalledWith(phrase.id, expect.any(Blob));
     await waitFor(() => expect(onDrilled).toHaveBeenCalledWith(updated));
-    expect(screen.getByRole("button", { name: /Otra vez/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Try again/ })).toBeInTheDocument();
   });
 
   it("shows the missing words when it was not quite right", async () => {
     mocked.drill.mockResolvedValueOnce({ said: "a meeting", score: 50, passed: false, missing: ["set", "up"], phrase });
     render(<SayItButton phraseId={phrase.id} />);
     await sayIt();
-    expect(await screen.findByText(/Te faltó/)).toHaveTextContent("set, up");
-    expect(screen.getByText(/Escuchamos/)).toHaveTextContent("a meeting");
+    expect(await screen.findByText(/Missing/)).toHaveTextContent("set, up");
+    expect(screen.getByText(/We heard/)).toHaveTextContent("a meeting");
   });
 
   it("shows a friendly error", async () => {

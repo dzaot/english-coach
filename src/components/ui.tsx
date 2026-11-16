@@ -34,7 +34,7 @@ export function Card({ children, className = "", as: Tag = "section" }: { childr
   return <Tag className={`rounded-3xl border border-border bg-surface p-5 shadow-card ${className}`}>{children}</Tag>;
 }
 
-export function TopBar({ title, onBack, backLabel = "Volver", right }: { title: string; onBack: () => void; backLabel?: string; right?: ReactNode }) {
+export function TopBar({ title, onBack, backLabel = "Back", right }: { title: string; onBack: () => void; backLabel?: string; right?: ReactNode }) {
   return (
     <header className="mb-4 flex items-center gap-2">
       <button
@@ -63,12 +63,12 @@ export function ErrorBanner({ message, topUpUrl, onRetry }: { message: string; t
         <div className="flex flex-wrap gap-3">
           {topUpUrl ? (
             <a href={topUpUrl} target="_blank" rel="noopener noreferrer" className="cursor-pointer font-semibold text-primary-ink underline underline-offset-4">
-              Recargar en publik
+              Top up on publik
             </a>
           ) : null}
           {onRetry ? (
             <button type="button" onClick={onRetry} className="inline-flex min-h-11 cursor-pointer items-center gap-1 font-semibold underline underline-offset-4">
-              <RotateCcw aria-hidden="true" className="size-4" /> Reintentar
+              <RotateCcw aria-hidden="true" className="size-4" /> Try again
             </button>
           ) : null}
         </div>
