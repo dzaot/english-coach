@@ -1,37 +1,81 @@
-# Demo de 15 segundos para un reel
+# Primer video de Dilo (2026-11-17)
 
-> Resumen: un reel vertical (9:16) grabado en el teléfono que muestra el ciclo completo: elegir compañero y entrevista, hablar en voz alta, oír la respuesta, ver las frases corregidas, decirlas con "Say it" y la racha. La app está en inglés; los textos del video pueden ir en español. Grábalo con la IA real ya desplegada; el modo demo sirve para ensayar.
+> Resumen: un reel vertical de 30 a 40 segundos, en español, que muestra a David practicando una entrevista con Emily. Se ve la llamada con subtítulos en vivo, el feedback y el "Sound check" que marca la palabra difícil, y cierra con el precio: sin suscripción, centavos por práctica. Se graba en la Mac con la IA real de publik, porque la app aún no está desplegada. Cada toma cuesta unos $0,05.
 
-## Antes de grabar
+Los textos finales y el calendario los lleva la sesión de marketing (`marketing/`). Aquí van la estructura y la lista de tomas.
 
-- **Modo:** graba con la app desplegada y la IA real de publik. El modo demo (`npm run dev` sin variables) tiene feedback fijo y muestra la etiqueta "Demo mode: simulated AI"; úsalo solo para ensayar encuadres. Un reel no debe mostrar resultados simulados como si fueran reales.
-- **Teléfono:** modo claro (más legible en el feed), brillo alto, No molestar activado, batería y hora limpias.
-- **Audio:** en iPhone, mantén presionado el botón de grabar pantalla en el Centro de control y activa el micrófono, para que se oiga tu voz y la de tu compañero (Sarah en esta lista).
-- **Ensayo:** haz 2 o 3 prácticas antes, para que la racha muestre más de 1 día (de verdad, en días distintos) y "Phrases to review" y "Today's review" tengan contenido. No inventes rachas.
-- **Respuesta preparada:** una frase con un error típico real, por ejemplo "I have five years of experience in sales and I am agree with the goals". Así el feedback muestra una corrección clara.
-- **Nivel:** graba en Intermediate (explicaciones en inglés y traducción en español en "Help me"). Para un reel dirigido a principiantes, Beginner muestra el feedback en español.
-- **Avatares:** son retratos generados con IA de personas ficticias. No los presentes como personas reales ni como "profesores".
-- **"Free":** la sesión de marketing marcó no decir "free/gratis" hasta que Akrit confirme si los créditos de David pueden cubrir el uso de sus usuarios (publik solo regala $0,05). La interfaz dice "Free" en el inicio; si Akrit dice que no, hay que cambiar ese texto y el de la toma 1.
-- **Precio de Speak:** $39.99/mes viene de `02-opportunities.md` (App Store de EE. UU., marcado P, dato menos firme). Verifícalo el día que publiques.
+## La idea en una frase
 
-## Lista de tomas
+"Practiqué mi entrevista en inglés con una colega americana, y me mostró qué palabra me cuesta y cómo suena." Es real, es útil y se ve en pantalla.
 
-| Segundo | En pantalla | Acción | Texto sobre el video (borrador en inglés) | Versión en español |
+## Gancho (elige uno; son los 3 primeros segundos)
+
+| # | Texto en pantalla y voz | Por qué funciona |
+|---|---|---|
+| A | "¿Te congelas cuando te hablan en inglés en el trabajo?" | Dolor directo del público: hispanohablantes que trabajan en inglés |
+| B | "Esta app me mostró la palabra que llevo años diciendo mal." | Curiosidad. Se cumple en la toma del Sound check |
+| C | "Speak cuesta $17,99 al mes. Yo practico por centavos." | Precio, nuestra bandera. Hay que mostrar la cifra de la App Store con fecha |
+
+Recomendación: **B** para este primer video, porque es lo más visual y nuevo. **C** para el segundo.
+
+## Guion y tomas (unos 35 s)
+
+| Seg. | En pantalla | Acción | Voz de David (español) | Texto sobre el video |
 |---|---|---|---|---|
-| 0 a 2 | Inicio: "Practice your work English out loud" y la tarjeta de racha | Ninguna, plano fijo | "Speak costs $39.99/month. This is free." | "Speak cuesta $39.99 al mes. Esto es gratis." |
-| 2 a 4 | "Pick your partner" con las 4 fotos, luego situaciones e industrias | Toca Sarah, "Job interview", "Sales", "Start talking" | "Pick your partner and your real situation" | "Elige con quién y tu situación real" |
-| 4 a 8 | Foto grande de Sarah con el anillo animado ("Sarah is talking…") y su primera pregunta | Toca el micrófono y di tu respuesta; toca otra vez para enviar | "Answer out loud" | "Responde en voz alta" |
-| 8 a 10 | Tu frase transcrita y la respuesta de Sarah, con su voz | Ninguna | "It talks back" | "Te responde" |
-| 10 a 13 | Feedback: anillo del puntaje y una tarjeta de frase mejor (tachado tu original, en grande la versión mejor) | Desliza despacio hasta la tarjeta | "And fixes what you said" | "Y corrige lo que dijiste" |
-| 13 a 15 | "Say it" sobre esa frase y el resultado "Well said!", o la tarjeta de racha | Toca "Say it", di la frase, toca otra vez | "Say it right. 5 minutes a day." | "Dilo bien. 5 minutos al día." |
+| 0 a 3 | Tu cara | Gancho B | "Esta app me mostró la palabra que llevo años diciendo mal." | "la palabra que digo mal" |
+| 3 a 7 | Inicio de Dilo: "Your call with Emily" y "Job interview" | Toca "Start talking" | "Es Dilo. Practicas tu inglés de trabajo en voz alta, como en una llamada." | "Dilo: practica en voz alta" |
+| 7 a 13 | La llamada: Emily con su brillo y los subtítulos en vivo | Escucha la pregunta y responde con el micrófono | "Ella me entrevista en inglés y yo respondo con mi voz." | "Una llamada con una colega de EE. UU." |
+| 13 a 18 | Feedback: el puntaje y tu frase original tachada ("I am agree…") | Desliza despacio | "Al final me corrige las frases que digo mal sin darme cuenta." | "Te corrige lo que dijiste" |
+| 18 a 27 | **Sound check:** las palabras foco en ámbar. Tocas una y aparece su deletreo fonético (por ejemplo "SPEEK") con el tip en español | Toca la palabra, luego "Hear it slowly", y di la frase con "Say it" | "Y aquí está lo mejor: me muestra cómo suena cada palabra y qué sonido me cuesta." | "Así suena en inglés americano" |
+| 27 a 31 | Resultado: palabras en verde con ✓ y "Well said!" en amarillo | Plano fijo | "La repito, y listo." | "Dilo bien" |
+| 31 a 35 | Tarjeta "Your results" o la racha | Plano fijo | "Sin suscripción: pagas solo lo que practicas, centavos por práctica. Link en la bio." | "Sin suscripción. Centavos por práctica." |
 
-Consejo de edición: corta los silencios mientras la IA piensa (unos 2 a 4 segundos por turno). Si los cortas, agrega una nota pequeña "editado para acortar" para no prometer una velocidad que no es.
+Consejos:
+- **Respuesta preparada**, con errores reales y comunes: "I want to espeak about my experience in sales and I am agree with the goals." Así sale una corrección clara. Las palabras foco las elige la app según la frase corregida. Si "speak" no queda en esa frase, usa la palabra que la app marque y ajusta la voz del segundo 18.
+- **Corta los silencios** mientras la IA piensa, de 2 a 4 segundos por turno. Si los cortas, pon una nota pequeña: "editado para acortar".
+- **Subtítulos:** tu voz en español va con subtítulos; la de Emily ya trae los de la app.
 
-Toma extra opcional (otro reel): toca "Help me" en medio de la conversación para mostrar la traducción y la respuesta sugerida. Gancho: "Freeze mid-interview? Tap Help me." / "¿Te congelaste? Toca Help me."
+## Honestidad (no negociable)
 
-## Gancho alternativo (para probar en otro reel)
+- **Precio:** no decir "gratis". Decir "sin suscripción" y "centavos por práctica". Si muestras el precio de Speak, usa el de la App Store con la fecha del día y en la moneda de tu público (sección 6 de `COMPETITIVE-ANALYSIS.md`).
+- **Sound check:** muestra qué palabras entendió la IA y qué sonidos suelen costarles a los hispanohablantes. **No** mide tu acento sonido por sonido. No decir "la IA analiza tu acento letra por letra".
+- **Los colegas** son retratos hechos con IA de personas ficticias. Si alguien pregunta, se dice.
+- **IA real, no simulada.** El modo demo tiene feedback fijo y muestra "Demo mode: simulated AI". No se graba en ese modo.
 
-- EN: "POV: you freeze in English interviews."
-- ES: "Cuando te congelas en entrevistas en inglés."
+## Cómo grabar mañana en la Mac (unos 10 minutos de preparación)
 
-Los textos finales y el plan de publicación los lleva la sesión de marketing (`marketing/`). Esto es solo la lista de tomas.
+La app no está desplegada todavía. Se graba en local, con tu clave de publik, que ya está en `.env.local`.
+
+1. En la Terminal, dentro de `apps/english-coach`:
+
+```bash
+npm run dev
+```
+
+2. Abre Chrome en http://localhost:3000. El micrófono funciona porque es localhost.
+3. Activa la vista de teléfono:
+   - Ve a Ver > Opciones para desarrolladores > Herramientas para desarrolladores.
+   - Pulsa el ícono de teléfono.
+   - Elige "iPhone 14 Pro Max" con zoom al 100 %.
+4. Usa el modo claro de macOS, que se lee mejor en el feed. Deja la ventana limpia, sin marcadores ni extensiones a la vista.
+5. Graba la pantalla:
+   - Pulsa Cmd+Shift+5 y elige "Grabar parte seleccionada" sobre el teléfono.
+   - En Opciones, activa "Micrófono de MacBook" para que se oigan tu voz y la de Emily.
+6. Antes de grabar, haz una práctica completa de ensayo. Así "Your results" y el Sound check ya tienen contenido.
+7. Costo: unos $0,05 por práctica completa. Diez tomas son unos $0,50 de tu saldo de publik.
+
+Para grabar en el iPhone, primero hay que desplegar la app con https (pasos en `PUBLIK-SETUP.md`). Sin https, el micrófono del teléfono no funciona contra la IP de tu Mac.
+
+## Segundo y tercer video (ideas que la app ya respalda)
+
+- **"5 palabras que los latinos pronunciamos mal en el trabajo".** Cada una con su deletreo fonético del Sound check:
+
+  | Palabra | Deletreo fonético |
+  |---|---|
+  | speak | SPEEK |
+  | very | VEH-ree |
+  | think | THINGK |
+  | worked | WERKT |
+  | meeting | MEE-ding |
+- **Precio (gancho C):** comparación en pesos, con fecha, y la frase "sin plan anual que te amarre".
+- **Día 1 contra día 30:** la misma respuesta grabada hoy y dentro de un mes. Hay que guardar la toma de hoy.

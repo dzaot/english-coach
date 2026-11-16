@@ -1,8 +1,15 @@
 # Estado: Dilo (english-coach)
 
-> Resumen: MVP completo y probado **con la IA real de publik** en local (clave de desarrollador, gate apagado): voz a texto, respuesta de la contraparte, voz, feedback, "Help me" y "Say it". Una práctica de 10 minutos cuesta unos **$0,05 a $0,06** (medido por llamada). La interfaz está en inglés; cada persona elige su nivel (Beginner con apoyo en español, Intermediate, Advanced) y su compañero de práctica entre 4 avatares con foto y voz propia (Sarah, James, Emily, Mike). Sign in with publik sigue probado solo contra un publik falso: falta el token de la app y la aprobación de David. Repo privado; no está público, desplegado ni listado.
+> Resumen: MVP completo y probado **con la IA real de publik** en local (clave de desarrollador, gate apagado). Una práctica de 10 minutos cuesta unos **$0,05 a $0,06**. El 2026-11-16 se agregaron:
+> - una marca propia (`BRAND.md`);
+> - la práctica como videollamada con subtítulos en vivo;
+> - el **Sound check** de pronunciación en inglés americano;
+> - un inicio con una sola acción y una tarjeta de resultados;
+> - un análisis de precios: sin suscripción, de 3 a 15 veces más barato que las apps pagas.
+>
+> Sign in with publik sigue probado solo contra un publik falso. Repo privado; no está público, desplegado ni listado.
 
-Actualizado: 2026-11-16
+Actualizado: 2026-11-16 (tarde)
 
 ## Qué funciona (verificado)
 
@@ -10,6 +17,10 @@ Actualizado: 2026-11-16
 |---|---|
 | Flujo completo (inicio, práctica, feedback, frases, historial) | A mano en el navegador a 375px, modo claro y oscuro; con IA simulada y con IA real |
 | IA real de publik: whisper-1, `publik-balanced`, `tts-1`, `publik-fast` | Pruebas reales el 2026-11-16 con audio grabado (`say` de macOS), costos abajo |
+| Marca Dilo: paleta "atardecer sobre la noche", Bricolage Grotesque para títulos, logo de burbuja con barras de voz (`BRAND.md`, `public/brand/`) | Revisión visual a 375px; contraste calculado con la fórmula WCAG |
+| Práctica como videollamada: foto grande del colega, brillo que late cuando habla y sigue tu voz cuando hablas, subtítulos en vivo palabra por palabra | Tests y revisión visual a 375px (modo demo). Los subtítulos siguen el audio real, los eventos de la voz del navegador o, si no hay, una estimación por tiempo |
+| **Sound check** en "Say it": deletreo fonético en inglés americano ("MEE-ding"), sílaba fuerte, 3 palabras foco con tips en español o inglés según el nivel (17 reglas para hispanohablantes sobre el diccionario CMU); al decir la frase: qué palabras entendió la IA, qué oyó en su lugar, palabras por minuto, pausas largas y tu voz palabra por palabra | Tests (dominio, servidor, componente) y revisión visual. Prueba real: publik devuelve los tiempos por palabra de whisper-1 (`verbose_json`), $0,0003 por 3 s de audio |
+| Inicio: una tarjeta "Your call with …" con la situación y un solo botón; compañero, industria y nivel en un panel que se abre solo la primera vez; tarjeta "Your results" (palabras dichas en inglés, prácticas, frases aprendidas, curva de puntaje) | Tests y revisión visual a 375px |
 | Interfaz en inglés y 3 niveles: Beginner (inglés más simple, voz a 0,9x, explicaciones y traducción en español), Intermediate (explicaciones en inglés, traducción en español), Advanced (todo en inglés) | Tests (prompts, ayuda y feedback por nivel). Los prompts por nivel **no** se probaron aún con la IA real |
 | 4 avatares con foto (retratos generados con IA de personas ficticias, hechos con Blotato) y voz propia: Sarah (nova), James (onyx), Emily (shimmer), Mike (echo). El avatar se anima cuando habla o escucha | Tests y revisión visual a 375px. **Sin sincronía de labios** (ver pendientes) |
 | "Help me": traducción o paráfrasis de lo que te dijeron, respuesta sugerida y un tip | Tests y prueba real (2,6 s, $0,0002) |
@@ -21,7 +32,7 @@ Actualizado: 2026-11-16
 | Sign in with publik por sesión de navegador, telemetría `app_opened` y `active_session` | Tests y recorrido contra un publik falso en localhost. **No probado contra publik real** |
 | Claves solo en el servidor, cifradas (AES-256-GCM) | Tests |
 | `npm run build`, `npm run lint`, `npm run typecheck` | Pasan |
-| Tests | 240 tests. Cobertura: 97,5% de líneas, 90% de ramas, 96% de funciones |
+| Tests | 294 tests. Cobertura: 97,2% de líneas, 88,8% de ramas, 96% de funciones |
 
 ## Diferencias entre la API real y el mock (corregidas)
 
@@ -32,6 +43,7 @@ Actualizado: 2026-11-16
 | El feedback hablaba de "el candidato" y con frases largas | Prompt en "tú", frases de máximo 25 palabras y razones de máximo 20 |
 | La transcripción no siempre trae la cabecera `x-publik-charge-micros` | El total se cuadró con `GET /wallet` `spent_today_micros` |
 | `tts-1` con la voz `alloy` sí funciona en `/audio/speech` | Se mantiene (antes era una suposición) |
+| whisper-1 corrige solo el acento: el audio "I want to espeak" volvió como "I want to speak" | El Sound check dice "la IA te entendió", no "pronunciaste perfecto"; los tips de sonidos se predicen por la palabra y lo dicen |
 
 ## Costo medido con la IA real (2026-11-16)
 
@@ -46,7 +58,8 @@ Fuente: cabecera `x-publik-charge-micros` por llamada (activar con `PUBLIK_COST_
 | **Un turno completo** | | **unos $0,004** |
 | Feedback final | publik-balanced | $0,0102 |
 | "Help me" | publik-fast | $0,0002 |
-| "Say it" (una frase) | whisper-1 | $0,0005 |
+| "Say it" (una frase, con tiempos por palabra) | whisper-1 `verbose_json` | $0,0003 a $0,0005 |
+| Sound check (deletreo y tips) | ninguno, diccionario local | $0 |
 
 **Práctica de 10 minutos** (estimado con esos costos, unos 10 turnos, 3 "Say it" y 2 ayudas): 0,0024 + 10 × 0,004 + 0,0102 + 3 × 0,0005 + 2 × 0,0002 ≈ **$0,054**. Con el historial más largo de los últimos turnos, entre **$0,05 y $0,06**. Toda la prueba real de esta sesión gastó unos $0,029.
 
@@ -55,6 +68,7 @@ Lectura: el saldo gratis de publik ($0,05) alcanza para más o menos **una** pr�
 ## Qué está simulado o sin probar
 
 - **Sign in with publik real:** necesita el token de la app (`PUBLIK_APP_TOKEN`) y el setup de `PUBLIK-SETUP.md`. La prueba real usó la clave de desarrollador con el gate apagado.
+- **Pronunciación sonido por sonido:** el Sound check no puntúa cada sonido como ELSA o BoldVoice. Eso necesita un servicio de evaluación de pronunciación (por ejemplo Azure Speech, fuera de publik) o un modelo de unos 200 MB en el navegador. Detalle en `COMPETITIVE-ANALYSIS.md`, mejora #20.
 - **Avatar que habla con los labios:** hoy el avatar es una foto con animación de "hablando" y "escuchando". Mover los labios en vivo necesita un servicio de avatar en tiempo real de pago (mejora #13 en `COMPETITIVE-ANALYSIS.md`).
 - **Niveles con la IA real:** el estilo de cada nivel está en los prompts y tiene tests, pero no se hizo una práctica real en Beginner ni en Advanced.
 - **Teléfonos reales:** falta probar micrófono, audio automático y "Say it" en iPhone (Safari) y Android (Chrome). El arreglo de `.m4a` se probó con un archivo de macOS, no con una grabación de Safari.
@@ -92,14 +106,13 @@ Para David:
 
 ## Siguientes pasos sugeridos
 
-Ranking completo y fuentes en `COMPETITIVE-ANALYSIS.md`.
+Ranking completo, precios y fuentes en `COMPETITIVE-ANALYSIS.md`.
 
-1. Los pasos de `PUBLIK-SETUP.md` y una práctica real con Sign in with publik.
-2. Probar en iPhone y Android reales (micrófono, audio, "Say it") y una práctica real por nivel.
-3. Grabar el primer reel con `DEMO.md`.
-4. Escenario propio: pegar tu CV o "mañana tengo reunión con..." y practicar eso (puntaje 78 en el ranking).
-5. Objetivos visibles: 3 tareas por situación, marcadas al final (66).
-6. Recordatorio diario (correo o notificación web) para cuidar la racha y el "Today's review" (64).
-7. Bajar el costo de voz: probar otra voz o modelo de `/audio/speech` si publik ofrece uno más barato, o usar la voz del navegador en los repasos.
+1. Grabar el primer video con `DEMO.md` (en la Mac, con la IA real, unos $0,05 por toma).
+2. Los pasos de `PUBLIK-SETUP.md` y una práctica real con Sign in with publik.
+3. Probar en iPhone y Android reales (micrófono, audio, subtítulos, "Say it") y una práctica real por nivel.
+4. Prueba de nivel al inicio y repetirla cada mes, con el audio de antes y después (#17). Es el mejor momento para un reel.
+5. Ejercicios armados con tus propios errores del Sound check (#18).
+6. Escenario propio: pegar tu CV o "mañana tengo reunión con..." (#3).
+7. Recordatorio diario (correo o notificación web) para la racha y el "Today's review".
 8. Voz en tiempo real como v2, con un relé en el servidor (detalle en `README.md`).
-9. Vincular el historial a la cuenta de publik para usarlo en varios dispositivos.

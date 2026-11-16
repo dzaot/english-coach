@@ -6,10 +6,10 @@ Dilo (working name, Spanish for "say it") is a free daily speaking practice for 
 
 1. Pick a scenario: job interview, team meeting, client call, presentation or salary negotiation.
 2. Pick your industry: general, sales, customer support, healthcare admin, construction or tech.
-3. Talk out loud with your chosen partner for 5 to 10 minutes (push to talk, or type if you have no mic). Stuck? "Help me" explains the question and suggests an answer.
+3. Talk out loud on a video-call style screen with your chosen partner for 5 to 10 minutes (push to talk, or type if you have no mic). Their lines are captioned live, word by word. Stuck? "Help me" explains the question and suggests an answer.
 4. Get feedback: what you did well, 3 phrases to say more naturally (with the better version), vocabulary to keep, and a score.
-5. "Say it": say each better phrase out loud; the app checks it and brings it back 1, 3 and 7 days later in "Today's review".
-6. Come back tomorrow: daily streak, session history and phrases to review.
+5. "Say it" with a sound check: each better phrase shows how its words sound in General American English (respelling, strong syllable, the three sounds Spanish speakers should focus on). Say it out loud and see which words the AI understood, your pace and your own voice word by word. It comes back 1, 3 and 7 days later in "Today's review".
+6. Come back tomorrow: daily streak, your results (words spoken in English, phrases learned, score trend), session history and phrases to review.
 
 The interface and the conversation are in English. Each learner picks a level: **Beginner** (simpler English, slower voice, tips and translations in Spanish), **Intermediate** (tips in English, translations in Spanish) or **Advanced** (natural speed, English only). They also pick a practice partner: four photo avatars (AI-generated portraits of fictional people, made with Blotato), each with its own voice.
 
@@ -50,7 +50,8 @@ Audio element or speechSynthesis  <--base64 mp3 or null (browser voice fallback)
                                           POST /api/practice/:id/help   ("Help me", publik-fast)
                                           POST /api/practice/:id/finish
                                              /chat/completions (publik-balanced, retry on publik-fast) -> JSON feedback
-                                          POST /api/phrases/:id/drill    ("Say it": whisper-1, then 1/3/7-day schedule)
+                                          POST /api/phrases/:id/drill    ("Say it": whisper-1 with word timings, clarity, pace, 1/3/7-day schedule)
+                                          POST /api/pronounce            (sound check: CMU dictionary, no AI call)
                                           GET  /api/progress  (streak, last 7 days, history, phrases, due today)
                                           GET/POST /api/gate  (Sign in with publik)
                                           POST /api/telemetry (app_opened, active_session)
@@ -60,7 +61,7 @@ Layers (each file is small and has its own tests):
 
 | Folder | Role |
 |---|---|
-| `src/domain/` | Pure logic: scenarios and industries, prompts, conversation rules, feedback parsing (zod), streak math |
+| `src/domain/` | Pure logic: scenarios and industries, prompts, conversation rules, feedback parsing (zod), streak math, sound rules for Spanish speakers (`sounds.ts`) and clarity and pace (`clarity.ts`) |
 | `src/server/ai/` | The AI port (`AiProvider`), an OpenAI-compatible client used for publik API and for a user's own key, and the offline mock |
 | `src/server/publik/` | `publik.ts` (installs, wallet, gate words, telemetry; adapted from publik's reference module) and `gate.ts` (Sign in with publik per browser session) |
 | `src/server/db/` | The `Store` interface and its SQLite implementation |
@@ -91,6 +92,10 @@ v1 is push to talk: record, send, transcribe (whisper-1, files up to about 4 MB,
 
 v2 (documented, not built): publik's realtime voice over `wss://realtime.publikhq.com/v1/realtime` (OpenAI Realtime events, Gemini Live, 16-bit mono PCM at 24 kHz). publik's docs say a browser cannot set the Authorization header and must send the key in a subprotocol, "only with a key that belongs to the person at the browser". To keep keys on the server, v2 should relay the socket through our server (browser to our WebSocket, our server to publik with the install key in the header). publik lists the price at about $0.0225 per minute where both sides talk, and a session holds $0.225 of balance when it opens.
 
+## Brand
+
+Palette, type, logo, voice and how the brand carries to publik and Instagram: [BRAND.md](BRAND.md). Price positioning and competitor prices: [COMPETITIVE-ANALYSIS.md](COMPETITIVE-ANALYSIS.md), section 6.
+
 ## Accessibility and design
 
 WCAG 2.1 AA target: color tokens checked for 4.5:1 contrast in light and dark mode, visible focus rings, labels on every field, a skip link, one `h1` per screen, `lang="en"` on English text, icons from Lucide (no emoji icons), 44px+ touch targets, `aria-live` announcements during the conversation, space bar to talk, Escape to cancel, and `prefers-reduced-motion` respected. Mobile first from 375px.
@@ -102,3 +107,5 @@ Audio is sent for transcription and not stored. Transcripts, feedback and phrase
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+Pronunciations come from the CMU Pronouncing Dictionary through the `cmu-pronouncing-dictionary` package (ISC). Partner portraits are AI-generated images of fictional people.
