@@ -12,9 +12,9 @@ describe("usePreferences", () => {
   it("starts with defaults and remembers changes", () => {
     const { result } = renderHook(() => usePreferences());
     expect(result.current.level).toBe("intermediate");
-    act(() => result.current.update({ level: "beginner", avatarId: "daniel" }));
-    expect(result.current).toMatchObject({ level: "beginner", avatarId: "daniel" });
-    expect(readPreferences()).toEqual({ level: "beginner", avatarId: "daniel" });
+    act(() => result.current.update({ level: "beginner", avatarId: "mike" }));
+    expect(result.current).toMatchObject({ level: "beginner", avatarId: "mike" });
+    expect(readPreferences()).toEqual({ level: "beginner", avatarId: "mike" });
   });
 
   it("ignores bad stored values and blocked storage", () => {

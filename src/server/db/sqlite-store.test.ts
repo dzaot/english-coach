@@ -38,13 +38,13 @@ describe("SQLite store", () => {
       scenarioId: "job_interview",
       industryId: "tech",
       level: "beginner",
-      avatarId: "priya",
+      avatarId: "emily",
       startedAt: "2026-11-15T10:00:00Z",
       turns: [{ role: "counterpart", text: "Hi" }],
     });
     expect(p.finishedAt).toBeNull();
     expect(p.level).toBe("beginner");
-    expect(p.avatarId).toBe("priya");
+    expect(p.avatarId).toBe("emily");
     const withTurn = store.savePracticeTurns(SID, p.id, [...p.turns, { role: "user", text: "Hello" }]);
     expect(withTurn.turns).toHaveLength(2);
     const done = store.finishPractice(SID, p.id, { feedback, finishedAt: "2026-11-15T10:08:00Z", localDay: "2026-11-15" });

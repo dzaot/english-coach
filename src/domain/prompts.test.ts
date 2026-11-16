@@ -6,8 +6,8 @@ import { getIndustry, getScenario } from "./scenarios";
 
 describe("counterpartSystemPrompt", () => {
   it("puts the chosen avatar in role, in English, for the industry and level", () => {
-    const p = counterpartSystemPrompt(getScenario("salary_negotiation"), getIndustry("construction"), getAvatar("daniel"), getLevel("beginner"));
-    expect(p).toContain("You are Daniel, a HR manager");
+    const p = counterpartSystemPrompt(getScenario("salary_negotiation"), getIndustry("construction"), getAvatar("mike"), getLevel("beginner"));
+    expect(p).toContain("You are Mike, a HR manager");
     expect(p).toContain("construction");
     expect(p).toMatch(/only in English/i);
     expect(p).toMatch(/one question/i);

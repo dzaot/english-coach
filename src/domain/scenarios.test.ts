@@ -63,9 +63,9 @@ describe("scenarios catalog", () => {
 
 describe("buildOpener", () => {
   it("opens a job interview for the chosen industry role", () => {
-    const text = buildOpener(getScenario("job_interview"), getIndustry("healthcare_admin"), getAvatar("priya"));
+    const text = buildOpener(getScenario("job_interview"), getIndustry("healthcare_admin"), getAvatar("emily"));
     expect(text).toContain("medical office administrator");
-    expect(text).toContain("I'm Priya");
+    expect(text).toContain("I'm Emily");
     expect(text).toMatch(/tell me a little about yourself/i);
   });
 
@@ -76,7 +76,7 @@ describe("buildOpener", () => {
 
   it("returns a non-empty English line for every scenario", () => {
     for (const s of SCENARIOS) {
-      expect(buildOpener(s, getIndustry("tech"), getAvatar("daniel")).length).toBeGreaterThan(20);
+      expect(buildOpener(s, getIndustry("tech"), getAvatar("mike")).length).toBeGreaterThan(20);
     }
   });
 });

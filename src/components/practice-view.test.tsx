@@ -50,11 +50,11 @@ describe("PracticeView", () => {
 
   it("shows the partner's photo and who is talking", async () => {
     installRecorderStub();
-    render(<PracticeView initial={practice({ avatarId: "daniel", level: "beginner" })} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
-    expect(screen.getByAltText(/Daniel/)).toBeInTheDocument();
+    render(<PracticeView initial={practice({ avatarId: "mike", level: "beginner" })} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
+    expect(screen.getByAltText(/Mike/)).toBeInTheDocument();
     await screen.findByText(/Your turn/);
     await userEvent.click(screen.getByRole("button", { name: "Record your answer" }));
-    expect(await screen.findByText("Daniel is listening…")).toBeInTheDocument();
+    expect(await screen.findByText("Mike is listening…")).toBeInTheDocument();
   });
 
   it("labels the help translation by level", async () => {

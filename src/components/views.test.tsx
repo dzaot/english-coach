@@ -34,7 +34,7 @@ describe("HomeView", () => {
   it("lets the person pick a partner and a level", async () => {
     const onChangePrefs = vi.fn();
     render(<HomeView level="intermediate" avatarId="sarah" onChangePrefs={onChangePrefs} progress={progress()} starting={false} onStart={vi.fn()} onOpenPhrases={vi.fn()} onOpenHistory={vi.fn()} />);
-    expect(screen.getByAltText(/Priya, a woman/)).toBeInTheDocument();
+    expect(screen.getByAltText(/Emily, a woman/)).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText(/James/));
     expect(onChangePrefs).toHaveBeenCalledWith({ avatarId: "james" });
     await userEvent.click(screen.getByLabelText(/Beginner/));
