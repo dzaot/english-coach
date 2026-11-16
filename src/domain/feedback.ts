@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { extractJsonObject } from "./json";
 import { cleanDashes } from "./text";
 
 /** Feedback the coach returns at the end of a session. Explanations in Spanish, phrases in English. */
@@ -33,14 +34,9 @@ export class FeedbackParseError extends Error {
 }
 
 function extractJson(raw: string): unknown {
-  const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (start === -1 || end <= start) throw new FeedbackParseError("no JSON object found");
-  try {
-    return JSON.parse(raw.slice(start, end + 1));
-  } catch {
-    throw new FeedbackParseError("malformed JSON");
-  }
+  const json = extractJsonObject(raw);
+  if (json === null) throw new FeedbackParseError("no valid JSON object found");
+  return json;
 }
 
 /** Parses model output into feedback. Throws FeedbackParseError on anything unexpected. */

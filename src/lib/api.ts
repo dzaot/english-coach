@@ -1,4 +1,4 @@
-import type { FinishResult, GateState, Phrase, PracticeView, Progress, SpeechAudio, TurnResult } from "./types";
+import type { FinishResult, GateState, Help, Phrase, PracticeView, Progress, SpeechAudio, TurnResult } from "./types";
 
 /** Typed calls to our own API. Every failure becomes an ApiError with a Spanish message. */
 
@@ -57,6 +57,7 @@ export const api = {
     }
     return request<TurnResult>(`/api/practice/${encodeURIComponent(id)}/turn`, { method: "POST", body: form });
   },
+  help: (id: string) => request<Help>(`/api/practice/${encodeURIComponent(id)}/help`, jsonInit("POST", {})),
   finish: (id: string) =>
     request<FinishResult>(`/api/practice/${encodeURIComponent(id)}/finish`, jsonInit("POST", { tzOffset: tzOffset() })),
   progress: () => request<Progress>(`/api/progress?tz=${tzOffset()}`),

@@ -53,6 +53,12 @@ function mockFeedback(transcript: string): string {
   });
 }
 
+const MOCK_HELP = JSON.stringify({
+  translationEs: "¿Puedes darme un ejemplo concreto de un resultado del que estés orgulloso?",
+  suggestionEn: "Sure. Last year I improved our returns process and cut handling time by forty percent.",
+  tipEs: "Da una cifra concreta: hace tu respuesta más creíble.",
+});
+
 export function createMockProvider(): AiProvider {
   return {
     async transcribe(audio) {
@@ -60,6 +66,7 @@ export function createMockProvider(): AiProvider {
     },
     async chat(messages) {
       const system = messages[0]?.content ?? "";
+      if (system.includes("HELP_JSON")) return MOCK_HELP;
       if (system.includes("JSON")) return mockFeedback(messages[messages.length - 1]?.content ?? "");
       const answered = messages.filter((m) => m.role === "user").length;
       return FOLLOW_UPS[(answered - 1 + FOLLOW_UPS.length) % FOLLOW_UPS.length];

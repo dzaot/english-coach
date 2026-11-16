@@ -17,6 +17,7 @@ const CATALOG = {
   ai_auth: { status: 502, es: "Tu sesión de publik expiró. Recarga la página para entrar de nuevo." },
   ai_unavailable: { status: 503, es: "El servicio de IA no responde ahora. Inténtalo en un momento." },
   feedback_invalid: { status: 502, es: "No pudimos preparar tu feedback. Inténtalo otra vez." },
+  help_invalid: { status: 502, es: "No pudimos preparar una ayuda. Inténtalo otra vez." },
   internal: { status: 500, es: "Algo salió mal de nuestro lado. Inténtalo de nuevo." },
 } as const;
 

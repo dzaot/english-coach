@@ -50,6 +50,7 @@ describe("api client", () => {
     await api.telemetry("app_opened");
     await api.getPractice("a/b");
     await api.markPhrase("ph1", true);
-    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual(["/api/gate", "/api/telemetry", "/api/practice/a%2Fb", "/api/phrases/ph1"]);
+    await api.help("p1");
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual(["/api/gate", "/api/telemetry", "/api/practice/a%2Fb", "/api/phrases/ph1", "/api/practice/p1/help"]);
   });
 });

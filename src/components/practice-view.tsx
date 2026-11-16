@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Flag, Keyboard, Mic, Send } from "lucide-react";
+import { Flag, Keyboard, LifeBuoy, Mic, Send } from "lucide-react";
 import { MAX_USER_TURNS, countUserTurns } from "@/domain/conversation";
 import { getScenario } from "@/domain/scenarios";
 import { ApiError, api } from "@/lib/api";
@@ -9,8 +9,9 @@ import { formatClock } from "@/lib/format";
 import { useElapsedSeconds } from "@/lib/hooks/use-elapsed";
 import { useRecorder } from "@/lib/hooks/use-recorder";
 import { useSpeaker } from "@/lib/hooks/use-speaker";
-import type { FinishResult, PracticeView as Practice, SpeechAudio } from "@/lib/types";
+import type { FinishResult, Help, PracticeView as Practice, SpeechAudio } from "@/lib/types";
 import { ChatBubble } from "./chat-bubble";
+import { HelpCard } from "./help-card";
 import { RecordButton, type MicState } from "./record-button";
 import { industryLabel } from "./scenario-meta";
 import { Button, ErrorBanner, TopBar } from "./ui";
@@ -22,7 +23,7 @@ interface Props {
   onExit: () => void;
 }
 
-type Phase = "ready" | "sending" | "finishing";
+type Phase = "ready" | "sending" | "finishing" | "helping";
 const turnKey = (i: number) => `turn-${i}`;
 
 export function PracticeView({ initial, initialAudio, onFinished, onExit }: Props) {
@@ -32,6 +33,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
   const [typing, setTyping] = useState(false);
   const [draft, setDraft] = useState("");
   const [announcement, setAnnouncement] = useState("");
+  const [help, setHelp] = useState<Help | null>(null);
   const speaker = useSpeaker();
   const elapsed = useElapsedSeconds(initial.startedAt);
   const endRef = useRef<HTMLLIElement | null>(null);
@@ -42,6 +44,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
     async (answer: { audio: Blob } | { text: string }) => {
       setPhase("sending");
       setError(null);
+      setHelp(null);
       setAnnouncement("Enviando tu respuesta…");
       try {
         const result = await api.turn(practice.id, answer);
@@ -94,6 +97,20 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, pressMic, recorder, typing]);
+
+  const askHelp = async () => {
+    setPhase("helping");
+    setError(null);
+    try {
+      const next = await api.help(practice.id);
+      setHelp(next);
+      setAnnouncement(`Puedes decir: ${next.suggestionEn}`);
+    } catch (e) {
+      setError({ message: e instanceof Error ? e.message : String(e), topUpUrl: e instanceof ApiError ? e.topUpUrl : null });
+    } finally {
+      setPhase("ready");
+    }
+  };
 
   const finish = async () => {
     setPhase("finishing");
@@ -170,6 +187,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
       </p>
 
       <div className="sticky bottom-0 -mx-4 space-y-3 border-t border-border bg-bg/95 px-4 pb-4 pt-3 backdrop-blur">
+        {help ? <HelpCard help={help} onListen={() => speaker.play("help", help.suggestionEn)} onClose={() => setHelp(null)} /> : null}
         {error || recorder.error ? <ErrorBanner message={error?.message ?? recorder.error ?? ""} topUpUrl={error?.topUpUrl} /> : null}
         {practice.limitReached ? <p className="text-center font-semibold">Llegaste al final de esta práctica. Mira tu feedback.</p> : null}
 
@@ -210,7 +228,9 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
               <Keyboard aria-hidden="true" className="size-4" /> Escribir
             </Button>
             <RecordButton state={micState} onPress={() => void pressMic()} />
-            <span />
+            <Button variant="ghost" onClick={() => void askHelp()} disabled={busy || recorder.status === "recording"} className="justify-self-end text-sm">
+              <LifeBuoy aria-hidden="true" className="size-4" /> {phase === "helping" ? "Pensando…" : "¿Qué digo?"}
+            </Button>
           </div>
         ) : null}
 

@@ -1,11 +1,12 @@
 /** Shapes the browser receives from the API. Type-only imports: nothing from the server ships to the client. */
 import type { Feedback } from "@/domain/feedback";
+import type { Help } from "@/domain/help";
 import type { Streak } from "@/domain/streak";
 import type { SpeechAudio } from "@/server/ai/provider";
 import type { HistoryItem, PracticeView, TurnResult } from "@/server/practice-service";
 import type { GateState } from "@/server/publik/gate";
 
-export type { Feedback, GateState, HistoryItem, PracticeView, SpeechAudio, Streak, TurnResult };
+export type { Feedback, GateState, Help, HistoryItem, PracticeView, SpeechAudio, Streak, TurnResult };
 
 export interface Phrase {
   readonly id: string;

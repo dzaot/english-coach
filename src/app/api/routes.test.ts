@@ -9,6 +9,7 @@ import * as gate from "./gate/route";
 import * as phrases from "./phrases/[id]/route";
 import * as practiceById from "./practice/[id]/route";
 import * as finish from "./practice/[id]/finish/route";
+import * as help from "./practice/[id]/help/route";
 import * as turn from "./practice/[id]/turn/route";
 import * as practice from "./practice/route";
 import * as progress from "./progress/route";
@@ -32,6 +33,9 @@ describe("practice flow over HTTP (mock AI)", () => {
     const started = await (await practice.POST(post("/api/practice", { scenarioId: "client_call", industryId: "customer_support" }))).json();
     const id = started.practice.id;
     expect(started.practice.turns[0].text).toContain("Michael");
+
+    const helped = await (await help.POST(post(`/api/practice/${id}/help`, {}), params(id))).json();
+    expect(helped.suggestionEn.length).toBeGreaterThan(5);
 
     const form = new FormData();
     form.append("text", "Sorry about that, let me check your account.");

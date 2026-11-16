@@ -8,6 +8,7 @@ import {
   type Turn,
 } from "@/domain/conversation";
 import { FeedbackParseError, parseFeedback, type Feedback } from "@/domain/feedback";
+import { HelpParseError, helpMessages, parseHelp, type Help } from "@/domain/help";
 import { counterpartSystemPrompt, feedbackMessages } from "@/domain/prompts";
 import { cleanDashes } from "@/domain/text";
 import { INDUSTRY_IDS, SCENARIO_IDS, buildOpener, getIndustry, getScenario } from "@/domain/scenarios";
@@ -22,6 +23,7 @@ import { AppError } from "./errors";
 export const MAX_AUDIO_BYTES = 4_000_000; // publik's multipart transcription limit is about 4 MB
 const REPLY_MAX_TOKENS = 160;
 const FEEDBACK_MAX_TOKENS = 900;
+const HELP_MAX_TOKENS = 300;
 const HISTORY_LIMIT = 30;
 const WEEK_DAYS = 7;
 
@@ -126,6 +128,19 @@ export async function takeTurn(
   const replyText = cleanDashes(await ai.chat(toChatMessages(system, withUser), { tier: ctx.config.replyTier, maxTokens: REPLY_MAX_TOKENS }));
   const saved = ctx.store.savePracticeTurns(sid, id, appendTurn(withUser, { role: "counterpart", text: replyText }));
   return { userText: check.text, replyText, audio: await ai.speak(replyText), practice: view(saved) };
+}
+
+/** "¿Qué digo?": translation of the last line and a suggested answer (fast tier). */
+export async function getHelp(ctx: AppContext, ai: AiProvider, sid: string, id: string): Promise<Help> {
+  const practice = load(ctx, sid, id);
+  if (practice.finishedAt) throw new AppError("session_finished");
+  const messages = helpMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), practice.turns);
+  try {
+    return parseHelp(await ai.chat(messages, { tier: "fast", maxTokens: HELP_MAX_TOKENS }));
+  } catch (e) {
+    if (e instanceof HelpParseError) throw new AppError("help_invalid");
+    throw e;
+  }
 }
 
 async function generateFeedback(ai: AiProvider, practice: PracticeRecord): Promise<Feedback> {

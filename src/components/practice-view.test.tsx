@@ -9,7 +9,7 @@ import { PracticeView } from "./practice-view";
 
 vi.mock("@/lib/api", async (orig) => {
   const real = await orig<typeof import("@/lib/api")>();
-  return { ...real, api: { turn: vi.fn(), finish: vi.fn() } };
+  return { ...real, api: { turn: vi.fn(), finish: vi.fn(), help: vi.fn() } };
 });
 const mocked = vi.mocked(api);
 
@@ -43,6 +43,27 @@ describe("PracticeView", () => {
     expect(screen.getAllByText("Sarah").length).toBeGreaterThan(0);
     expect(screen.getByText("0/12")).toBeInTheDocument();
     expect(screen.getByText(/Responde 2 veces/)).toBeInTheDocument();
+  });
+
+  it("helps when the person is stuck: translation, suggested answer and tip", async () => {
+    mocked.help.mockResolvedValueOnce({ translationEs: "Háblame de ti.", suggestionEn: "I'm a sales rep.", tipEs: "Empieza por tu rol." });
+    render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /¿Qué digo\?/ }));
+    const card = await screen.findByRole("region", { name: "Ayuda para responder" });
+    expect(card).toHaveTextContent("Háblame de ti.");
+    expect(card).toHaveTextContent("I'm a sales rep.");
+    expect(card).toHaveTextContent("Empieza por tu rol.");
+    await userEvent.click(screen.getByRole("button", { name: /Escuchar la sugerencia/ }));
+    expect(speech.speak).toHaveBeenCalledTimes(2);
+    await userEvent.click(screen.getByRole("button", { name: "Cerrar ayuda" }));
+    expect(screen.queryByRole("region", { name: "Ayuda para responder" })).not.toBeInTheDocument();
+  });
+
+  it("shows an error when help fails", async () => {
+    mocked.help.mockRejectedValueOnce(new Error("No pudimos preparar una ayuda."));
+    render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /¿Qué digo\?/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos preparar una ayuda.");
   });
 
   it("sends a typed answer, then finishes and returns the feedback", async () => {

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { testContext } from "@/test/context";
 import { createMockProvider } from "./ai/mock-provider";
 import type { AiProvider } from "./ai/provider";
-import { finishPractice, getPractice, getProgress, markPhrase, startPractice, takeTurn } from "./practice-service";
+import { finishPractice, getHelp, getPractice, getProgress, markPhrase, startPractice, takeTurn } from "./practice-service";
 
 const SID = "sid-1";
 const ai = createMockProvider();
@@ -153,5 +153,30 @@ describe("audioExtension", () => {
     expect(audioExtension("audio/mpeg")).toBe("mp3");
     expect(audioExtension("audio/wav")).toBe("wav");
     expect(audioExtension("")).toBe("webm");
+  });
+});
+
+describe("getHelp", () => {
+  it("translates the last question and suggests an answer with the fast tier", async () => {
+    const { ctx, practice } = await started();
+    const chat = vi.fn<AiProvider["chat"]>(ai.chat);
+    const help = await getHelp(ctx, { ...ai, chat }, SID, practice.id);
+    expect(help.translationEs.length).toBeGreaterThan(3);
+    expect(help.suggestionEn.length).toBeGreaterThan(3);
+    expect(chat.mock.calls[0][1]).toEqual({ tier: "fast", maxTokens: 300 });
+  });
+
+  it("gives a friendly error when the model answer is not usable", async () => {
+    const { ctx, practice } = await started();
+    await expect(getHelp(ctx, { ...ai, chat: async () => "no" }, SID, practice.id)).rejects.toMatchObject({ code: "help_invalid" });
+  });
+
+  it("refuses a finished or missing practice", async () => {
+    const { ctx, practice } = await started();
+    await takeTurn(ctx, ai, SID, practice.id, { text: "one" });
+    await takeTurn(ctx, ai, SID, practice.id, { text: "two" });
+    await finishPractice(ctx, ai, SID, practice.id, { tzOffset: 0 });
+    await expect(getHelp(ctx, ai, SID, practice.id)).rejects.toMatchObject({ code: "session_finished" });
+    await expect(getHelp(ctx, ai, SID, "missing")).rejects.toMatchObject({ code: "not_found" });
   });
 });
