@@ -1,36 +1,66 @@
 # Estado: Dilo (english-coach)
 
-> Resumen: MVP completo y probado en local con IA simulada: elegir escenario e industria, hablar por turnos (micrófono o texto), feedback con puntaje, 3 frases mejores y vocabulario, racha diaria, historial y frases para repasar. Sign in with publik, conteo de uso y publik API están programados según los docs de publik y probados contra un servidor publik falso local, pero **no contra publik real**: eso necesita el token y la aprobación de David. Repo privado en GitHub; no está público, desplegado ni listado.
+> Resumen: MVP completo y probado **con la IA real de publik** en local (clave de desarrollador, gate apagado): voz a texto, respuesta de la contraparte, voz, feedback, "¿Qué digo?" y "Dilo tú". Una práctica de 10 minutos cuesta unos **$0,05 a $0,06** (medido por llamada). Tras compararnos con Speak, se agregaron "Dilo tú" con repaso espaciado, "¿Qué digo?", texto antes que voz y "Más lento". Sign in with publik sigue probado solo contra un publik falso: falta el token de la app y la aprobación de David. Repo privado; no está público, desplegado ni listado.
 
-Actualizado: 2026-11-15
+Actualizado: 2026-11-16
 
 ## Qué funciona (verificado)
 
 | Parte | Cómo se verificó |
 |---|---|
-| Flujo completo en modo demo (inicio, práctica, feedback, frases, historial) | Recorrido a mano en el navegador a 375px, modo claro y oscuro |
-| Racha diaria con los últimos 7 días, en la zona horaria del usuario | Tests de dominio y de rutas |
+| Flujo completo (inicio, práctica, feedback, frases, historial) | A mano en el navegador a 375px, modo claro y oscuro; con IA simulada y con IA real |
+| IA real de publik: whisper-1, `publik-balanced`, `tts-1`, `publik-fast` | Pruebas reales el 2026-11-16 con audio grabado (`say` de macOS), costos abajo |
+| "¿Qué digo?": traducción de lo que te dijeron, respuesta sugerida y un tip | Tests y prueba real (2,6 s, $0,0002) |
+| "Dilo tú": dices la frase mejorada, la app la transcribe, marca las palabras que faltaron y la agenda para 1, 3 y 7 días | Tests y prueba real: frase correcta 100% y agendada para el día siguiente; frase equivocada 6% |
+| "Repaso de hoy" en el inicio y frases del día primero | Tests |
+| El texto de la respuesta aparece antes que la voz; la voz se pide aparte y queda en caché para repetir y para "Más lento" (0,75x) | Tests y prueba real: el texto llega unos 2,5 s antes |
+| Racha diaria con los últimos 7 días, en la zona horaria del usuario | Tests |
 | Push to talk con MediaRecorder, corte a los 90 s, respuesta escrita como alternativa | Tests con MediaRecorder simulado. **No probado en un teléfono real** |
-| Voz de la contraparte: audio del servidor o, si falla, la voz inglesa del navegador | Tests; en el navegador se oyó la voz del sistema |
-| Sign in with publik por sesión de navegador: instalar, "Sign in with publik", elegir plan, "Connect your plan", "Use my own key", uso en % | Tests y recorrido completo contra un servidor publik falso en localhost |
-| Telemetría `app_opened` y `active_session` con la clave de la instalación | Tests y el servidor falso la recibió con clave |
-| Claves solo en el servidor, cifradas (AES-256-GCM) | Tests: la clave no aparece en la base ni en las respuestas |
-| Errores en español con un solo enlace de recarga en el 402 | Tests |
+| Sign in with publik por sesión de navegador, telemetría `app_opened` y `active_session` | Tests y recorrido contra un publik falso en localhost. **No probado contra publik real** |
+| Claves solo en el servidor, cifradas (AES-256-GCM) | Tests |
 | `npm run build`, `npm run lint`, `npm run typecheck` | Pasan |
-| Tests | 183 tests. Cobertura: 97% de líneas, 90% de ramas, 96% de funciones |
+| Tests | 225 tests. Cobertura: 97% de líneas, 90% de ramas, 96% de funciones |
+
+## Diferencias entre la API real y el mock (corregidas)
+
+| Hallazgo | Arreglo |
+|---|---|
+| publik rechazó el audio `audio/mp4` subido como `turn.mp4` ("Invalid file format"). Es lo que graba Safari en iPhone | Se sube como `.m4a`; mapeo de tipos en `audioExtension()` con test |
+| El modelo escribe guiones largos en respuestas y feedback | Se limpian (`cleanDashes`) y el prompt los prohíbe |
+| El feedback hablaba de "el candidato" y con frases largas | Prompt en "tú", frases de máximo 25 palabras y razones de máximo 20 |
+| La transcripción no siempre trae la cabecera `x-publik-charge-micros` | El total se cuadró con `GET /wallet` `spent_today_micros` |
+| `tts-1` con la voz `alloy` sí funciona en `/audio/speech` | Se mantiene (antes era una suposición) |
+
+## Costo medido con la IA real (2026-11-16)
+
+Fuente: cabecera `x-publik-charge-micros` por llamada (activar con `PUBLIK_COST_LOG=1`) y cuadre con `GET /wallet`. 1.000.000 micros = $1.
+
+| Llamada | Modelo | Costo medido |
+|---|---|---|
+| Voz del saludo inicial | tts-1 | $0,0022 a $0,0025 |
+| Transcripción de un turno (unos 6 s de audio) | whisper-1 | $0,0005 |
+| Respuesta de la contraparte | publik-balanced | $0,0010 a $0,0014 (crece con la conversación) |
+| Voz de la respuesta | tts-1 | $0,0015 a $0,0030 |
+| **Un turno completo** | | **unos $0,004** |
+| Feedback final | publik-balanced | $0,0102 |
+| "¿Qué digo?" | publik-fast | $0,0002 |
+| "Dilo tú" (una frase) | whisper-1 | $0,0005 |
+
+**Práctica de 10 minutos** (estimado con esos costos, unos 10 turnos, 3 "Dilo tú" y 2 ayudas): 0,0024 + 10 × 0,004 + 0,0102 + 3 × 0,0005 + 2 × 0,0002 ≈ **$0,054**. Con el historial más largo de los últimos turnos, entre **$0,05 y $0,06**. Toda la prueba real de esta sesión gastó unos $0,029.
+
+Lectura: el saldo gratis de publik ($0,05) alcanza para más o menos **una** práctica. La voz (tts-1) es casi la mitad del costo; `REPLY_TIER=fast` ahorra poco porque el chat es la parte barata.
 
 ## Qué está simulado o sin probar
 
-- **IA en desarrollo:** `AI_PROVIDER=mock` responde con preguntas fijas y un feedback fijo construido con tus frases. Sirve para demo y tests, no para un reel.
-- **publik real:** nada se ha llamado contra publikhq.com con un token. Faltan los pasos de `PUBLIK-SETUP.md`.
-- **Modelo de voz:** los docs de publik no dicen qué nombre de modelo acepta `/audio/speech`. Usé `tts-1` y la voz `alloy` (configurables con `PUBLIK_TTS_MODEL` y `PUBLIK_TTS_VOICE`). Si fallan, la app usa la voz del navegador y sigue funcionando.
-- **Teléfonos reales:** falta probar micrófono y reproducción automática en iPhone (Safari) y Android (Chrome). iOS puede bloquear el audio que llega después de esperar la respuesta; para eso está el botón "Escuchar" en cada burbuja.
+- **Sign in with publik real:** necesita el token de la app (`PUBLIK_APP_TOKEN`) y el setup de `PUBLIK-SETUP.md`. La prueba real usó la clave de desarrollador con el gate apagado.
+- **Teléfonos reales:** falta probar micrófono, audio automático y "Dilo tú" en iPhone (Safari) y Android (Chrome). El arreglo de `.m4a` se probó con un archivo de macOS, no con una grabación de Safari.
+- **Modo demo:** `AI_PROVIDER=mock` sigue sirviendo para ensayar sin gastar; su feedback es fijo.
 
 ## Nombres propuestos
 
 | Nombre | Por qué | Contra |
 |---|---|---|
-| **Dilo** (favorito, nombre de trabajo) | "Dilo" es la acción misma: decirlo en voz alta. Corto, en español, sirve como verbo en los reels ("Dilo en inglés") | Disponibilidad de dominio y marca sin verificar |
+| **Dilo** (favorito, nombre de trabajo) | "Dilo" es la acción misma: decirlo en voz alta. Corto, en español, sirve como verbo en los reels ("Dilo en inglés"). Ahora también nombra la función estrella, "Dilo tú" | Disponibilidad de dominio y marca sin verificar |
 | Ensayo | Suena profesional: ensayas antes de la entrevista real | Menos memorable, puede sonar a escrito académico |
 | Turno | Calza con la mecánica por turnos y con "tu turno" | Genérico, difícil de buscar |
 
@@ -38,12 +68,12 @@ Actualizado: 2026-11-15
 
 Para Akrit o Mann (publik):
 
-1. **Web alojada con muchos usuarios:** el módulo de publik guarda una instalación por computador. Aquí cada sesión de navegador hace su propio `POST /installs` con el token del servidor, y su clave queda cifrada en la base. ¿Es el patrón que esperan para `hosted_web`? ¿Qué valor de `os` debe ir (hoy `linux`, configurable con `PUBLIK_INSTALL_OS`)?
-2. **El escaneo:** busca `/api/v1/installs`, `/api/v1/telemetry`, `app_opened` y `APP_SLUG = "<slug>"` en "el archivo del módulo". Todo está en `src/server/publik/publik.ts`. ¿Lo encontrará ahí?
-3. **Saldo gratis de $0,05:** una práctica hace unas 6 a 12 llamadas de chat, más transcripción, voz y feedback. Estimo (I) que el saldo gratis se acaba dentro de la primera práctica y el usuario ve el aviso de recarga. ¿Pueden dar más saldo inicial a los usuarios de fellows? Mientras tanto, `REPLY_TIER=fast` abarata las respuestas.
-4. **Compute:** ¿cuenta para el leaderboard el gasto en audio (transcripción y voz), que publik cobra sin margen?
+1. **Web alojada con muchos usuarios:** aquí cada sesión de navegador hace su propio `POST /installs` con el token del servidor y su clave queda cifrada en la base. ¿Es el patrón que esperan para `hosted_web`? ¿Qué valor de `os` va (hoy `linux`, configurable)?
+2. **El escaneo:** busca `/api/v1/installs`, `/api/v1/telemetry`, `app_opened` y `APP_SLUG = "<slug>"` en el archivo del módulo, que es `src/server/publik/publik.ts`. ¿Lo encontrará ahí?
+3. **Saldo gratis:** medido, $0,05 da para una práctica. ¿Pueden dar más saldo inicial a los usuarios de fellows, o pueden los créditos de David cubrir su uso?
+4. **Compute:** ¿cuenta para el leaderboard el gasto en audio (transcripción y voz), que publik cobra sin margen? Es casi la mitad del costo de una práctica.
 5. **Hosting:** ¿publik aloja apps `hosted_web` o cada fellow pone su servidor?
-6. **"Gratis":** ¿pueden los créditos de David cubrir el uso de sus usuarios? La interfaz dice "Gratis" en el inicio y en el título; si la respuesta es no, hay que cambiar esos textos (riesgo marcado también en `marketing/STATUS.md` según el segundo cerebro).
+6. **"Gratis":** la interfaz dice "Gratis" en el inicio y en el título. Si los créditos de David no pueden cubrir el uso, hay que cambiar esos textos (riesgo marcado también por la sesión de marketing).
 
 Para David:
 
@@ -51,19 +81,20 @@ Para David:
 8. ¿Licencia MIT está bien?
 9. ¿Dónde desplegar? Necesita disco persistente (ver `PUBLIK-SETUP.md`).
 
-## Bloqueado por David (no se puede hacer sin él)
+## Bloqueado por David
 
 - Hacer público el repo, desplegar, correr el setup de publik y aprobar en el navegador, poner `PUBLIK_APP_TOKEN` en el hosting. Todo en `PUBLIK-SETUP.md`.
 
 ## Siguientes pasos sugeridos
 
-1. Los pasos de `PUBLIK-SETUP.md` y una práctica real de punta a punta.
-2. Probar en iPhone y Android reales (micrófono, audio automático, teclado).
+Ranking completo y fuentes en `COMPETITIVE-ANALYSIS.md`.
+
+1. Los pasos de `PUBLIK-SETUP.md` y una práctica real con Sign in with publik.
+2. Probar en iPhone y Android reales (micrófono, audio, "Dilo tú").
 3. Grabar el primer reel con `DEMO.md`.
-4. Medir costo real por práctica con `x-publik-charge-micros` y decidir `REPLY_TIER`.
-5. Recordatorio diario opcional (correo o notificación web) para cuidar la racha, que es lo que convierte a alguien en usuario semanal (uso en 2 días distintos).
-6. Repaso activo de frases: decir la frase mejorada en voz alta y comprobarla con la transcripción.
-7. Nivel (básico, intermedio, avanzado) y opción de voz más lenta.
-8. Tarjeta para compartir el puntaje (imagen) para que los usuarios la suban a historias.
-9. Voz en tiempo real como v2, con un relé en el servidor para no exponer la clave (detalle en `README.md`).
-10. Vincular el historial a la cuenta de publik (no solo a la cookie) para usarlo en varios dispositivos.
+4. Escenario propio: pegar tu CV o "mañana tengo reunión con..." y practicar eso (puntaje 78 en el ranking).
+5. Objetivos visibles: 3 tareas por situación, marcadas al final (66).
+6. Recordatorio diario (correo o notificación web) para cuidar la racha y el "Repaso de hoy" (64).
+7. Bajar el costo de voz: probar otra voz o modelo de `/audio/speech` si publik ofrece uno más barato, o usar la voz del navegador en los repasos.
+8. Voz en tiempo real como v2, con un relé en el servidor (detalle en `README.md`).
+9. Vincular el historial a la cuenta de publik para usarlo en varios dispositivos.
