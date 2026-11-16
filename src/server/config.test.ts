@@ -11,6 +11,8 @@ describe("loadConfig", () => {
     expect(c.speechModel).toBe("tts-1");
     expect(c.replyTier).toBe("balanced");
     expect(loadConfig({ REPLY_TIER: "fast" }).replyTier).toBe("fast");
+    expect(c.costLog).toBe(false);
+    expect(loadConfig({ PUBLIK_COST_LOG: "1" }).costLog).toBe(true);
   });
 
   it("turns the gate on for the publik provider and requires its secrets", () => {

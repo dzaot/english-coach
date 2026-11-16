@@ -1,11 +1,16 @@
 import type { AppConfig } from "@/server/config";
 import { MODELS } from "@/server/publik/publik";
-import { createOpenAiCompatibleProvider } from "./openai-compatible";
+import { createOpenAiCompatibleProvider, type Charge } from "./openai-compatible";
 import type { AiProvider } from "./provider";
 
 /** Builds the real clients. Which key to use is decided by the gate (publik/gate.ts). */
 
 export const OPENAI_BASE_URL = "https://api.openai.com/v1";
+
+/** One server log line per charged call: operation, model, micros. Never the key or the content. */
+export function logCharge(charge: Charge): void {
+  console.info(`[publik-cost] ${charge.op} ${charge.model} ${charge.micros}`);
+}
 
 export function publikProvider(config: AppConfig, apiKey: string, doFetch: typeof fetch): AiProvider {
   return createOpenAiCompatibleProvider({
@@ -14,6 +19,7 @@ export function publikProvider(config: AppConfig, apiKey: string, doFetch: typeo
     models: { fast: MODELS.fast, balanced: MODELS.balanced, transcribe: "whisper-1", speech: config.speechModel },
     voice: config.speechVoice,
     fetch: doFetch,
+    onCharge: config.costLog ? logCharge : undefined,
   });
 }
 

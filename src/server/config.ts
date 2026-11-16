@@ -12,6 +12,7 @@ const EnvSchema = z.object({
   PUBLIK_TTS_VOICE: z.string().min(1).default("alloy"),
   PUBLIK_INSTALL_OS: z.enum(["linux", "macos", "windows"]).default("linux"),
   REPLY_TIER: z.enum(["fast", "balanced"]).default("balanced"),
+  PUBLIK_COST_LOG: z.enum(["0", "1"]).default("0"),
   DATABASE_PATH: z.string().min(1).default("./data/coach.db"),
   NODE_ENV: z.string().optional(),
 });
@@ -29,6 +30,8 @@ export interface AppConfig {
   readonly installOs: "linux" | "macos" | "windows";
   /** Model tier for the counterpart's replies. Feedback always tries balanced first. */
   readonly replyTier: "fast" | "balanced";
+  /** Log what publik charged for each call (server log, no keys, no content). */
+  readonly costLog: boolean;
   readonly databasePath: string;
   readonly isProduction: boolean;
 }
@@ -60,6 +63,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     speechVoice: e.PUBLIK_TTS_VOICE,
     installOs: e.PUBLIK_INSTALL_OS,
     replyTier: e.REPLY_TIER,
+    costLog: e.PUBLIK_COST_LOG === "1",
     databasePath: e.DATABASE_PATH,
     isProduction: e.NODE_ENV === "production",
   };

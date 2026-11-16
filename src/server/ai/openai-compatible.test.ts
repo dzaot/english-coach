@@ -75,4 +75,20 @@ describe("OpenAI-compatible provider", () => {
     expect(await make(net.fetch).speak("Hello")).toBeNull();
     spy.mockRestore();
   });
+
+  it("reports what each call cost from x-publik-charge-micros", async () => {
+    const onCharge = vi.fn();
+    const { fetch } = fakeFetch({
+      "/chat/completions": json({ choices: [{ message: { content: "Hi" } }] }, 200, { "x-publik-charge-micros": "1234" }),
+      "/audio/transcriptions": json({ text: "hello" }, 200, { "x-publik-charge-micros": "50" }),
+      "/audio/speech": new Response(new Uint8Array([1]), { headers: { "content-type": "audio/mpeg" } }),
+    });
+    const ai = createOpenAiCompatibleProvider({ baseURL: "https://publikhq.com/api/v1", apiKey: "pk", models, voice: "alloy", fetch, onCharge });
+    await ai.chat([], { tier: "fast" });
+    await ai.transcribe(audio, "a.webm");
+    await ai.speak("x");
+    expect(onCharge).toHaveBeenCalledWith({ op: "chat", model: "publik-fast", micros: 1234 });
+    expect(onCharge).toHaveBeenCalledWith({ op: "transcribe", model: "whisper-1", micros: 50 });
+    expect(onCharge).toHaveBeenCalledTimes(2);
+  });
 });

@@ -8,6 +8,14 @@ export interface OpenAiCompatibleOptions {
   readonly models: Readonly<Record<Tier, string>> & { readonly transcribe: string; readonly speech: string };
   readonly voice: string;
   readonly fetch?: typeof fetch;
+  /** Called with what publik charged for a call (x-publik-charge-micros), when the header is present. */
+  readonly onCharge?: (charge: Charge) => void;
+}
+
+export interface Charge {
+  readonly op: "transcribe" | "chat" | "speech";
+  readonly model: string;
+  readonly micros: number;
 }
 
 const CHAT_TIMEOUT_MS = 45_000;
@@ -16,6 +24,11 @@ const AUDIO_TIMEOUT_MS = 30_000;
 export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): AiProvider {
   const doFetch = opts.fetch ?? fetch;
   const auth = { authorization: `Bearer ${opts.apiKey}` };
+
+  function report(res: Response, op: Charge["op"], model: string): void {
+    const micros = Number(res.headers.get("x-publik-charge-micros"));
+    if (opts.onCharge && res.headers.has("x-publik-charge-micros") && Number.isFinite(micros)) opts.onCharge({ op, model, micros });
+  }
 
   async function call(path: string, init: RequestInit, timeoutMs: number): Promise<Response> {
     let res: Response;
@@ -44,6 +57,7 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): A
       form.append("model", opts.models.transcribe);
       form.append("language", "en");
       const res = await call("/audio/transcriptions", { method: "POST", headers: auth, body: form }, AUDIO_TIMEOUT_MS);
+      report(res, "transcribe", opts.models.transcribe);
       const body = (await res.json().catch(() => ({}))) as { text?: unknown };
       const text = typeof body.text === "string" ? body.text.trim() : "";
       if (!text) throw new AppError("transcription_empty");
@@ -60,6 +74,7 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): A
         },
         CHAT_TIMEOUT_MS,
       );
+      report(res, "chat", opts.models[tier]);
       const body = (await res.json().catch(() => ({}))) as { choices?: { message?: { content?: unknown } }[] };
       const content = body.choices?.[0]?.message?.content;
       if (typeof content !== "string" || !content.trim()) {
@@ -79,6 +94,7 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): A
           },
           AUDIO_TIMEOUT_MS,
         );
+        report(res, "speech", opts.models.speech);
         const bytes = Buffer.from(await res.arrayBuffer());
         return { base64: bytes.toString("base64"), mime: res.headers.get("content-type") ?? "audio/mpeg" };
       } catch (e) {
