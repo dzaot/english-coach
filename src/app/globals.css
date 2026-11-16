@@ -1,47 +1,64 @@
 @import "tailwindcss";
 
-/* Design tokens. Light by default, dark via prefers-color-scheme. Contrast checked for WCAG 2.1 AA. */
+/* Design tokens: Dilo brand "sunset over night" (see BRAND.md). Light by default, dark via prefers-color-scheme.
+   Contrast checked for WCAG 2.1 AA (4.5:1 for normal text). */
 :root {
-  --bg: #fbf7f2;
+  --bg: #fff8f0;
   --surface: #ffffff;
-  --surface-2: #f3ece3;
-  --ink: #1c1b29;
-  --muted: #565262;
-  --border: #e3d8ca;
-  --primary: #c13d12;
+  --surface-2: #f7ede1;
+  --ink: #1a1530;
+  --muted: #5b5470;
+  --border: #eadccb;
+  --primary: #d63a17;
   --on-primary: #ffffff;
-  --primary-soft: #fde6da;
-  --primary-ink: #9a2f0c;
-  --accent: #1d6b58;
+  --primary-soft: #ffe4da;
+  --primary-ink: #b02e0e;
+  --accent: #12805c;
   --on-accent: #ffffff;
-  --accent-soft: #dcf1e9;
-  --accent-ink: #145444;
+  --accent-soft: #d7f5e8;
+  --accent-ink: #0b5e43;
+  --sun: #ffc233;
+  --on-sun: #1a1530;
+  --warn: #8a4b00;
+  --warn-soft: #fff0d1;
+  --sky: #3559e0;
   --focus: #2457d6;
-  --error: #b42318;
+  --error: #c4291c;
   --error-soft: #fde8e6;
-  --shadow: 0 1px 2px rgb(28 27 41 / 0.06), 0 8px 24px rgb(28 27 41 / 0.06);
+  --night: #1a1530;
+  --on-night: #fbf4ea;
+  --brand-a: #ff5b3a;
+  --brand-b: #ffc233;
+  --shadow: 0 1px 2px rgb(26 21 48 / 0.06), 0 10px 30px rgb(26 21 48 / 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #14131c;
-    --surface: #1e1d29;
-    --surface-2: #2a2837;
-    --ink: #f5f1ea;
-    --muted: #bdb7c8;
-    --border: #383547;
-    --primary: #ff8f63;
-    --on-primary: #1c1b29;
-    --primary-soft: #3b241b;
-    --primary-ink: #ffb596;
-    --accent: #63d5b3;
-    --on-accent: #10261f;
-    --accent-soft: #163a31;
-    --accent-ink: #8fe6cb;
+    --bg: #120f22;
+    --surface: #1d1933;
+    --surface-2: #29244a;
+    --ink: #fbf4ea;
+    --muted: #bdb5d3;
+    --border: #39335a;
+    --primary: #ff7a55;
+    --on-primary: #1a1530;
+    --primary-soft: #3d2020;
+    --primary-ink: #ffb199;
+    --accent: #4fd6a4;
+    --on-accent: #08261b;
+    --accent-soft: #123a2e;
+    --accent-ink: #8bebc6;
+    --sun: #ffd15c;
+    --on-sun: #1a1530;
+    --warn: #ffc46b;
+    --warn-soft: #3a2a10;
+    --sky: #8fa8ff;
     --focus: #8fb1ff;
     --error: #ff8a80;
     --error-soft: #3d1c1a;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.25);
+    --night: #0b0918;
+    --on-night: #fbf4ea;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.3);
   }
 }
 
@@ -60,10 +77,18 @@
   --color-on-accent: var(--on-accent);
   --color-accent-soft: var(--accent-soft);
   --color-accent-ink: var(--accent-ink);
+  --color-sun: var(--sun);
+  --color-on-sun: var(--on-sun);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-sky: var(--sky);
   --color-focus: var(--focus);
   --color-error: var(--error);
   --color-error-soft: var(--error-soft);
+  --color-night: var(--night);
+  --color-on-night: var(--on-night);
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --shadow-card: var(--shadow);
 }
 
@@ -105,7 +130,30 @@ body {
   50% { transform: rotate(3deg) scale(1.06); }
 }
 
+@keyframes pulse-orb {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+@keyframes pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* The brand gradient: coral to sun. Use once per screen. */
+.bg-brand {
+  background-image: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+}
+.text-brand {
+  background-image: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 .animate-rise { animation: rise 280ms ease-out both; }
+.animate-orb { animation: pulse-orb 1.2s ease-in-out infinite; }
+.animate-pop { animation: pop 600ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 .animate-ring { animation: ring 1.4s ease-out infinite; }
 .animate-bar { animation: bar 900ms ease-in-out infinite; transform-origin: center; }
 .animate-flicker { animation: flicker 1.6s ease-in-out infinite; }
