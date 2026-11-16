@@ -1,5 +1,12 @@
 # Estado: Dilo (english-coach)
 
+> **Publicada el 2026-11-16.**
+> - Listado en publik: https://publikhq.com/dilo (estado `live`, slug `dilo`, categoría Productivity, publik API con `ai.chat`, `ai.transcribe` y `ai.speech`).
+> - App: https://dilo-mocha.vercel.app (Vercel, proyecto `dilo`, base de datos Turso).
+> - Repo público: https://github.com/dzaot/english-coach (MIT).
+> - Abre con **Sign in with publik**. Sin sesión, la práctica responde `gate_required`.
+> - El token de la app (`PUBLIK_APP_TOKEN`) solo está en Vercel; publik respondió `installs: 201`.
+
 > Resumen: MVP completo y probado **con la IA real de publik** en local (clave de desarrollador, gate apagado). Una práctica de 10 minutos cuesta unos **$0,07 a $0,09** con voces HD (`tts-1-hd`, elegidas por David el 2026-11-16). El 2026-11-16 se agregaron:
 > - una marca propia (`BRAND.md`);
 > - la práctica como videollamada con subtítulos en vivo;
@@ -67,7 +74,7 @@ Lectura: el saldo gratis de publik ($0,05) ya no alcanza para una práctica comp
 
 ## Qué está simulado o sin probar
 
-- **Sign in with publik real:** necesita el token de la app (`PUBLIK_APP_TOKEN`) y el setup de `PUBLIK-SETUP.md`. La prueba real usó la clave de desarrollador con el gate apagado.
+- **Sign in with publik de punta a punta:** el gate real sale en la URL pública y el token sirve (`installs: 201`), pero nadie ha completado aún el inicio de sesión ni una práctica real en producción.
 - **Pronunciación sonido por sonido:** el Sound check no puntúa cada sonido como ELSA o BoldVoice. Eso necesita un servicio de evaluación de pronunciación (por ejemplo Azure Speech, fuera de publik) o un modelo de unos 200 MB en el navegador. Detalle en `COMPETITIVE-ANALYSIS.md`, mejora #20.
 - **Avatar que habla con los labios:** hoy el avatar es una foto con animación de "hablando" y "escuchando". Mover los labios en vivo necesita un servicio de avatar en tiempo real de pago (mejora #13 en `COMPETITIVE-ANALYSIS.md`).
 - **Niveles con la IA real:** el estilo de cada nivel está en los prompts y tiene tests, pero no se hizo una práctica real en Beginner ni en Advanced.
@@ -90,19 +97,19 @@ Para Akrit o Mann (publik):
 2. **El escaneo:** busca `/api/v1/installs`, `/api/v1/telemetry`, `app_opened` y `APP_SLUG = "<slug>"` en el archivo del módulo, que es `src/server/publik/publik.ts`. ¿Lo encontrará ahí?
 3. **Saldo gratis:** medido, $0,05 da para unos dos tercios de una práctica con voces HD. ¿Pueden dar más saldo inicial a los usuarios de fellows, o pueden los créditos de David cubrir su uso?
 4. **Compute:** ¿cuenta para el leaderboard el gasto en audio (transcripción y voz), que publik cobra sin margen? Es casi la mitad del costo de una práctica.
-5. **Hosting:** ¿publik aloja apps `hosted_web` o cada fellow pone su servidor?
+5. **Hosting:** resuelto por ahora con Vercel (plan Hobby) y Turso. Pregunta: ¿publik aloja apps `hosted_web`?
 6. **"Free":** la interfaz dice "Free" en el inicio y en la descripción. Si los créditos de David no pueden cubrir el uso, hay que cambiar esos textos (riesgo marcado también por la sesión de marketing).
 
 Para David:
 
 7. ¿Nombre final? (tabla de arriba).
 8. ¿Licencia MIT está bien?
-9. ¿Dónde desplegar? Necesita disco persistente (ver `PUBLIK-SETUP.md`).
+9. Dominio propio: hoy la URL es `dilo-mocha.vercel.app`. ¿Compramos un dominio (por ejemplo, para Dilo)?
 10. ¿Te sirven los 4 avatares (Sarah, James, Emily, Mike)? Se cambian con una imagen y una línea en `src/domain/avatars.ts`. Blotato quedó con 398 créditos.
 
 ## Bloqueado por David
 
-- Hacer público el repo, desplegar, correr el setup de publik y aprobar en el navegador, poner `PUBLIK_APP_TOKEN` en el hosting. Todo en `PUBLIK-SETUP.md`.
+- Nada. Lo que había (repo público, despliegue, setup de publik, token) quedó hecho el 2026-11-16.
 
 ## Siguientes pasos sugeridos
 

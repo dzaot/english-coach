@@ -33,6 +33,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Docs: https://publikhq.com/llms.txt, https://publikhq.com/developers, https://publikhq.com/skills/api.md
 
 ### How this repo applies it (hosted web app)
-- Module: `src/server/publik/publik.ts` (set `APP_SLUG` to the listing slug). Gate per browser session: `src/server/publik/gate.ts`. There is one module; do not add a second.
-- The "credential path" here is the database: each browser session's `pk_` key is sealed with `APP_SECRET`. The app token is server only: `PUBLIK_APP_TOKEN` in the host's environment (not committed).
+- Listing: https://publikhq.com/dilo (slug `dilo`). Module: `src/server/publik/publik.ts` (`APP_SLUG = "dilo"`). Gate per browser session: `src/server/publik/gate.ts`. There is one module; do not add a second.
+- The "credential path" here is the database: each browser session's `pk_` key is sealed with `APP_SECRET`. The app token is server only: `PUBLIK_APP_TOKEN` in Vercel's production environment (not committed).
+- Hosting: Vercel project `dilo` (https://dilo-mocha.vercel.app), database Turso through the Vercel integration (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`). Deploy: `npx vercel deploy --prod`. `publik-verify.txt` proves repo ownership to publik; keep it.
 - The page shows the gate before the first screen (`src/components/coach-app.tsx`) and reports `app_opened` and `active_session` through `POST /api/telemetry`.

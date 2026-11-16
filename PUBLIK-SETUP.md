@@ -1,5 +1,12 @@
 # Pasos que faltan para publicar en publik (los hace David)
 
+> **Hecho el 2026-11-16.**
+> - Listado: https://publikhq.com/dilo. App: https://dilo-mocha.vercel.app (Vercel + Turso). Repo público.
+> - Variables de producción en Vercel: `AI_PROVIDER=publik`, `PUBLIK_APP_TOKEN`, `APP_SECRET`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`.
+> - La propiedad del repo se verificó con `publik-verify.txt`, porque la cuenta de publik de David no está ligada al GitHub `dzaot`.
+> - Lo de abajo queda como referencia para rehacerlo o para otra app.
+
+
 > Resumen: el código ya trae Sign in with publik, el conteo de uso y publik API detrás de una interfaz. Falta lo que necesita a David: elegir dónde alojar la app, desplegarla, hacer público el repo, correr el prompt de setup de publik y aprobar en el navegador, y poner el token en el servidor. Unos 45 a 60 minutos.
 
 Fuentes leídas en crudo con curl el 2026-11-15: `publikhq.com/skills/setup.md`, `/skills/api.md`, `/skills/publish.md`, `/sdk/publik.ts.md`, `/developers`.

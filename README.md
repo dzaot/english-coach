@@ -92,6 +92,10 @@ v1 is push to talk: record, send, transcribe (whisper-1, files up to about 4 MB,
 
 v2 (documented, not built): publik's realtime voice over `wss://realtime.publikhq.com/v1/realtime` (OpenAI Realtime events, Gemini Live, 16-bit mono PCM at 24 kHz). publik's docs say a browser cannot set the Authorization header and must send the key in a subprotocol, "only with a key that belongs to the person at the browser". To keep keys on the server, v2 should relay the socket through our server (browser to our WebSocket, our server to publik with the install key in the header). publik lists the price at about $0.0225 per minute where both sides talk, and a session holds $0.225 of balance when it opens.
 
+## Deploy
+
+Production runs on Vercel with a Turso (libSQL) database: https://dilo-mocha.vercel.app, listed on publik at https://publikhq.com/dilo. Set `DATABASE_URL` and `DATABASE_AUTH_TOKEN` (or the Turso integration's `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`) and the app uses the hosted database instead of the local SQLite file. Steps and variables: [PUBLIK-SETUP.md](PUBLIK-SETUP.md).
+
 ## Brand
 
 Palette, type, logo, voice and how the brand carries to publik and Instagram: [BRAND.md](BRAND.md). Price positioning and competitor prices: [COMPETITIVE-ANALYSIS.md](COMPETITIVE-ANALYSIS.md), section 6.
