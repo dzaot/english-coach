@@ -5,7 +5,7 @@
 // The pk_ key never leaves the server. Endpoints used: POST /api/v1/installs, GET /api/v1/wallet,
 // POST /api/v1/telemetry ("app_opened", then "active_session" every 30 minutes).
 
-export const APP_SLUG = "english-coach"; // set to the real listing slug during publik setup
+export const APP_SLUG = "dilo";
 export const APP_VERSION = "0.1.0";
 /** The app calls models (chat, transcription, speech), so the gate asks how to pay for AI. */
 export const USES_AI = true;
