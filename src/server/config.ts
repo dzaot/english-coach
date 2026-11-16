@@ -8,7 +8,7 @@ const EnvSchema = z.object({
   APP_SECRET: z.string().optional(),
   PUBLIK_ORIGIN: z.string().url().default("https://publikhq.com"),
   PUBLIK_API_KEY: z.string().optional(),
-  PUBLIK_TTS_MODEL: z.string().min(1).default("tts-1"),
+  PUBLIK_TTS_MODEL: z.string().min(1).default("tts-1-hd"),
   PUBLIK_TTS_VOICE: z.string().min(1).default("alloy"),
   PUBLIK_INSTALL_OS: z.enum(["linux", "macos", "windows"]).default("linux"),
   REPLY_TIER: z.enum(["fast", "balanced"]).default("balanced"),

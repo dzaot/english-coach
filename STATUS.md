@@ -1,11 +1,11 @@
 # Estado: Dilo (english-coach)
 
-> Resumen: MVP completo y probado **con la IA real de publik** en local (clave de desarrollador, gate apagado). Una práctica de 10 minutos cuesta unos **$0,05 a $0,06**. El 2026-11-16 se agregaron:
+> Resumen: MVP completo y probado **con la IA real de publik** en local (clave de desarrollador, gate apagado). Una práctica de 10 minutos cuesta unos **$0,07 a $0,09** con voces HD (`tts-1-hd`, elegidas por David el 2026-11-16). El 2026-11-16 se agregaron:
 > - una marca propia (`BRAND.md`);
 > - la práctica como videollamada con subtítulos en vivo;
 > - el **Sound check** de pronunciación en inglés americano;
 > - un inicio con una sola acción y una tarjeta de resultados;
-> - un análisis de precios: sin suscripción, de 3 a 15 veces más barato que las apps pagas.
+> - un análisis de precios: sin suscripción, de 2 a 12 veces más barato que las apps pagas.
 >
 > Sign in with publik sigue probado solo contra un publik falso. Repo privado; no está público, desplegado ni listado.
 
@@ -51,19 +51,19 @@ Fuente: cabecera `x-publik-charge-micros` por llamada (activar con `PUBLIK_COST_
 
 | Llamada | Modelo | Costo medido |
 |---|---|---|
-| Voz del saludo inicial | tts-1 | $0,0022 a $0,0025 |
+| Voz del saludo inicial | tts-1-hd | unos $0,0045 a $0,005 (tts-1: $0,0022 a $0,0025) |
 | Transcripción de un turno (unos 6 s de audio) | whisper-1 | $0,0005 |
 | Respuesta de la contraparte | publik-balanced | $0,0010 a $0,0014 (crece con la conversación) |
-| Voz de la respuesta | tts-1 | $0,0015 a $0,0030 |
-| **Un turno completo** | | **unos $0,004** |
+| Voz de la respuesta | tts-1-hd | unos $0,003 a $0,006 (tts-1: $0,0015 a $0,003). HD cuesta el doble: medido el 2026-11-16, la misma frase costó $0,0017 en tts-1 y $0,0035 en tts-1-hd |
+| **Un turno completo** | | **unos $0,006** (tts-1: $0,004) |
 | Feedback final | publik-balanced | $0,0102 |
 | "Help me" | publik-fast | $0,0002 |
 | "Say it" (una frase, con tiempos por palabra) | whisper-1 `verbose_json` | $0,0003 a $0,0005 |
 | Sound check (deletreo y tips) | ninguno, diccionario local | $0 |
 
-**Práctica de 10 minutos** (estimado con esos costos, unos 10 turnos, 3 "Say it" y 2 ayudas): 0,0024 + 10 × 0,004 + 0,0102 + 3 × 0,0005 + 2 × 0,0002 ≈ **$0,054**. Con el historial más largo de los últimos turnos, entre **$0,05 y $0,06**. Toda la prueba real de esta sesión gastó unos $0,029.
+**Práctica de 10 minutos con voces HD** (estimado con esos costos, unos 10 turnos, 3 "Say it" y 2 ayudas): 0,0048 + 10 × 0,0062 + 0,0102 + 3 × 0,0005 + 2 × 0,0002 ≈ **$0,079**, entre **$0,07 y $0,09**. Con `tts-1` serían $0,05 a $0,06. 10 minutos al día durante un mes: unos **$2,10 a $2,70**. Toda la prueba real de esta sesión gastó unos $0,029.
 
-Lectura: el saldo gratis de publik ($0,05) alcanza para más o menos **una** práctica. La voz (tts-1) es casi la mitad del costo; `REPLY_TIER=fast` ahorra poco porque el chat es la parte barata.
+Lectura: el saldo gratis de publik ($0,05) ya no alcanza para una práctica completa con voces HD (cubre unos dos tercios). La voz es más de la mitad del costo; volver a `tts-1` con `PUBLIK_TTS_MODEL=tts-1` lo baja a $0,05 a $0,06, pero suena más robótica; `REPLY_TIER=fast` ahorra poco porque el chat es la parte barata.
 
 ## Qué está simulado o sin probar
 
@@ -88,7 +88,7 @@ Para Akrit o Mann (publik):
 
 1. **Web alojada con muchos usuarios:** aquí cada sesión de navegador hace su propio `POST /installs` con el token del servidor y su clave queda cifrada en la base. ¿Es el patrón que esperan para `hosted_web`? ¿Qué valor de `os` va (hoy `linux`, configurable)?
 2. **El escaneo:** busca `/api/v1/installs`, `/api/v1/telemetry`, `app_opened` y `APP_SLUG = "<slug>"` en el archivo del módulo, que es `src/server/publik/publik.ts`. ¿Lo encontrará ahí?
-3. **Saldo gratis:** medido, $0,05 da para una práctica. ¿Pueden dar más saldo inicial a los usuarios de fellows, o pueden los créditos de David cubrir su uso?
+3. **Saldo gratis:** medido, $0,05 da para unos dos tercios de una práctica con voces HD. ¿Pueden dar más saldo inicial a los usuarios de fellows, o pueden los créditos de David cubrir su uso?
 4. **Compute:** ¿cuenta para el leaderboard el gasto en audio (transcripción y voz), que publik cobra sin margen? Es casi la mitad del costo de una práctica.
 5. **Hosting:** ¿publik aloja apps `hosted_web` o cada fellow pone su servidor?
 6. **"Free":** la interfaz dice "Free" en el inicio y en la descripción. Si los créditos de David no pueden cubrir el uso, hay que cambiar esos textos (riesgo marcado también por la sesión de marketing).
@@ -108,7 +108,7 @@ Para David:
 
 Ranking completo, precios y fuentes en `COMPETITIVE-ANALYSIS.md`.
 
-1. Grabar el primer video con `DEMO.md` (en la Mac, con la IA real, unos $0,05 por toma).
+1. Grabar el primer video con `DEMO.md` (en la Mac, con la IA real, unos $0,08 por toma).
 2. Los pasos de `PUBLIK-SETUP.md` y una práctica real con Sign in with publik.
 3. Probar en iPhone y Android reales (micrófono, audio, subtítulos, "Say it") y una práctica real por nivel.
 4. Prueba de nivel al inicio y repetirla cada mes, con el audio de antes y después (#17). Es el mejor momento para un reel.

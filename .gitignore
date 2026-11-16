@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local database
 /data/
+
+# local voice samples (generated for listening, not part of the app)
+.voice-samples/

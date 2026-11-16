@@ -1,6 +1,6 @@
 # Primer video de Dilo (2026-11-17)
 
-> Resumen: un reel vertical de 30 a 40 segundos, en español, que muestra a David practicando una entrevista con Emily. Se ve la llamada con subtítulos en vivo, el feedback y el "Sound check" que marca la palabra difícil, y cierra con el precio: sin suscripción, centavos por práctica. Se graba en la Mac con la IA real de publik, porque la app aún no está desplegada. Cada toma cuesta unos $0,05.
+> Resumen: un reel vertical de 30 a 40 segundos, en español, que muestra a David practicando una entrevista con Emily. Se ve la llamada con subtítulos en vivo, el feedback y el "Sound check" que marca la palabra difícil, y cierra con el precio: sin suscripción, centavos por práctica. Se graba en la Mac con la IA real de publik, porque la app aún no está desplegada. Cada toma cuesta unos $0,08.
 
 Los textos finales y el calendario los lleva la sesión de marketing (`marketing/`). Aquí van la estructura y la lista de tomas.
 
@@ -62,7 +62,7 @@ npm run dev
    - Pulsa Cmd+Shift+5 y elige "Grabar parte seleccionada" sobre el teléfono.
    - En Opciones, activa "Micrófono de MacBook" para que se oigan tu voz y la de Emily.
 6. Antes de grabar, haz una práctica completa de ensayo. Así "Your results" y el Sound check ya tienen contenido.
-7. Costo: unos $0,05 por práctica completa. Diez tomas son unos $0,50 de tu saldo de publik.
+7. Costo: unos $0,08 por práctica completa con voces HD. Diez tomas son unos $0,80 de tu saldo de publik.
 
 Para grabar en el iPhone, primero hay que desplegar la app con https (pasos en `PUBLIK-SETUP.md`). Sin https, el micrófono del teléfono no funciona contra la IP de tu Mac.
 

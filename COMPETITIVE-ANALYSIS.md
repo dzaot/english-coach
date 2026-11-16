@@ -3,7 +3,7 @@
 > Resumen: el rival a vencer es **Speak**. Su ciclo es casi el de Dilo (situación, conversación, feedback, repaso de tus errores, racha), se lanzó oficialmente en México en abril de 2026 y cobra MXN 199 a 399 al mes, solo en móvil y sin plan gratis. Nos gana en voz más fluida, repaso con repetición espaciada, ejercicios de "repite después de mí" y pulido. Le podemos ganar en lo que Speak no puede: gratis, en el navegador sin instalar nada, con la interfaz y las explicaciones en español y con situaciones de trabajo para quien no paga. La mejora con más impacto en usuarios semanales es **decir en voz alta la frase corregida y repasarla al día siguiente** (Speak lo cobra; Praktika no lo tiene y sus usuarios lo piden). La segunda es **"Help me"** para no quedarse callado. Las dos quedaron implementadas en esta sesión, junto con otras de esfuerzo bajo (ver el final). Después, por decisión de David, la interfaz pasó a inglés con nivel elegible y se agregaron 4 compañeros con foto realista.
 
 **Actualización 2026-11-16:**
-- **Precio como bandera.** Dilo no tiene suscripción: el usuario paga el uso de IA, unos $1,50 a $1,80 al mes si practica 10 minutos diarios. Las apps pagas cobran de $10 a $29 al mes, o de $5 a $16 al mes si se paga el año entero por adelantado (sección 6). No somos los más baratos en todos los casos: TalkPal y Gliglish dan 10 minutos diarios gratis.
+- **Precio como bandera.** Dilo no tiene suscripción: el usuario paga el uso de IA, unos $2,10 a $2,70 al mes si practica 10 minutos diarios, con voces HD. Las apps pagas cobran de $10 a $29 al mes, o de $5 a $16 al mes si se paga el año entero por adelantado (sección 6). No somos los más baratos en todos los casos: TalkPal y Gliglish dan 10 minutos diarios gratis.
 - **Funciones nuevas:**
   - "Sound check": cómo suena cada palabra en inglés americano y los sonidos difíciles para hispanohablantes.
   - La práctica como videollamada, con subtítulos en vivo.
@@ -22,7 +22,7 @@ Fecha: 2026-11-15. Solo fuentes públicas, sin registros ni compras. **V** = pá
 
 | Función | **Dilo** (hoy, tras esta sesión) | **Speak** (benchmark) | **ELSA Speak** | **Praktika** |
 |---|---|---|---|---|
-| Precio | **Sin suscripción**: el usuario paga la IA con su saldo de publik, unos $0,05 a $0,06 por práctica de 10 min (medido); la cuenta nueva trae $0,05. Ver sección 6 | Sin plan gratis. EE. UU.: $17,99 a $39,99/mes (S4, P). México: MXN 199 a 399/mes (S5, P) | Plan gratis limitado. EE. UU.: $19,99/mes (S16, P). México: MXN 160/mes (S17, P) | Gratis limitado. Cerca de $8/mes según el proveedor (S9, V); $9,99/mes en la App Store (S11, P) |
+| Precio | **Sin suscripción**: el usuario paga la IA con su saldo de publik, unos $0,07 a $0,09 por práctica de 10 min con voces HD (medido); la cuenta nueva trae $0,05. Ver sección 6 | Sin plan gratis. EE. UU.: $17,99 a $39,99/mes (S4, P). México: MXN 199 a 399/mes (S5, P) | Plan gratis limitado. EE. UU.: $19,99/mes (S16, P). México: MXN 160/mes (S17, P) | Gratis limitado. Cerca de $8/mes según el proveedor (S9, V); $9,99/mes en la App Store (S11, P) |
 | Plataforma | **Web en el teléfono, sin instalar** | iOS y Android; en la web solo vimos registro (S1, S2) | iOS y Android; la web solo trae demos (S14) | iOS y Android (S9, S11) |
 | Idioma y apoyo en español | Interfaz en inglés; el usuario elige nivel: Beginner con tips y traducciones en español, Advanced solo inglés | Interfaz en español (S4) | Tutor bilingüe que explica en español (S15) | Sí, con tutores de acento latino (S10, S11) |
 | Situaciones de trabajo | 5 situaciones × 6 industrias | Escenarios a tu medida; los de tu puesto real solo en la versión para empresas (S1, S7) | La más profunda: entrevista, ventas, negociación, liderazgo (S16, S17) | Entrevista, negocios, ensayo con tu CV (S11) |
@@ -50,11 +50,11 @@ Fecha: 2026-11-15. Solo fuentes públicas, sin registros ni compras. **V** = pá
 
 | Restricción nuestra | Cómo se vuelve ventaja |
 |---|---|
-| Pagar solo el uso de IA | Sin suscripción ni plan anual. 10 minutos al día cuestan unos $1,50 a $1,80 al mes de IA, frente a $10 a $29 al mes de las apps pagas en EE. UU. (sección 6). Cuidado: TalkPal y Gliglish tienen 10 minutos diarios gratis, y en Colombia y México los precios de Speak, Praktika y Duolingo son más bajos que en EE. UU. |
+| Pagar solo el uso de IA | Sin suscripción ni plan anual. 10 minutos al día cuestan unos $2,10 a $2,70 al mes de IA, frente a $10 a $29 al mes de las apps pagas en EE. UU. (sección 6). Cuidado: TalkPal y Gliglish tienen 10 minutos diarios gratis, y en Colombia y México los precios de Speak, Praktika y Duolingo son más bajos que en EE. UU. |
 | App web alojada | Se abre desde el link del reel en el teléfono, sin tienda ni instalación. Ninguno de los cinco con IA tiene práctica completa en el navegador verificada |
 | Interfaz en inglés con apoyo por nivel | Inmersión en inglés para todos, y apoyo en español solo para quien lo pide (Beginner, Intermediate). Nadie se queda fuera por su nivel |
 | Situaciones de trabajo | El "rol de tu trabajo real" que Speak vende a empresas, gratis para la persona |
-| Costos de publik API | Un turno cuesta unos $0,004 y una práctica de 10 minutos unos $0,05 (medido, ver `STATUS.md`). Lo barato (traducciones, sugerencias) va en `publik-fast` |
+| Costos de publik API | Un turno cuesta unos $0,006 y una práctica de 10 minutos unos $0,08 con voces HD (medido, ver `STATUS.md`). Lo barato (traducciones, sugerencias) va en `publik-fast` |
 | Por turnos | Las reseñas de Praktika piden tiempo para pensar (S13). Pulsar para hablar da ese tiempo |
 | Quejas de los rivales | Feedback "laxo" en Speak (S6), sin práctica de la corrección en Praktika (S13), cobros tras cancelar en ELSA y Loora (S17, S25). Dilo: feedback concreto, practicar la corrección y no hay cobro de por medio |
 
@@ -91,7 +91,7 @@ Fuente principal: las listas de compras dentro de la app de la App Store de EE. 
 
 | App | Plan gratis | Mensual (EE. UU.) | Anual, por mes | Prueba |
 |---|---|---|---|---|
-| **Dilo** | Saldo inicial de publik ($0,05, alcanza para una práctica) | **Sin suscripción: unos $1,50 a $1,80 de IA** con 10 min al día (estimado con costos medidos) | No hay plan anual | No aplica |
+| **Dilo** | Saldo inicial de publik ($0,05, unos dos tercios de una práctica) | **Sin suscripción: unos $2,10 a $2,70 de IA** con 10 min al día (estimado con costos medidos) | No hay plan anual | No aplica |
 | Speak | sin dato | $17,99 (Plus $39,99) | $7,00 (Plus $13,75) | 7 días [sin verificar] |
 | ELSA Speak | Limitado | $19,99 | unos $5,92 a $10,83 | 7 días |
 | BoldVoice | Solo la primera lección | unos $24,99 [etiqueta sin verificar] | $12,50 | 7 días |
@@ -105,15 +105,15 @@ Fuente principal: las listas de compras dentro de la app de la App Store de EE. 
 | Preply (humano) | No | unos $80 al mes con 5 horas a $16 la hora | No aplica | sin dato |
 
 Lectura:
-- **Contra suscripciones pagas:** Dilo cuesta de 3 a 15 veces menos al mes en EE. UU. y no amarra a nadie con un plan anual.
+- **Contra suscripciones pagas:** Dilo cuesta de 2 a 12 veces menos al mes en EE. UU. y no amarra a nadie con un plan anual.
 - **Contra los planes gratis de TalkPal y Gliglish:** Dilo **no** es más barato, porque ellos dan 10 minutos diarios por $0. Ahí la ventaja es el enfoque, no el precio: inglés de trabajo para hispanohablantes, colegas con foto y Sound check.
 - **En Colombia y México:** Speak, Praktika y Duolingo cobran menos que en EE. UU. Por ejemplo, Speak Premium mensual cuesta MXN 149 a 199 y COP 39.000 a 99.900, así que la diferencia con Dilo es menor que en dólares. Para un reel, hay que comparar en la moneda del público y con fecha.
 - **Contra un tutor humano:** Dilo es mucho más barato, pero no reemplaza a un tutor y no se debe vender así.
 
 **Mensajes de precio que sí podemos usar:**
 1. "Sin suscripción. Pagas solo los minutos que practicas."
-2. "Unos 5 o 6 centavos de dólar de IA por práctica de 10 minutos." Aclarar que es costo medido y que puede variar.
-3. "10 minutos al día salen en unos $1,50 a $1,80 al mes de IA, menos de lo que cobra la mayoría de apps para hablar inglés." Usar "la mayoría", porque existen planes gratis.
+2. "Unos 8 centavos de dólar de IA por práctica de 10 minutos." Aclarar que es costo medido y que puede variar.
+3. "10 minutos al día salen en unos $2 a $3 al mes de IA, menos de lo que cobra la mayoría de apps para hablar inglés." Usar "la mayoría", porque existen planes gratis.
 4. "Sin plan anual que te amarre."
 
 **Qué no decir:**

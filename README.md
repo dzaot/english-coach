@@ -45,7 +45,7 @@ MediaRecorder (push to talk)  --audio-->  POST /api/practice/:id/turn
                                              1. /audio/transcriptions (whisper-1)
                                              2. /chat/completions (publik-balanced) as the counterpart -> text shown at once
                                           POST /api/practice/:id/speech  { turnIndex }
-                                             /audio/speech (tts-1, the avatar's voice), cached in the page
+                                             /audio/speech (tts-1-hd, the avatar's voice), cached in the page
 Audio element or speechSynthesis  <--base64 mp3 or null (browser voice fallback)
                                           POST /api/practice/:id/help   ("Help me", publik-fast)
                                           POST /api/practice/:id/finish

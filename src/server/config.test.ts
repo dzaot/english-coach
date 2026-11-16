@@ -8,7 +8,7 @@ describe("loadConfig", () => {
     expect(c.gateEnabled).toBe(false);
     expect(c.databasePath).toBe("./data/coach.db");
     expect(c.publikOrigin).toBe("https://publikhq.com");
-    expect(c.speechModel).toBe("tts-1");
+    expect(c.speechModel).toBe("tts-1-hd");
     expect(c.replyTier).toBe("balanced");
     expect(loadConfig({ REPLY_TIER: "fast" }).replyTier).toBe("fast");
     expect(c.costLog).toBe(false);
