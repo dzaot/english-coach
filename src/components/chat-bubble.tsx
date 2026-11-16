@@ -1,16 +1,21 @@
-import { Volume2 } from "lucide-react";
+import { Snail, Volume2 } from "lucide-react";
 import type { Turn } from "@/domain/conversation";
+
+const LISTEN_BUTTON =
+  "inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full px-2 text-sm font-semibold text-primary-ink transition duration-200 hover:bg-surface-2";
 
 export function ChatBubble({
   turn,
   speakerName,
   speaking,
   onListen,
+  onListenSlow,
 }: {
   turn: Turn;
   speakerName: string;
   speaking?: boolean;
   onListen?: () => void;
+  onListenSlow?: () => void;
 }) {
   const mine = turn.role === "user";
   return (
@@ -23,14 +28,17 @@ export function ChatBubble({
           {turn.text}
         </p>
         {!mine && onListen ? (
-          <button
-            type="button"
-            onClick={onListen}
-            className="mt-1 -ml-2 inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full px-2 text-sm font-semibold text-primary-ink transition duration-200 hover:bg-surface-2"
-          >
-            <Volume2 aria-hidden="true" className="size-4" />
-            {speaking ? "Reproduciendo…" : "Escuchar"}
-          </button>
+          <div className="mt-1 -ml-2 flex flex-wrap gap-1">
+            <button type="button" onClick={onListen} className={LISTEN_BUTTON}>
+              <Volume2 aria-hidden="true" className="size-4" />
+              {speaking ? "Reproduciendo…" : "Escuchar"}
+            </button>
+            {onListenSlow ? (
+              <button type="button" onClick={onListenSlow} className={LISTEN_BUTTON}>
+                <Snail aria-hidden="true" className="size-4" /> Más lento
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </li>

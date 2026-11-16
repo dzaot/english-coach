@@ -16,6 +16,16 @@ export interface Phrase {
   readonly whyEs: string;
   readonly createdAt: string;
   readonly reviewedAt: string | null;
+  readonly step: number;
+  readonly dueDay: string | null;
+}
+
+export interface DrillResult {
+  readonly said: string;
+  readonly score: number;
+  readonly passed: boolean;
+  readonly missing: readonly string[];
+  readonly phrase: Phrase;
 }
 
 export interface Progress {
@@ -24,6 +34,7 @@ export interface Progress {
   readonly history: readonly HistoryItem[];
   readonly phrases: readonly Phrase[];
   readonly toReview: number;
+  readonly dueToday: number;
 }
 
 export interface FinishResult {

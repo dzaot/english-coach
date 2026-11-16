@@ -8,7 +8,7 @@ import { ApiError, api } from "@/lib/api";
 import { formatClock } from "@/lib/format";
 import { useElapsedSeconds } from "@/lib/hooks/use-elapsed";
 import { useRecorder } from "@/lib/hooks/use-recorder";
-import { useSpeaker } from "@/lib/hooks/use-speaker";
+import { SLOW_RATE, useSpeaker } from "@/lib/hooks/use-speaker";
 import type { FinishResult, Help, PracticeView as Practice, SpeechAudio } from "@/lib/types";
 import { ChatBubble } from "./chat-bubble";
 import { HelpCard } from "./help-card";
@@ -35,10 +35,32 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
   const [announcement, setAnnouncement] = useState("");
   const [help, setHelp] = useState<Help | null>(null);
   const speaker = useSpeaker();
+  const { play, stop: stopSpeaking } = speaker;
+  const audioCache = useRef(new Map<number, SpeechAudio | null>(initialAudio ? [[0, initialAudio]] : []));
+  const voiceToken = useRef(0);
   const elapsed = useElapsedSeconds(initial.startedAt);
   const endRef = useRef<HTMLLIElement | null>(null);
   const scenario = getScenario(practice.scenarioId);
   const { name, roleEn } = scenario.counterpart;
+
+  /** Plays a counterpart line. Its audio is fetched once, after the text is already on screen. */
+  const voice = useCallback(
+    async (index: number, text: string, rate = 1) => {
+      const token = ++voiceToken.current;
+      let audio = audioCache.current.get(index);
+      if (audio === undefined) {
+        audio = await api.speech(initial.id, index).then((r) => r.audio, () => null);
+        audioCache.current.set(index, audio);
+      }
+      if (token === voiceToken.current) play(turnKey(index), text, audio, rate);
+    },
+    [initial.id, play],
+  );
+
+  const silence = useCallback(() => {
+    voiceToken.current += 1;
+    stopSpeaking();
+  }, [stopSpeaking]);
 
   const submit = useCallback(
     async (answer: { audio: Blob } | { text: string }) => {
@@ -51,7 +73,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
         setPractice(result.practice);
         setDraft("");
         setAnnouncement(`${name} responde: ${result.replyText}`);
-        speaker.play(turnKey(result.practice.turns.length - 1), result.replyText, result.audio);
+        void voice(result.practice.turns.length - 1, result.replyText);
       } catch (e) {
         setError({ message: e instanceof Error ? e.message : String(e), topUpUrl: e instanceof ApiError ? e.topUpUrl : null });
         setAnnouncement("");
@@ -59,13 +81,13 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
         setPhase("ready");
       }
     },
-    [name, practice.id, speaker],
+    [name, practice.id, voice],
   );
 
   const recorder = useRecorder({ onAutoStop: (audio) => void submit({ audio }) });
 
   useEffect(() => {
-    speaker.play(turnKey(0), initial.turns[0]?.text ?? "", initialAudio);
+    void voice(0, initial.turns[0]?.text ?? "");
     // Speak the opener once, when the practice opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -80,9 +102,9 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
       if (audio) await submit({ audio });
       return;
     }
-    speaker.stop();
+    silence();
     if (await recorder.start()) setAnnouncement("Grabando. Toca otra vez para enviar.");
-  }, [recorder, speaker, submit]);
+  }, [recorder, silence, submit]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -115,7 +137,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
   const finish = async () => {
     setPhase("finishing");
     setError(null);
-    speaker.stop();
+    silence();
     try {
       onFinished(await api.finish(practice.id));
     } catch (e) {
@@ -134,7 +156,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
         title={scenario.titleEs}
         onBack={() => {
           recorder.cancel();
-          speaker.stop();
+          silence();
           onExit();
         }}
         backLabel="Salir de la práctica"
@@ -167,7 +189,8 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
             turn={t}
             speakerName={name}
             speaking={speaker.speakingId === turnKey(i)}
-            onListen={t.role === "counterpart" ? () => speaker.play(turnKey(i), t.text) : undefined}
+            onListen={t.role === "counterpart" ? () => void voice(i, t.text) : undefined}
+            onListenSlow={t.role === "counterpart" ? () => void voice(i, t.text, SLOW_RATE) : undefined}
           />
         ))}
         {phase === "sending" ? (

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { installAudioStub, installRecorderStub, installSpeechStub, removeRecorderSupport } from "@/test/browser-stubs";
 import { api } from "@/lib/api";
 import { RECORDER_ERRORS, useRecorder } from "./use-recorder";
-import { useSpeaker } from "./use-speaker";
+import { SLOW_RATE, useSpeaker } from "./use-speaker";
 import { useTelemetry, ACTIVE_SESSION_MS } from "./use-telemetry";
 import { useElapsedSeconds } from "./use-elapsed";
 import { GATE_POLL_LIMIT_MS, GATE_POLL_MS, useGate } from "./use-gate";
@@ -111,6 +111,16 @@ describe("useSpeaker", () => {
     expect(result.current.speakingId).toBe("a");
     act(() => audios[0].onended?.());
     expect(result.current.speakingId).toBeNull();
+  });
+
+  it("replays slower on request", () => {
+    const audios = installAudioStub();
+    const speech = installSpeechStub();
+    const { result } = renderHook(() => useSpeaker());
+    act(() => result.current.play("a", "Hello", { base64: "AAA", mime: "audio/mpeg" }, SLOW_RATE));
+    expect(audios[0].playbackRate).toBe(SLOW_RATE);
+    act(() => result.current.play("b", "Hello", null, SLOW_RATE));
+    expect((speech.speak.mock.calls[0][0] as unknown as { rate: number }).rate).toBeCloseTo(0.95 * SLOW_RATE);
   });
 
   it("falls back to the browser voice when playback is blocked", async () => {

@@ -7,6 +7,7 @@ import {
   validateUserText,
   type Turn,
 } from "@/domain/conversation";
+import { compareSaid, isDue, nextSchedule } from "@/domain/drill";
 import { FeedbackParseError, parseFeedback, type Feedback } from "@/domain/feedback";
 import { HelpParseError, helpMessages, parseHelp, type Help } from "@/domain/help";
 import { counterpartSystemPrompt, feedbackMessages } from "@/domain/prompts";
@@ -57,7 +58,17 @@ function view(p: PracticeRecord): PracticeView {
 
 /** A phrase without the owner's session id. */
 function publicPhrase(p: PhraseRecord) {
-  return { id: p.id, practiceId: p.practiceId, original: p.original, better: p.better, whyEs: p.whyEs, createdAt: p.createdAt, reviewedAt: p.reviewedAt };
+  return {
+    id: p.id,
+    practiceId: p.practiceId,
+    original: p.original,
+    better: p.better,
+    whyEs: p.whyEs,
+    createdAt: p.createdAt,
+    reviewedAt: p.reviewedAt,
+    step: p.step,
+    dueDay: p.dueDay,
+  };
 }
 
 function load(ctx: AppContext, sid: string, id: string): PracticeRecord {
@@ -76,7 +87,8 @@ export async function startPractice(ctx: AppContext, ai: AiProvider, sid: string
   const now = ctx.now().toISOString();
   ctx.store.getOrCreateUser(sid, now);
   const practice = ctx.store.createPractice({ sid, ...parsed.data, startedAt: now, turns: [{ role: "counterpart", text: opener }] });
-  return { practice: view(practice), audio: await ai.speak(opener) };
+  // Speech is fetched separately (speakTurn) so the text shows without waiting for audio.
+  return { practice: view(practice), audio: null };
 }
 
 export function getPractice(ctx: AppContext, sid: string, id: string): PracticeView {
@@ -93,13 +105,14 @@ export function audioExtension(mime: string): string {
   return "webm";
 }
 
+function transcribeAudio(ai: AiProvider, audio: Blob): Promise<string> {
+  if (audio.size === 0) throw new AppError("audio_empty");
+  if (audio.size > MAX_AUDIO_BYTES) throw new AppError("audio_too_large");
+  return ai.transcribe(audio, `turn.${audioExtension(audio.type)}`);
+}
+
 async function userTextFrom(ai: AiProvider, input: { audio?: Blob | null; text?: string | null }): Promise<string> {
-  if (input.audio) {
-    if (input.audio.size === 0) throw new AppError("audio_empty");
-    if (input.audio.size > MAX_AUDIO_BYTES) throw new AppError("audio_too_large");
-    const ext = audioExtension(input.audio.type);
-    return ai.transcribe(input.audio, `turn.${ext}`);
-  }
+  if (input.audio) return transcribeAudio(ai, input.audio);
   if (typeof input.text === "string") return input.text;
   throw new AppError("invalid_input");
 }
@@ -127,7 +140,7 @@ export async function takeTurn(
   const system = counterpartSystemPrompt(getScenario(practice.scenarioId), getIndustry(practice.industryId));
   const replyText = cleanDashes(await ai.chat(toChatMessages(system, withUser), { tier: ctx.config.replyTier, maxTokens: REPLY_MAX_TOKENS }));
   const saved = ctx.store.savePracticeTurns(sid, id, appendTurn(withUser, { role: "counterpart", text: replyText }));
-  return { userText: check.text, replyText, audio: await ai.speak(replyText), practice: view(saved) };
+  return { userText: check.text, replyText, audio: null, practice: view(saved) };
 }
 
 /** "¿Qué digo?": translation of the last line and a suggested answer (fast tier). */
@@ -141,6 +154,17 @@ export async function getHelp(ctx: AppContext, ai: AiProvider, sid: string, id: 
     if (e instanceof HelpParseError) throw new AppError("help_invalid");
     throw e;
   }
+}
+
+const SpeakSchema = z.object({ turnIndex: z.number().int().min(0) });
+
+/** Voice for one counterpart line, asked for after the text is on screen. Only lines the app generated. */
+export async function speakTurn(ctx: AppContext, ai: AiProvider, sid: string, id: string, input: unknown) {
+  const practice = load(ctx, sid, id);
+  const parsed = SpeakSchema.safeParse(input);
+  const turn = parsed.success ? practice.turns[parsed.data.turnIndex] : undefined;
+  if (!turn || turn.role !== "counterpart") throw new AppError("invalid_input");
+  return { audio: await ai.speak(turn.text) };
 }
 
 async function generateFeedback(ai: AiProvider, practice: PracticeRecord): Promise<Feedback> {
@@ -176,7 +200,7 @@ export async function finishPractice(ctx: AppContext, ai: AiProvider, sid: strin
   const feedback = await generateFeedback(ai, practice);
   const now = ctx.now();
   const done = ctx.store.finishPractice(sid, id, { feedback, finishedAt: now.toISOString(), localDay: localDay(now, tzOffset) });
-  ctx.store.addPhrases(sid, id, feedback.betterPhrases, now.toISOString());
+  ctx.store.addPhrases(sid, id, feedback.betterPhrases, now.toISOString(), addDays(localDay(now, tzOffset), 1));
   return { practice: view(done), feedback, streak: streakFor(ctx, sid, tzOffset) };
 }
 
@@ -207,6 +231,7 @@ export function getProgress(ctx: AppContext, sid: string, tzOffset: unknown) {
     history,
     phrases: phrases.map(publicPhrase),
     toReview: phrases.filter((p) => !p.reviewedAt).length,
+    dueToday: phrases.filter((p) => isDue(p, today)).length,
   };
 }
 
@@ -218,4 +243,29 @@ export function markPhrase(ctx: AppContext, sid: string, id: string, input: unkn
   const phrase = ctx.store.markPhrase(sid, id, parsed.data.reviewed, ctx.now().toISOString());
   if (!phrase) throw new AppError("not_found");
   return publicPhrase(phrase);
+}
+
+/** "Dilo tú": the person says a better phrase out loud; when it matches, the next review moves 1, 3, then 7 days ahead. */
+export async function drillPhrase(
+  ctx: AppContext,
+  ai: AiProvider,
+  sid: string,
+  id: string,
+  input: { audio: Blob | null; tzOffset: unknown },
+) {
+  const tzOffset = parseTz(input.tzOffset);
+  const phrase = ctx.store.getPhrase(sid, id);
+  if (!phrase) throw new AppError("not_found");
+  if (!input.audio) throw new AppError("invalid_input");
+  const said = await transcribeAudio(ai, input.audio);
+  const result = compareSaid(phrase.better, said);
+  let updated = phrase;
+  if (result.passed) {
+    const now = ctx.now();
+    const next = nextSchedule(phrase, localDay(now, tzOffset));
+    updated =
+      ctx.store.schedulePhrase(sid, id, { step: next.step, dueDay: next.dueDay, reviewedAt: next.learned ? now.toISOString() : phrase.reviewedAt }) ??
+      phrase;
+  }
+  return { said, ...result, phrase: publicPhrase(updated) };
 }

@@ -6,6 +6,8 @@ import type { SpeechAudio } from "@/lib/types";
 /** Plays the counterpart's voice: server audio when there is some, else the browser's English voice. */
 
 const SPEECH_RATE = 0.95;
+/** "Más lento": playback rate for a slower replay. */
+export const SLOW_RATE = 0.75;
 
 function englishVoice(): SpeechSynthesisVoice | undefined {
   const voices = window.speechSynthesis.getVoices();
@@ -27,14 +29,14 @@ export function useSpeaker() {
     setSpeakingId(null);
   }, []);
 
-  const speakWithBrowser = useCallback((id: string, text: string) => {
+  const speakWithBrowser = useCallback((id: string, text: string, rate = 1) => {
     if (!canUseBrowserVoice()) {
       setSpeakingId(null);
       return;
     }
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "en-US";
-    utterance.rate = SPEECH_RATE;
+    utterance.rate = SPEECH_RATE * rate;
     const voice = englishVoice();
     if (voice) utterance.voice = voice;
     utterance.onend = () => setSpeakingId((cur) => (cur === id ? null : cur));
@@ -43,17 +45,18 @@ export function useSpeaker() {
   }, []);
 
   const play = useCallback(
-    (id: string, text: string, audio: SpeechAudio | null = null) => {
+    (id: string, text: string, audio: SpeechAudio | null = null, rate = 1) => {
       stop();
       setSpeakingId(id);
       if (!audio) {
-        speakWithBrowser(id, text);
+        speakWithBrowser(id, text, rate);
         return;
       }
       const el = new Audio(`data:${audio.mime};base64,${audio.base64}`);
+      el.playbackRate = rate;
       audioRef.current = el;
       el.onended = () => setSpeakingId((cur) => (cur === id ? null : cur));
-      el.play().catch(() => speakWithBrowser(id, text));
+      el.play().catch(() => speakWithBrowser(id, text, rate));
     },
     [speakWithBrowser, stop],
   );

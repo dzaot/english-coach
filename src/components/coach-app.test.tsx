@@ -21,6 +21,9 @@ vi.mock("@/lib/api", async (orig) => {
       finish: vi.fn(),
       progress: vi.fn(),
       markPhrase: vi.fn(),
+      speech: vi.fn(),
+      help: vi.fn(),
+      drill: vi.fn(),
     },
   };
 });
@@ -32,6 +35,7 @@ beforeEach(() => {
   installAudioStub();
   mocked.telemetry.mockResolvedValue({ result: "skipped" });
   mocked.progress.mockResolvedValue(progress());
+  mocked.speech.mockResolvedValue({ audio: null });
 });
 afterEach(() => {
   cleanup();
@@ -87,12 +91,20 @@ describe("CoachApp", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Frases para repasar/ }));
     await userEvent.click(screen.getAllByLabelText("Ya la practiqué")[0]);
     await waitFor(() => expect(mocked.markPhrase).toHaveBeenCalledWith("ph2", true));
-    expect(await screen.findByText(/Te quedan/)).toHaveTextContent("Te quedan 0 por repasar");
+    expect(await screen.findByText(/Te quedan/)).toHaveTextContent("Te quedan 0 por aprender");
     await userEvent.click(screen.getByRole("button", { name: "Volver" }));
     await userEvent.click(await screen.findByRole("button", { name: /Historial/ }));
     await userEvent.click(screen.getByRole("button", { name: /Llamada con cliente/ }));
     expect(await screen.findByText("Tu feedback")).toBeInTheDocument();
     expect(screen.queryByText(/Racha de/)).not.toBeInTheDocument();
+  });
+
+  it("invites to today's review from home", async () => {
+    mocked.gate.mockResolvedValue(demo);
+    render(<CoachApp />);
+    await userEvent.click(await screen.findByRole("button", { name: /Repaso de hoy/ }));
+    expect(await screen.findByText("Para hoy")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Dilo tú/ })).toBeInTheDocument();
   });
 
   it("shows API errors on the home screen", async () => {

@@ -44,6 +44,18 @@ describe("HomeView", () => {
     expect(onOpenHistory).toHaveBeenCalled();
   });
 
+  it("invites to today's review when phrases are due", async () => {
+    const onOpenPhrases = vi.fn();
+    const { rerender } = render(<HomeView progress={progress({ dueToday: 3 })} starting={false} onStart={vi.fn()} onOpenPhrases={onOpenPhrases} onOpenHistory={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /Repaso de hoy/ }));
+    expect(onOpenPhrases).toHaveBeenCalled();
+    expect(screen.getByText(/3 frases te esperan/)).toBeInTheDocument();
+    rerender(<HomeView progress={progress({ dueToday: 1 })} starting={false} onStart={vi.fn()} onOpenPhrases={onOpenPhrases} onOpenHistory={vi.fn()} />);
+    expect(screen.getByText(/1 frase te espera/)).toBeInTheDocument();
+    rerender(<HomeView progress={progress({ dueToday: 0 })} starting={false} onStart={vi.fn()} onOpenPhrases={onOpenPhrases} onOpenHistory={vi.fn()} />);
+    expect(screen.queryByText("Repaso de hoy")).not.toBeInTheDocument();
+  });
+
   it("encourages a first session and disables the button while starting", () => {
     const p = progress({ streak: { current: 0, best: 0, practicedToday: false } });
     render(<HomeView progress={p} starting onStart={vi.fn()} onOpenPhrases={vi.fn()} onOpenHistory={vi.fn()} />);
@@ -82,6 +94,12 @@ describe("FeedbackView", () => {
     expect(onHome).toHaveBeenCalled();
   });
 
+  it("offers Dilo tú on saved phrases", () => {
+    const saved = [{ ...progress().phrases[1], better: "I created a process", practiceId: "p1" }];
+    render(<FeedbackView practice={finishResult.practice} feedback={feedback} streak={null} phrases={saved} onPracticeAgain={vi.fn()} onHome={vi.fn()} />);
+    expect(screen.getAllByRole("button", { name: /Dilo tú/ })).toHaveLength(1);
+  });
+
   it("hides the streak banner and vocabulary when there are none", () => {
     render(<FeedbackView practice={finishResult.practice} feedback={{ ...feedback, vocabulary: [] }} streak={null} onPracticeAgain={vi.fn()} onHome={vi.fn()} />);
     expect(screen.queryByText(/Racha de/)).not.toBeInTheDocument();
@@ -95,10 +113,19 @@ describe("PhrasesView", () => {
     render(<PhrasesView phrases={progress().phrases} onToggle={onToggle} onBack={vi.fn()} />);
     const items = screen.getAllByRole("listitem");
     expect(items[0]).toHaveTextContent("Set up a meeting");
+    expect(items[0]).toHaveTextContent("Para hoy");
+    expect(screen.getByText(/son para hoy/)).toBeInTheDocument();
     await userEvent.click(screen.getAllByLabelText("Ya la practiqué")[0]);
     expect(onToggle).toHaveBeenCalledWith("ph2", true);
     await userEvent.click(screen.getAllByRole("button", { name: /Escuchar/ })[0]);
     expect(speech.speak).toHaveBeenCalled();
+  });
+
+  it("shows the next review day for phrases not due yet", () => {
+    const later = { ...progress().phrases[1], dueDay: "2099-01-05" };
+    render(<PhrasesView phrases={[later]} onToggle={vi.fn()} onBack={vi.fn()} />);
+    expect(screen.getByText(/Próximo repaso/)).toBeInTheDocument();
+    expect(screen.queryByText("Para hoy")).not.toBeInTheDocument();
   });
 
   it("explains the empty state", () => {
@@ -150,7 +177,10 @@ describe("small pieces", () => {
 
   it("ChatBubble labels who speaks and replays the counterpart", async () => {
     const onListen = vi.fn();
-    const { rerender } = render(<ChatBubble turn={{ role: "counterpart", text: "Hi" }} speakerName="Sarah" speaking onListen={onListen} />);
+    const onListenSlow = vi.fn();
+    const { rerender } = render(<ChatBubble turn={{ role: "counterpart", text: "Hi" }} speakerName="Sarah" speaking onListen={onListen} onListenSlow={onListenSlow} />);
+    await userEvent.click(screen.getByRole("button", { name: /Más lento/ }));
+    expect(onListenSlow).toHaveBeenCalled();
     expect(screen.getByText("Sarah")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Reproduciendo/ }));
     expect(onListen).toHaveBeenCalled();

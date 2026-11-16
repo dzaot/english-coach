@@ -23,9 +23,10 @@ export function installSpeechStub() {
 }
 
 export function installAudioStub(play: () => Promise<void> = () => Promise.resolve()) {
-  const created: { src: string; play: ReturnType<typeof vi.fn>; pause: ReturnType<typeof vi.fn>; onended: (() => void) | null }[] = [];
+  const created: { src: string; playbackRate: number; play: ReturnType<typeof vi.fn>; pause: ReturnType<typeof vi.fn>; onended: (() => void) | null }[] = [];
   class FakeAudio {
     src: string;
+    playbackRate = 1;
     play = vi.fn(play);
     pause = vi.fn();
     onended: (() => void) | null = null;

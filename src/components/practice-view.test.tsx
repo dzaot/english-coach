@@ -9,7 +9,7 @@ import { PracticeView } from "./practice-view";
 
 vi.mock("@/lib/api", async (orig) => {
   const real = await orig<typeof import("@/lib/api")>();
-  return { ...real, api: { turn: vi.fn(), finish: vi.fn(), help: vi.fn() } };
+  return { ...real, api: { turn: vi.fn(), finish: vi.fn(), help: vi.fn(), speech: vi.fn() } };
 });
 const mocked = vi.mocked(api);
 
@@ -26,9 +26,11 @@ const afterTurns = (n: number) =>
   });
 
 let speech: ReturnType<typeof installSpeechStub>;
+let audios: ReturnType<typeof installAudioStub>;
 beforeEach(() => {
   speech = installSpeechStub();
-  installAudioStub();
+  audios = installAudioStub();
+  mocked.speech.mockResolvedValue({ audio: null });
 });
 afterEach(() => {
   cleanup();
@@ -37,12 +39,27 @@ afterEach(() => {
 });
 
 describe("PracticeView", () => {
-  it("speaks the opener and shows the counterpart", () => {
+  it("speaks the opener and shows the counterpart", async () => {
     render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
-    expect(speech.speak).toHaveBeenCalled();
+    await waitFor(() => expect(speech.speak).toHaveBeenCalled());
+    expect(mocked.speech).toHaveBeenCalledWith("p1", 0);
     expect(screen.getAllByText("Sarah").length).toBeGreaterThan(0);
     expect(screen.getByText("0/12")).toBeInTheDocument();
     expect(screen.getByText(/Responde 2 veces/)).toBeInTheDocument();
+  });
+
+  it("shows the reply text first, then plays its server voice, and replays slower from cache", async () => {
+    mocked.speech.mockResolvedValueOnce({ audio: null }).mockResolvedValueOnce({ audio: { base64: "BB", mime: "audio/mpeg" } });
+    mocked.turn.mockResolvedValueOnce({ userText: "hi", replyText: "question 0?", audio: null, practice: afterTurns(1) });
+    render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /Escribir/ }));
+    await userEvent.type(screen.getByLabelText("Tu respuesta en inglés"), "hi");
+    await userEvent.click(screen.getByRole("button", { name: /Enviar/ }));
+    await waitFor(() => expect(mocked.speech).toHaveBeenCalledWith("p1", 2));
+    await waitFor(() => expect(audios.at(-1)?.src).toBe("data:audio/mpeg;base64,BB"));
+    await userEvent.click(screen.getAllByRole("button", { name: /Más lento/ })[1]);
+    expect(audios.at(-1)?.playbackRate).toBe(0.75);
+    expect(mocked.speech).toHaveBeenCalledTimes(2);
   });
 
   it("helps when the person is stuck: translation, suggested answer and tip", async () => {
@@ -53,6 +70,7 @@ describe("PracticeView", () => {
     expect(card).toHaveTextContent("Háblame de ti.");
     expect(card).toHaveTextContent("I'm a sales rep.");
     expect(card).toHaveTextContent("Empieza por tu rol.");
+    await waitFor(() => expect(speech.speak).toHaveBeenCalledTimes(1));
     await userEvent.click(screen.getByRole("button", { name: /Escuchar la sugerencia/ }));
     expect(speech.speak).toHaveBeenCalledTimes(2);
     await userEvent.click(screen.getByRole("button", { name: "Cerrar ayuda" }));

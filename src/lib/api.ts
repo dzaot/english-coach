@@ -1,4 +1,4 @@
-import type { FinishResult, GateState, Help, Phrase, PracticeView, Progress, SpeechAudio, TurnResult } from "./types";
+import type { DrillResult, FinishResult, GateState, Help, Phrase, PracticeView, Progress, SpeechAudio, TurnResult } from "./types";
 
 /** Typed calls to our own API. Every failure becomes an ApiError with a Spanish message. */
 
@@ -56,6 +56,14 @@ export const api = {
       form.append("text", answer.text);
     }
     return request<TurnResult>(`/api/practice/${encodeURIComponent(id)}/turn`, { method: "POST", body: form });
+  },
+  speech: (id: string, turnIndex: number) =>
+    request<{ audio: SpeechAudio | null }>(`/api/practice/${encodeURIComponent(id)}/speech`, jsonInit("POST", { turnIndex })),
+  drill: (phraseId: string, audio: Blob) => {
+    const form = new FormData();
+    form.append("audio", audio, `say.${audio.type.includes("mp4") ? "m4a" : "webm"}`);
+    form.append("tzOffset", String(tzOffset()));
+    return request<DrillResult>(`/api/phrases/${encodeURIComponent(phraseId)}/drill`, { method: "POST", body: form });
   },
   help: (id: string) => request<Help>(`/api/practice/${encodeURIComponent(id)}/help`, jsonInit("POST", {})),
   finish: (id: string) =>

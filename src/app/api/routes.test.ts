@@ -10,6 +10,8 @@ import * as phrases from "./phrases/[id]/route";
 import * as practiceById from "./practice/[id]/route";
 import * as finish from "./practice/[id]/finish/route";
 import * as help from "./practice/[id]/help/route";
+import * as speech from "./practice/[id]/speech/route";
+import * as drill from "./phrases/[id]/drill/route";
 import * as turn from "./practice/[id]/turn/route";
 import * as practice from "./practice/route";
 import * as progress from "./progress/route";
@@ -33,6 +35,9 @@ describe("practice flow over HTTP (mock AI)", () => {
     const started = await (await practice.POST(post("/api/practice", { scenarioId: "client_call", industryId: "customer_support" }))).json();
     const id = started.practice.id;
     expect(started.practice.turns[0].text).toContain("Michael");
+
+    const spoken = await (await speech.POST(post(`/api/practice/${id}/speech`, { turnIndex: 0 }), params(id))).json();
+    expect(spoken).toEqual({ audio: null });
 
     const helped = await (await help.POST(post(`/api/practice/${id}/help`, {}), params(id))).json();
     expect(helped.suggestionEn.length).toBeGreaterThan(5);
@@ -58,6 +63,15 @@ describe("practice flow over HTTP (mock AI)", () => {
     expect(prog.toReview).toBe(3);
 
     const phraseId = prog.phrases[0].id;
+    const drillForm = new FormData();
+    drillForm.append("audio", new Blob([new Uint8Array(3)], { type: "audio/mp4" }), "say.m4a");
+    drillForm.append("tzOffset", "300");
+    const drilled = await drill.POST(new Request(`http://localhost/api/phrases/${phraseId}/drill`, { method: "POST", headers: cookie, body: drillForm }), params(phraseId));
+    expect(drilled.status).toBe(200);
+    expect(typeof (await drilled.json()).score).toBe("number");
+    const badDrill = await drill.POST(post(`/api/phrases/${phraseId}/drill`, {}), params(phraseId));
+    expect(badDrill.status).toBe(400);
+
     const patched = await phrases.PATCH(
       new Request(`http://localhost/api/phrases/${phraseId}`, { method: "PATCH", headers: { ...cookie, "content-type": "application/json" }, body: JSON.stringify({ reviewed: true }) }),
       params(phraseId),

@@ -5,7 +5,8 @@ import type { IndustryId, ScenarioId } from "@/domain/scenarios";
 import { ApiError, api } from "@/lib/api";
 import { useGate } from "@/lib/hooks/use-gate";
 import { useTelemetry } from "@/lib/hooks/use-telemetry";
-import type { Feedback, PracticeView as Practice, Progress, SpeechAudio, Streak } from "@/lib/types";
+import { replacePhrase } from "@/lib/progress";
+import type { Feedback, Phrase, PracticeView as Practice, Progress, SpeechAudio, Streak } from "@/lib/types";
 import { BrandMark } from "./brand-mark";
 import { FeedbackView } from "./feedback-view";
 import { GatePanel } from "./gate-panel";
@@ -94,12 +95,14 @@ export function CoachApp() {
     }
   }, []);
 
+  const onDrilled = useCallback((phrase: Phrase) => {
+    setProgress((p) => (p ? replacePhrase(p, phrase) : p));
+  }, []);
+
   const togglePhrase = useCallback(async (id: string, reviewed: boolean) => {
     try {
       const { phrase } = await api.markPhrase(id, reviewed);
-      setProgress((p) =>
-        p ? { ...p, phrases: p.phrases.map((x) => (x.id === id ? phrase : x)), toReview: p.toReview + (reviewed ? -1 : 1) } : p,
-      );
+      setProgress((p) => (p ? replacePhrase(p, phrase) : p));
     } catch (e) {
       setError(toShown(e));
     }
@@ -143,7 +146,10 @@ export function CoachApp() {
           initial={view.practice}
           initialAudio={view.audio}
           onExit={goHome}
-          onFinished={(r) => setView({ name: "feedback", practice: r.practice, feedback: r.feedback, streak: r.streak })}
+          onFinished={(r) => {
+            setView({ name: "feedback", practice: r.practice, feedback: r.feedback, streak: r.streak });
+            void loadProgress();
+          }}
         />
       );
     case "feedback":
@@ -152,6 +158,8 @@ export function CoachApp() {
           practice={view.practice}
           feedback={view.feedback}
           streak={view.streak}
+          phrases={progress?.phrases.filter((p) => p.practiceId === view.practice.id)}
+          onDrilled={onDrilled}
           onHome={goHome}
           onPracticeAgain={() => void start(lastChoice?.scenarioId ?? view.practice.scenarioId, lastChoice?.industryId ?? view.practice.industryId)}
         />
@@ -160,7 +168,7 @@ export function CoachApp() {
       return (
         <>
           {banner}
-          <PhrasesView phrases={progress?.phrases ?? []} onToggle={(id, r) => void togglePhrase(id, r)} onBack={goHome} />
+          <PhrasesView phrases={progress?.phrases ?? []} onToggle={(id, r) => void togglePhrase(id, r)} onDrilled={onDrilled} onBack={goHome} />
         </>
       );
     case "history":

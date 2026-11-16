@@ -51,6 +51,20 @@ describe("api client", () => {
     await api.getPractice("a/b");
     await api.markPhrase("ph1", true);
     await api.help("p1");
-    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual(["/api/gate", "/api/telemetry", "/api/practice/a%2Fb", "/api/phrases/ph1", "/api/practice/p1/help"]);
+    await api.speech("p1", 2);
+    await api.drill("ph1", new Blob(["x"], { type: "audio/mp4" }));
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([
+      "/api/gate",
+      "/api/telemetry",
+      "/api/practice/a%2Fb",
+      "/api/phrases/ph1",
+      "/api/practice/p1/help",
+      "/api/practice/p1/speech",
+      "/api/phrases/ph1/drill",
+    ]);
+    expect(JSON.parse(fetchMock.mock.calls[5][1].body)).toEqual({ turnIndex: 2 });
+    const drillForm = fetchMock.mock.calls[6][1].body as FormData;
+    expect((drillForm.get("audio") as File).name).toBe("say.m4a");
+    expect(drillForm.get("tzOffset")).toMatch(/^-?\d+$/);
   });
 });

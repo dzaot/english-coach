@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { testContext } from "@/test/context";
 import { createMockProvider } from "./ai/mock-provider";
 import type { AiProvider } from "./ai/provider";
-import { finishPractice, getHelp, getPractice, getProgress, markPhrase, startPractice, takeTurn } from "./practice-service";
+import { drillPhrase, finishPractice, speakTurn, getHelp, getPractice, getProgress, markPhrase, startPractice, takeTurn } from "./practice-service";
 
 const SID = "sid-1";
 const ai = createMockProvider();
@@ -178,5 +178,86 @@ describe("getHelp", () => {
     await finishPractice(ctx, ai, SID, practice.id, { tzOffset: 0 });
     await expect(getHelp(ctx, ai, SID, practice.id)).rejects.toMatchObject({ code: "session_finished" });
     await expect(getHelp(ctx, ai, SID, "missing")).rejects.toMatchObject({ code: "not_found" });
+  });
+});
+
+describe("drillPhrase (Dilo tú)", () => {
+  async function withPhrases() {
+    const { ctx, practice } = await started();
+    await takeTurn(ctx, ai, SID, practice.id, { text: "I am agree with the plan." });
+    await takeTurn(ctx, ai, SID, practice.id, { text: "two" });
+    await finishPractice(ctx, ai, SID, practice.id, { tzOffset: 0 });
+    return { ctx, phrase: ctx.store.listPhrases(SID)[0] };
+  }
+  const saying = (text: string): AiProvider => ({ ...ai, transcribe: async () => text });
+  const audio = new Blob([new Uint8Array(10)], { type: "audio/webm" });
+
+  it("schedules new phrases for tomorrow and counts what is due", async () => {
+    const { ctx, phrase } = await withPhrases();
+    expect(phrase.dueDay).toBe("2026-11-16");
+    expect(getProgress(ctx, SID, 0).dueToday).toBe(0);
+    ctx.store.schedulePhrase(SID, phrase.id, { step: 0, dueDay: "2026-11-15", reviewedAt: null });
+    expect(getProgress(ctx, SID, 0).dueToday).toBe(1);
+  });
+
+  it("moves the phrase ahead when it was said right", async () => {
+    const { ctx, phrase } = await withPhrases();
+    const out = await drillPhrase(ctx, saying(phrase.better), SID, phrase.id, { audio, tzOffset: 0 });
+    expect(out).toMatchObject({ passed: true, score: 100, missing: [] });
+    expect(out.phrase).toMatchObject({ step: 1, dueDay: "2026-11-16", reviewedAt: null });
+  });
+
+  it("keeps the schedule and lists missing words when it was not", async () => {
+    const { ctx, phrase } = await withPhrases();
+    const out = await drillPhrase(ctx, saying("hello"), SID, phrase.id, { audio, tzOffset: 0 });
+    expect(out.passed).toBe(false);
+    expect(out.missing.length).toBeGreaterThan(0);
+    expect(out.said).toBe("hello");
+    expect(out.phrase.step).toBe(0);
+  });
+
+  it("marks the phrase learned after the last review", async () => {
+    const { ctx, phrase } = await withPhrases();
+    ctx.store.schedulePhrase(SID, phrase.id, { step: 3, dueDay: "2026-11-15", reviewedAt: null });
+    const out = await drillPhrase(ctx, saying(phrase.better), SID, phrase.id, { audio, tzOffset: 0 });
+    expect(out.phrase.reviewedAt).not.toBeNull();
+    expect(out.phrase.dueDay).toBeNull();
+  });
+
+  it("validates input", async () => {
+    const { ctx, phrase } = await withPhrases();
+    await expect(drillPhrase(ctx, ai, SID, "nope", { audio, tzOffset: 0 })).rejects.toMatchObject({ code: "not_found" });
+    await expect(drillPhrase(ctx, ai, SID, phrase.id, { audio: null, tzOffset: 0 })).rejects.toMatchObject({ code: "invalid_input" });
+    await expect(drillPhrase(ctx, ai, SID, phrase.id, { audio, tzOffset: 9999 })).rejects.toMatchObject({ code: "invalid_input" });
+    await expect(drillPhrase(ctx, ai, SID, phrase.id, { audio: new Blob([]), tzOffset: 0 })).rejects.toMatchObject({ code: "audio_empty" });
+  });
+});
+
+describe("speakTurn", () => {
+  it("speaks a counterpart turn on request, so the text can show first", async () => {
+    const { ctx, practice } = await started();
+    const speak = vi.fn<AiProvider["speak"]>().mockResolvedValue({ base64: "AA", mime: "audio/mpeg" });
+    const out = await speakTurn(ctx, { ...ai, speak }, SID, practice.id, { turnIndex: 0 });
+    expect(out.audio).toEqual({ base64: "AA", mime: "audio/mpeg" });
+    expect(speak).toHaveBeenCalledWith(practice.turns[0].text);
+  });
+
+  it("does not speak user turns, missing turns or other people's practices", async () => {
+    const { ctx, practice } = await started();
+    await takeTurn(ctx, ai, SID, practice.id, { text: "Hello" });
+    await expect(speakTurn(ctx, ai, SID, practice.id, { turnIndex: 1 })).rejects.toMatchObject({ code: "invalid_input" });
+    await expect(speakTurn(ctx, ai, SID, practice.id, { turnIndex: 99 })).rejects.toMatchObject({ code: "invalid_input" });
+    await expect(speakTurn(ctx, ai, SID, practice.id, { turnIndex: "0" })).rejects.toMatchObject({ code: "invalid_input" });
+    await expect(speakTurn(ctx, ai, "other", practice.id, { turnIndex: 0 })).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("leaves speech out of start and turn responses", async () => {
+    const speak = vi.fn<AiProvider["speak"]>().mockResolvedValue({ base64: "AA", mime: "audio/mpeg" });
+    const ctx = testContext();
+    const out = await startPractice(ctx, { ...ai, speak }, SID, { scenarioId: "job_interview", industryId: "sales" });
+    const turn = await takeTurn(ctx, { ...ai, speak }, SID, out.practice.id, { text: "Hi" });
+    expect(out.audio).toBeNull();
+    expect(turn.audio).toBeNull();
+    expect(speak).not.toHaveBeenCalled();
   });
 });
