@@ -31,6 +31,7 @@ const MIGRATIONS: Record<"phrases" | "practices", Record<string, string>> = {
   practices: {
     level: "ALTER TABLE practices ADD COLUMN level TEXT NOT NULL DEFAULT 'intermediate'",
     avatar_id: "ALTER TABLE practices ADD COLUMN avatar_id TEXT NOT NULL DEFAULT 'sarah'",
+    context: "ALTER TABLE practices ADD COLUMN context TEXT",
   },
 };
 
@@ -71,6 +72,7 @@ function toPractice(r: Row): PracticeRecord {
     turns: JSON.parse(String(r.turns)),
     feedback: r.feedback ? (JSON.parse(String(r.feedback)) as Feedback) : null,
     score: r.score === null || r.score === undefined ? null : Number(r.score),
+    context: str(r.context),
   };
 }
 
@@ -137,8 +139,8 @@ export function createSqlStore(open: SqlDb | Promise<SqlDb>): Store {
     async createPractice(input: NewPractice) {
       const id = randomUUID();
       await (await ready).run(
-        "INSERT INTO practices (id, sid, scenario_id, industry_id, level, avatar_id, started_at, turns) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [id, input.sid, input.scenarioId, input.industryId, input.level, input.avatarId, input.startedAt, JSON.stringify(input.turns)],
+        "INSERT INTO practices (id, sid, scenario_id, industry_id, level, avatar_id, started_at, turns, context) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [id, input.sid, input.scenarioId, input.industryId, input.level, input.avatarId, input.startedAt, JSON.stringify(input.turns), input.context ?? null],
       );
       return requirePractice(input.sid, id);
     },
@@ -147,7 +149,6 @@ export function createSqlStore(open: SqlDb | Promise<SqlDb>): Store {
       return row ? toPractice(row) : null;
     },
     async savePracticeTurns(sid, id, turns) {
-      await requirePractice(sid, id);
       await (await ready).run("UPDATE practices SET turns = ? WHERE id = ? AND sid = ?", [JSON.stringify(turns), id, sid]);
       return requirePractice(sid, id);
     },

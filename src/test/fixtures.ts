@@ -26,6 +26,7 @@ export function practice(over: Partial<PracticeView> = {}): PracticeView {
     score: null,
     canFinish: false,
     limitReached: false,
+    context: null,
     ...over,
   };
 }

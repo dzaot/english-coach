@@ -23,6 +23,10 @@ const cookie = { cookie: `${SESSION_COOKIE}=${SID}` };
 const post = (path: string, body: unknown) =>
   new Request(`http://localhost${path}`, { method: "POST", headers: { ...cookie, "content-type": "application/json" }, body: JSON.stringify(body) });
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
+/** A streamed turn: its JSON lines, in order. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- test reads loosely shaped JSON lines
+type Line = { type: string } & Record<string, any>;
+const events = async (res: Response) => (await res.text()).trim().split("\n").map((l) => JSON.parse(l) as Line);
 
 beforeEach(() => {
   resetRateLimits();
@@ -47,11 +51,18 @@ describe("practice flow over HTTP (mock AI)", () => {
     form.append("text", "Sorry about that, let me check your account.");
     const t1 = await turn.POST(new Request(`http://localhost/api/practice/${id}/turn`, { method: "POST", headers: cookie, body: form }), params(id));
     expect(t1.status).toBe(200);
+    const e1 = await events(t1);
+    expect(e1[0]).toEqual({ type: "heard", text: "Sorry about that, let me check your account.", turnIndex: 1 });
+    expect(e1.map((e) => e.type).sort()).toEqual(["check", "done", "heard", "reply", "voice"]);
+    expect(e1.at(-1)?.type).toBe("done");
 
     const audioForm = new FormData();
     audioForm.append("audio", new Blob([new Uint8Array(7)], { type: "audio/webm" }), "turn.webm");
-    const t2 = await (await turn.POST(new Request(`http://localhost/api/practice/${id}/turn`, { method: "POST", headers: cookie, body: audioForm }), params(id))).json();
+    const t2 = (await events(await turn.POST(new Request(`http://localhost/api/practice/${id}/turn`, { method: "POST", headers: cookie, body: audioForm }), params(id)))).at(-1)!;
     expect(t2.practice.canFinish).toBe(true);
+    expect(t2.practice.turns[3].check.issues.length).toBeGreaterThan(0);
+    const alt = await (await speech.POST(post(`/api/practice/${id}/speech`, { turnIndex: 3, alternative: 0 }), params(id))).json();
+    expect(alt).toEqual({ audio: null });
 
     const fin = await (await finish.POST(post(`/api/practice/${id}/finish`, { tzOffset: 300 }), params(id))).json();
     expect(fin.feedback.betterPhrases).toHaveLength(3);

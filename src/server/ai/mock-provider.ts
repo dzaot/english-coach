@@ -1,3 +1,4 @@
+import { TURN_CHECK_MARK } from "@/domain/turn-check";
 import type { AiProvider } from "./provider";
 
 /** Deterministic, offline AI for development, demos and tests. No network, no keys. */
@@ -59,6 +60,30 @@ const MOCK_HELP = JSON.stringify({
   tip: "Give one concrete number: it makes your answer more believable.",
 });
 
+/** Mistakes the sample answers really contain, so the demo shows real marks. */
+const KNOWN_ISSUES = [
+  { said: "I am agree", better: "I agree", kind: "grammar", why: "\"Agree\" is already a verb, so you don't need \"am\"." },
+  { said: "I make a new process", better: "I created a new process", kind: "word", why: "You \"create\" a process, and the past is \"created\"." },
+  { said: "we reduce", better: "we reduced", kind: "grammar", why: "It happened in the past: reduced." },
+  { said: "in forty percent", better: "by forty percent", kind: "word", why: "Use \"by\" for how much something changed." },
+  { said: "I am very good working with people", better: "I work really well with people", kind: "natural", why: "Sounds more natural and confident." },
+  { said: "do everything perfect", better: "do everything perfectly", kind: "grammar", why: "\"Perfectly\" describes how you do it." },
+];
+
+function mockCheck(userLine: string): string {
+  const line = userLine.replace(/^USER: /m, "").split("\nUSER: ").pop() ?? "";
+  const issues = KNOWN_ISSUES.filter((i) => line.toLowerCase().includes(i.said.toLowerCase()));
+  return JSON.stringify({
+    issues,
+    alternatives: [
+      { label: "Natural", text: improve(line).better },
+      { label: "More confident", text: "I bring real experience here, and I'm confident I can deliver results for your team." },
+    ],
+  });
+}
+
+const MOCK_BRIEF = "Sales Manager at Acme Corp. Duties: grow B2B accounts and lead a team of five. Requirements: 3+ years in sales, CRM experience. Likely topics: past quotas, team leadership, handling objections.";
+
 /** Seconds per word in mock timings (about 150 words a minute). */
 const MOCK_WORD_SECONDS = 0.4;
 
@@ -74,7 +99,11 @@ export function createMockProvider(): AiProvider {
     },
     async chat(messages) {
       const system = messages[0]?.content ?? "";
+      const last = messages[messages.length - 1]?.content ?? "";
       if (system.includes("HELP_JSON")) return MOCK_HELP;
+      if (system.includes(TURN_CHECK_MARK)) return mockCheck(last);
+      if (system.startsWith("Summarize this web page")) return MOCK_BRIEF;
+      if (last.startsWith("(Start the conversation")) return "Hi, thanks for making the time. I read your notes, so let's start with the first point. How would you like to begin?";
       if (system.includes("JSON")) return mockFeedback(messages[messages.length - 1]?.content ?? "");
       const answered = messages.filter((m) => m.role === "user").length;
       return FOLLOW_UPS[(answered - 1 + FOLLOW_UPS.length) % FOLLOW_UPS.length];

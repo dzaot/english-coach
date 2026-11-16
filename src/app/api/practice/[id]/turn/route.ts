@@ -1,9 +1,12 @@
 import { AppError } from "@/server/errors";
-import { handle, type IdParams } from "@/server/http";
+import { EventStream, handle, type IdParams } from "@/server/http";
 import { takeTurn } from "@/server/practice-service";
 import { resolveAi } from "@/server/publik/gate";
 
-/** One spoken (multipart "audio") or typed (multipart "text") answer. */
+/**
+ * One spoken (multipart "audio") or typed (multipart "text") answer, streamed as JSON lines:
+ * heard (your words), check (marks), reply (the partner's words), voice (their audio), then done.
+ */
 export async function POST(request: Request, { params }: IdParams) {
   return handle(
     request,
@@ -17,10 +20,10 @@ export async function POST(request: Request, { params }: IdParams) {
       }
       const audio = form.get("audio");
       const text = form.get("text");
-      return takeTurn(ctx, ai, sid, (await params).id, {
-        audio: audio instanceof Blob ? audio : null,
-        text: typeof text === "string" ? text : null,
-      });
+      const id = (await params).id;
+      const answer = { audio: audio instanceof Blob ? audio : null, text: typeof text === "string" ? text : null };
+      if (!answer.audio && answer.text === null) throw new AppError("invalid_input");
+      return new EventStream(async (send) => ({ ...(await takeTurn(ctx, ai, sid, id, answer, { onEvent: send, voice: true })) }));
     },
     { usesAi: true },
   );

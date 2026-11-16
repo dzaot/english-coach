@@ -1,4 +1,4 @@
-import { Briefcase, HandCoins, Headset, Presentation, Users, type LucideIcon } from "lucide-react";
+import { Briefcase, HandCoins, Headset, MessageSquareText, Presentation, Users, type LucideIcon } from "lucide-react";
 import { INDUSTRIES, SCENARIOS, type IndustryId, type ScenarioId } from "@/domain/scenarios";
 
 export const SCENARIO_ICONS: Record<ScenarioId, LucideIcon> = {
@@ -7,6 +7,7 @@ export const SCENARIO_ICONS: Record<ScenarioId, LucideIcon> = {
   client_call: Headset,
   presentation: Presentation,
   salary_negotiation: HandCoins,
+  my_situation: MessageSquareText,
 };
 
 export function scenarioTitle(id: ScenarioId): string {

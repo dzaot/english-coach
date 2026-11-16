@@ -5,10 +5,11 @@ import type { Help } from "@/domain/help";
 import type { SoundTip, WordGuide } from "@/domain/sounds";
 import type { Streak } from "@/domain/streak";
 import type { SpeechAudio } from "@/server/ai/provider";
-import type { HistoryItem, PracticeView, ProgressStats, TurnResult } from "@/server/practice-service";
+import type { HistoryItem, PracticeView, ProgressStats, TurnEvent, TurnResult } from "@/server/practice-service";
+import type { Alternative, TurnCheck, TurnIssue } from "@/domain/turn-check";
 import type { GateState } from "@/server/publik/gate";
 
-export type { Feedback, GateState, Help, HistoryItem, Pace, ProgressStats, PracticeView, SoundTip, SpeechAudio, Streak, TimedWord, TurnResult, WordCheck, WordGuide };
+export type { Alternative, Feedback, GateState, Help, HistoryItem, Pace, ProgressStats, PracticeView, SoundTip, SpeechAudio, Streak, TimedWord, TurnCheck, TurnEvent, TurnIssue, TurnResult, WordCheck, WordGuide };
 
 export interface Phrase {
   readonly id: string;

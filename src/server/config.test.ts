@@ -9,8 +9,8 @@ describe("loadConfig", () => {
     expect(c.databasePath).toBe("./data/coach.db");
     expect(c.publikOrigin).toBe("https://publikhq.com");
     expect(c.speechModel).toBe("tts-1-hd");
-    expect(c.replyTier).toBe("balanced");
-    expect(loadConfig({ REPLY_TIER: "fast" }).replyTier).toBe("fast");
+    expect(c.replyTier).toBe("fast");
+    expect(loadConfig({ REPLY_TIER: "balanced" }).replyTier).toBe("balanced");
     expect(c.costLog).toBe(false);
     expect(loadConfig({ PUBLIK_COST_LOG: "1" }).costLog).toBe(true);
   });

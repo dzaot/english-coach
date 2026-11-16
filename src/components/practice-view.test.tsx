@@ -70,7 +70,7 @@ describe("PracticeView", () => {
 
   it("shows the reply text first, then plays its server voice, and replays slower from cache", async () => {
     mocked.speech.mockResolvedValueOnce({ audio: null }).mockResolvedValueOnce({ audio: { base64: "BB", mime: "audio/mpeg" } });
-    mocked.turn.mockResolvedValueOnce({ userText: "hi", replyText: "question 0?", audio: null, practice: afterTurns(1) });
+    mocked.turn.mockResolvedValueOnce({ userText: "hi", replyText: "question 0?", check: null, audio: null, practice: afterTurns(1) });
     render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /Type/ }));
     await userEvent.type(screen.getByLabelText("Your answer in English"), "hi");
@@ -80,6 +80,49 @@ describe("PracticeView", () => {
     await userEvent.click(screen.getAllByRole("button", { name: /Slower/ })[1]);
     expect(audios.at(-1)?.playbackRate).toBe(0.75);
     expect(mocked.speech).toHaveBeenCalledTimes(2);
+  });
+
+  it("streams the answer: your words with marks first, then the reply together with its voice", async () => {
+    const check = {
+      issues: [{ said: "I am agree", better: "I agree", kind: "grammar" as const, why: "Agree is a verb." }],
+      alternatives: [{ label: "Natural", text: "I agree with the plan." }],
+    };
+    const done = practice({
+      turns: [
+        { role: "counterpart", text: "Tell me about yourself." },
+        { role: "user", text: "I am agree with the plan.", check },
+        { role: "counterpart", text: "Why do you agree?" },
+      ],
+    });
+    let finish: () => void = () => undefined;
+    mocked.turn.mockImplementationOnce((_id, _answer, onEvent) => {
+      onEvent?.({ type: "heard", text: "I am agree with the plan.", turnIndex: 1 });
+      onEvent?.({ type: "check", check, turnIndex: 1 });
+      onEvent?.({ type: "reply", text: "Why do you agree?", turnIndex: 2 });
+      return new Promise((resolve) => {
+        finish = () => {
+          onEvent?.({ type: "voice", audio: { base64: "CC", mime: "audio/mpeg" }, turnIndex: 2 });
+          resolve({ userText: "I am agree with the plan.", replyText: "Why do you agree?", check, audio: null, practice: done });
+        };
+      });
+    });
+    render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /Type/ }));
+    await userEvent.type(screen.getByLabelText("Your answer in English"), "I am agree with the plan.");
+    await userEvent.click(screen.getByRole("button", { name: /Send/ }));
+    expect((await screen.findAllByText('You said "I am agree". Better: "I agree".')).length).toBeGreaterThan(0);
+    expect(screen.getByText("Agree is a verb.")).toBeInTheDocument();
+    expect(screen.getByText("Sarah is thinking…")).toBeInTheDocument();
+    // The reply waits for its voice, so text and voice arrive together.
+    expect(screen.queryByText("Why do you agree?")).not.toBeInTheDocument();
+    await act(async () => finish());
+    expect((await screen.findAllByText("Why do you agree?")).length).toBeGreaterThan(0);
+    await waitFor(() => expect(audios.at(-1)?.src).toBe("data:audio/mpeg;base64,CC"));
+    expect(mocked.speech).not.toHaveBeenCalledWith("p1", 2);
+    mocked.speech.mockResolvedValueOnce({ audio: { base64: "DD", mime: "audio/mpeg" } });
+    await userEvent.click(screen.getByRole("button", { name: /Listen to: I agree with the plan\./ }));
+    expect(mocked.speech).toHaveBeenCalledWith("p1", 1, 0);
+    await waitFor(() => expect(audios.at(-1)?.src).toBe("data:audio/mpeg;base64,DD"));
   });
 
   it("helps when the person is stuck: translation, suggested answer and tip", async () => {
@@ -105,14 +148,14 @@ describe("PracticeView", () => {
   });
 
   it("sends a typed answer, then finishes and returns the feedback", async () => {
-    mocked.turn.mockResolvedValueOnce({ userText: "answer 1", replyText: "question 1?", audio: null, practice: afterTurns(2) });
+    mocked.turn.mockResolvedValueOnce({ userText: "answer 1", replyText: "question 1?", check: null, audio: null, practice: afterTurns(2) });
     mocked.finish.mockResolvedValueOnce(finishResult);
     const onFinished = vi.fn();
     render(<PracticeView initial={afterTurns(1)} initialAudio={null} onFinished={onFinished} onExit={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /Type/ }));
     await userEvent.type(screen.getByLabelText("Your answer in English"), "I sold software.");
     await userEvent.click(screen.getByRole("button", { name: /Send/ }));
-    expect(mocked.turn).toHaveBeenCalledWith("p1", { text: "I sold software." });
+    expect(mocked.turn).toHaveBeenCalledWith("p1", { text: "I sold software." }, expect.any(Function));
     await screen.findByText(/2\/12 answers/);
     await userEvent.click(screen.getByRole("button", { name: /Finish and see my feedback/ }));
     await waitFor(() => expect(onFinished).toHaveBeenCalledWith(finishResult));
@@ -124,13 +167,13 @@ describe("PracticeView", () => {
     installRecorderStub();
     let now = 1000;
     vi.spyOn(Date, "now").mockImplementation(() => now);
-    mocked.turn.mockResolvedValueOnce({ userText: "hi", replyText: "ok?", audio: { base64: "AA", mime: "audio/mpeg" }, practice: afterTurns(1) });
+    mocked.turn.mockResolvedValueOnce({ userText: "hi", replyText: "ok?", check: null, audio: { base64: "AA", mime: "audio/mpeg" }, practice: afterTurns(1) });
     render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: "Record your answer" }));
     await screen.findByRole("button", { name: /Stop and send/ });
     now += 3000;
     await userEvent.click(screen.getByRole("button", { name: /Stop and send/ }));
-    await waitFor(() => expect(mocked.turn).toHaveBeenCalledWith("p1", { audio: expect.any(Blob) }));
+    await waitFor(() => expect(mocked.turn).toHaveBeenCalledWith("p1", { audio: expect.any(Blob) }, expect.any(Function)));
     await screen.findByText(/1\/12 answers/);
   });
 

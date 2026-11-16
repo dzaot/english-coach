@@ -20,6 +20,18 @@ export interface Charge {
 }
 
 const CHAT_TIMEOUT_MS = 45_000;
+
+/**
+ * Whisper copies the style of its prompt. A prompt full of learner mistakes and fillers keeps the person's
+ * real words ("I have work there") instead of quietly fixing them ("I have worked there").
+ */
+export const VERBATIM_PROMPT = "Um, so, uh, I am agree with this. I have work here since two years, and he don't like it.";
+const ECHO_PROBE = "i have work here since two years";
+
+/** On silence Whisper can return its own prompt. That is not something the person said. */
+export function isPromptEcho(text: string): boolean {
+  return text.toLowerCase().replace(/[^a-z' ]/g, "").replace(/\s+/g, " ").includes(ECHO_PROBE);
+}
 const AUDIO_TIMEOUT_MS = 30_000;
 
 export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): AiProvider {
@@ -56,6 +68,7 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): A
     form.append("file", audio, filename);
     form.append("model", opts.models.transcribe);
     form.append("language", "en");
+    form.append("prompt", VERBATIM_PROMPT);
     if (timed) {
       form.append("response_format", "verbose_json");
       form.append("timestamp_granularities[]", "word");
@@ -64,7 +77,7 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): A
     report(res, "transcribe", opts.models.transcribe);
     const body = (await res.json().catch(() => ({}))) as { text?: unknown; words?: unknown };
     const text = typeof body.text === "string" ? body.text.trim() : "";
-    if (!text) throw new AppError("transcription_empty");
+    if (!text || isPromptEcho(text)) throw new AppError("transcription_empty");
     return { text, words: parseTimedWords(body.words) };
   }
 

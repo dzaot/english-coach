@@ -11,16 +11,18 @@ import { checkClarity, measurePace } from "@/domain/clarity";
 import { compareSaid, isDue, nextSchedule } from "@/domain/drill";
 import { FeedbackParseError, parseFeedback, type Feedback } from "@/domain/feedback";
 import { HelpParseError, helpMessages, parseHelp, type Help } from "@/domain/help";
-import { counterpartSystemPrompt, feedbackMessages } from "@/domain/prompts";
+import { MAX_CONTEXT_CHARS, counterpartSystemPrompt, feedbackMessages, linkBriefMessages, openerMessages } from "@/domain/prompts";
+import { parseTurnCheck, turnCheckMessages, type TurnCheck } from "@/domain/turn-check";
 import { cleanDashes } from "@/domain/text";
 import { AVATAR_IDS, getAvatar } from "@/domain/avatars";
 import { LEVEL_IDS, getLevel } from "@/domain/levels";
-import { INDUSTRY_IDS, SCENARIO_IDS, buildOpener, getIndustry, getScenario } from "@/domain/scenarios";
+import { CUSTOM_SCENARIO, INDUSTRY_IDS, SCENARIO_IDS, buildOpener, getIndustry, getScenario } from "@/domain/scenarios";
 import { addDays, computeStreak, localDay, type Streak } from "@/domain/streak";
 import type { AiProvider, SpeechAudio, Tier } from "./ai/provider";
 import type { AppContext } from "./context";
 import type { PhraseRecord, PracticeRecord } from "./db/store";
 import { AppError } from "./errors";
+import { findLink, readLinkText } from "./link-reader";
 
 /** Use cases of a practice session. Route handlers only parse HTTP and call these. */
 
@@ -28,6 +30,12 @@ export const MAX_AUDIO_BYTES = 4_000_000; // publik's multipart transcription li
 const REPLY_MAX_TOKENS = 160;
 const FEEDBACK_MAX_TOKENS = 900;
 const HELP_MAX_TOKENS = 300;
+const CHECK_MAX_TOKENS = 450;
+const OPENER_MAX_TOKENS = 120;
+const BRIEF_MAX_TOKENS = 260;
+/** What the person can type about their situation. A pasted link adds a short summary on top. */
+export const MAX_CONTEXT_INPUT = 2000;
+const MIN_CUSTOM_CONTEXT = 10;
 const HISTORY_LIMIT = 30;
 /** Practices counted for lifetime stats. */
 const STATS_LIMIT = 1000;
@@ -48,6 +56,7 @@ export interface PracticeView {
   readonly score: number | null;
   readonly canFinish: boolean;
   readonly limitReached: boolean;
+  readonly context: string | null;
 }
 
 function view(p: PracticeRecord): PracticeView {
@@ -64,6 +73,7 @@ function view(p: PracticeRecord): PracticeView {
     score: p.score,
     canFinish: canFinish(p.turns),
     limitReached: isTurnLimitReached(p.turns),
+    context: p.context,
   };
 }
 
@@ -93,16 +103,47 @@ const StartSchema = z.object({
   industryId: z.enum(INDUSTRY_IDS),
   level: z.enum(LEVEL_IDS).default("intermediate"),
   avatarId: z.enum(AVATAR_IDS).default("sarah"),
+  context: z.string().max(MAX_CONTEXT_INPUT).default(""),
 });
 const TzSchema = z.number().int().min(-840).max(840);
+
+/** Out of balance or signed out: the person has to act, so these are never hidden behind a fallback. */
+const mustSurface = (e: unknown) => e instanceof AppError && (e.code === "ai_balance" || e.code === "ai_auth");
+
+/** The person's notes, plus a short summary of the page when they pasted a link (a job post). */
+async function situationFrom(ctx: AppContext, ai: AiProvider, notes: string): Promise<string | null> {
+  const text = notes.trim();
+  if (!text) return null;
+  const link = findLink(text);
+  if (!link) return text;
+  const page = await readLinkText(link, ctx.fetch);
+  const brief = cleanDashes(await ai.chat(linkBriefMessages(page), { tier: "fast", maxTokens: BRIEF_MAX_TOKENS }));
+  return `${text}\n\nFrom the link: ${brief}`.slice(0, MAX_CONTEXT_CHARS);
+}
 
 export async function startPractice(ctx: AppContext, ai: AiProvider, sid: string, input: unknown) {
   const parsed = StartSchema.safeParse(input);
   if (!parsed.success) throw new AppError("invalid_input");
-  const opener = buildOpener(getScenario(parsed.data.scenarioId), getIndustry(parsed.data.industryId), getAvatar(parsed.data.avatarId));
+  const { context: notes, ...choice } = parsed.data;
+  if (choice.scenarioId === CUSTOM_SCENARIO && notes.trim().length < MIN_CUSTOM_CONTEXT) throw new AppError("context_required");
+  const scenario = getScenario(choice.scenarioId);
+  const industry = getIndustry(choice.industryId);
+  const avatar = getAvatar(choice.avatarId);
+  const context = await situationFrom(ctx, ai, notes);
+  const fixed = buildOpener(scenario, industry, avatar);
+  // With their real situation, the first line is written for it; the fixed line is the fallback.
+  const opener = context
+    ? await ai
+        .chat(openerMessages(scenario, industry, avatar, getLevel(choice.level), context), { tier: ctx.config.replyTier, maxTokens: OPENER_MAX_TOKENS })
+        .then(cleanDashes)
+        .catch((e: unknown) => {
+          if (mustSurface(e)) throw e;
+          return fixed;
+        })
+    : fixed;
   const now = ctx.now().toISOString();
   await ctx.store.getOrCreateUser(sid, now);
-  const practice = await ctx.store.createPractice({ sid, ...parsed.data, startedAt: now, turns: [{ role: "counterpart", text: opener }] });
+  const practice = await ctx.store.createPractice({ sid, ...choice, context, startedAt: now, turns: [{ role: "counterpart", text: opener }] });
   // Speech is fetched separately (speakTurn) so the text shows without waiting for audio.
   return { practice: view(practice), audio: null };
 }
@@ -140,39 +181,95 @@ async function userTextFrom(ai: AiProvider, input: { audio?: Blob | null; text?:
 export interface TurnResult {
   readonly userText: string;
   readonly replyText: string;
+  readonly check: TurnCheck | null;
   readonly audio: SpeechAudio | null;
   readonly practice: PracticeView;
 }
 
+/** Sent while a turn is in progress, so the screen can show each part as soon as it exists. */
+export type TurnEvent =
+  | { readonly type: "heard"; readonly text: string; readonly turnIndex: number }
+  | { readonly type: "check"; readonly check: TurnCheck | null; readonly turnIndex: number }
+  | { readonly type: "reply"; readonly text: string; readonly turnIndex: number }
+  | { readonly type: "voice"; readonly audio: SpeechAudio | null; readonly turnIndex: number };
+
+export interface TurnOptions {
+  readonly onEvent?: (event: TurnEvent) => void;
+  /** Make the counterpart's voice in the same request, right after the reply. */
+  readonly voice?: boolean;
+}
+
+/**
+ * The live check never blocks the conversation: any failure just means no marks for this answer.
+ * Fast tier: the balanced one took 13 to 16 seconds and often ran out of tokens. A worked example in the
+ * prompt keeps the fast one from rewriting what people meant.
+ */
+async function checkTurn(ai: AiProvider, practice: PracticeRecord, userText: string): Promise<TurnCheck | null> {
+  const lastLine = practice.turns.findLast((t) => t.role === "counterpart")?.text ?? "";
+  try {
+    return parseTurnCheck(await ai.chat(turnCheckMessages(getLevel(practice.level), lastLine, userText), { tier: "fast", maxTokens: CHECK_MAX_TOKENS }), userText);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * One answer: transcribe it word for word, then in parallel write the reply and check the answer.
+ * The reply's voice starts as soon as the reply exists. Each part is sent as an event when ready.
+ */
 export async function takeTurn(
   ctx: AppContext,
   ai: AiProvider,
   sid: string,
   id: string,
   input: { audio?: Blob | null; text?: string | null },
+  opts: TurnOptions = {},
 ): Promise<TurnResult> {
+  const emit = opts.onEvent ?? (() => undefined);
   const practice = await load(ctx, sid, id);
   if (practice.finishedAt) throw new AppError("session_finished");
   if (isTurnLimitReached(practice.turns)) throw new AppError("turn_limit");
-  const check = validateUserText(await userTextFrom(ai, input));
-  if (!check.ok) throw new AppError(input.audio ? "transcription_empty" : "invalid_input");
-  const withUser = appendTurn(practice.turns, { role: "user", text: check.text });
-  const system = counterpartSystemPrompt(
-    getScenario(practice.scenarioId),
-    getIndustry(practice.industryId),
-    getAvatar(practice.avatarId),
-    getLevel(practice.level),
-  );
-  const replyText = cleanDashes(await ai.chat(toChatMessages(system, withUser), { tier: ctx.config.replyTier, maxTokens: REPLY_MAX_TOKENS }));
-  const saved = await ctx.store.savePracticeTurns(sid, id, appendTurn(withUser, { role: "counterpart", text: replyText }));
-  return { userText: check.text, replyText, audio: null, practice: view(saved) };
+  const said = validateUserText(await userTextFrom(ai, input));
+  if (!said.ok) throw new AppError(input.audio ? "transcription_empty" : "invalid_input");
+  const userIndex = practice.turns.length;
+  emit({ type: "heard", text: said.text, turnIndex: userIndex });
+
+  const avatar = getAvatar(practice.avatarId);
+  const system = counterpartSystemPrompt(getScenario(practice.scenarioId), getIndustry(practice.industryId), avatar, getLevel(practice.level), practice.context);
+  const withUser = appendTurn(practice.turns, { role: "user", text: said.text });
+  const replyP = ai.chat(toChatMessages(system, withUser), { tier: ctx.config.replyTier, maxTokens: REPLY_MAX_TOKENS }).then((raw) => {
+    const text = cleanDashes(raw);
+    emit({ type: "reply", text, turnIndex: userIndex + 1 });
+    return text;
+  });
+  const voiceP = opts.voice
+    ? replyP.then(async (text) => {
+        const audio = await ai.speak(text, avatar.voice);
+        emit({ type: "voice", audio, turnIndex: userIndex + 1 });
+        return audio;
+      })
+    : Promise.resolve(null);
+  voiceP.catch(() => undefined); // a failed reply is reported once, below
+  const checkP = checkTurn(ai, practice, said.text).then((check) => {
+    emit({ type: "check", check, turnIndex: userIndex });
+    return check;
+  });
+
+  const [replyText, check] = await Promise.all([replyP, checkP]);
+  const saved = await ctx.store.savePracticeTurns(sid, id, [
+    ...practice.turns,
+    { role: "user", text: said.text, check },
+    { role: "counterpart", text: replyText },
+  ]);
+  const audio = await voiceP;
+  return { userText: said.text, replyText, check, audio, practice: view(saved) };
 }
 
 /** "Help me": translation of the last line and a suggested answer (fast tier). */
 export async function getHelp(ctx: AppContext, ai: AiProvider, sid: string, id: string): Promise<Help> {
   const practice = await load(ctx, sid, id);
   if (practice.finishedAt) throw new AppError("session_finished");
-  const messages = helpMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), getLevel(practice.level), practice.turns);
+  const messages = helpMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), getLevel(practice.level), practice.turns, practice.context);
   try {
     return parseHelp(await ai.chat(messages, { tier: "fast", maxTokens: HELP_MAX_TOKENS }));
   } catch (e) {
@@ -181,19 +278,28 @@ export async function getHelp(ctx: AppContext, ai: AiProvider, sid: string, id: 
   }
 }
 
-const SpeakSchema = z.object({ turnIndex: z.number().int().min(0) });
+const SpeakSchema = z.object({ turnIndex: z.number().int().min(0), alternative: z.number().int().min(0).optional() });
 
-/** Voice for one counterpart line, asked for after the text is on screen. Only lines the app generated. */
+/**
+ * Voice for one counterpart line, or for one "other way to say it" of an answer, asked for after the text
+ * is on screen. Only text the app generated: never arbitrary input.
+ */
 export async function speakTurn(ctx: AppContext, ai: AiProvider, sid: string, id: string, input: unknown) {
   const practice = await load(ctx, sid, id);
   const parsed = SpeakSchema.safeParse(input);
-  const turn = parsed.success ? practice.turns[parsed.data.turnIndex] : undefined;
-  if (!turn || turn.role !== "counterpart") throw new AppError("invalid_input");
-  return { audio: await ai.speak(turn.text, getAvatar(practice.avatarId).voice) };
+  if (!parsed.success) throw new AppError("invalid_input");
+  const turn = practice.turns[parsed.data.turnIndex];
+  const alt = parsed.data.alternative;
+  const text =
+    alt === undefined
+      ? turn?.role === "counterpart" ? turn.text : undefined
+      : turn?.role === "user" ? turn.check?.alternatives[alt]?.text : undefined;
+  if (!text) throw new AppError("invalid_input");
+  return { audio: await ai.speak(text, getAvatar(practice.avatarId).voice) };
 }
 
 async function generateFeedback(ai: AiProvider, practice: PracticeRecord): Promise<Feedback> {
-  const messages = feedbackMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), getLevel(practice.level), practice.turns);
+  const messages = feedbackMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), getLevel(practice.level), practice.turns, practice.context);
   const tiers: Tier[] = ["balanced", "fast"];
   for (const tier of tiers) {
     try {

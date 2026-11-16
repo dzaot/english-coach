@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FOCUS_WORDS, MAX_TIPS_PER_WORD, guideText, guideWord, respell, soundTipsFor, syllabify } from "./sounds";
+import { FOCUS_WORDS, MAX_TIPS_PER_WORD, guideText, guideWord, respell, soundLetters, soundTipsFor, syllabify } from "./sounds";
 
 const dict: Record<string, string> = {
   authority: "AH0 TH AO1 R AH0 T IY0",
@@ -129,5 +129,32 @@ describe("guideText", () => {
 
   it("returns nothing for an empty sentence", () => {
     expect(guideText("   ", lookup)).toEqual([]);
+  });
+});
+
+describe("soundLetters", () => {
+  it("points at the letters that carry each sound", () => {
+    const pick = (w: string, id: Parameters<typeof soundLetters>[1]) => {
+      const r = soundLetters(w, id);
+      return r ? w.slice(r[0], r[1]) : null;
+    };
+    expect(pick("speak", "s_cluster")).toBe("s");
+    expect(pick("Think", "th")).toBe("Th");
+    expect(pick("very", "v")).toBe("v");
+    expect(pick("worked", "ed_ending")).toBe("ed");
+    expect(pick("meeting", "ng")).toBe("ng");
+    expect(pick("better", "flap_t")).toBe("tt");
+    expect(pick("water", "flap_t")).toBe("t");
+    expect(pick("issue", "sh")).toBe("ss");
+    expect(pick("manager", "j")).toBe("g");
+    expect(pick("call", "dark_l")).toBe("ll");
+    expect(pick("plans", "z_sound")).toBe("s");
+    expect(pick("best", "final_cluster")).toBe("st");
+  });
+
+  it("returns null when the spelling has no clear letters for the sound", () => {
+    expect(soundLetters("about", "schwa")).toBeNull();
+    expect(soundLetters("develop", "stress")).toBeNull();
+    expect(soundLetters("cat", "v")).toBeNull();
   });
 });

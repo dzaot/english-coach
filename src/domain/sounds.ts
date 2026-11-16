@@ -184,3 +184,32 @@ export function guideText(sentence: string, lookup: Lookup): WordGuide[] {
   const focus = focusIndexes(words);
   return words.map((w, i) => (focus.has(i) ? { ...w, focus: true } : w));
 }
+
+/**
+ * Where a tricky sound usually sits in the spelling, so it can be highlighted letter by letter.
+ * A spelling guess, not a measurement: it points the eye at the letters, the tip explains the sound.
+ */
+const SOUND_LETTERS: Partial<Record<SoundId, RegExp>> = {
+  s_cluster: /^s/i,
+  th: /th/i,
+  v: /v/i,
+  short_i: /i/i,
+  ed_ending: /ed$/i,
+  final_cluster: /[^aeiouy\W]{2,}$/i,
+  ae: /a/i,
+  z_sound: /s(?=[^s]*$)/i,
+  flap_t: /tt|(?<=[aeiour])t(?=[aeiouy])/i,
+  sh: /sh|ti(?=on)|ci(?=a)|ss(?=u)/i,
+  j: /j|dg|g(?=[eiy])/i,
+  h: /h/i,
+  ng: /ng/i,
+  dark_l: /l+(?=[^aeiouy]*$)/i,
+  r: /r+/i,
+};
+
+/** Start and end (exclusive) of the letters that carry a sound in a word, or null when unclear. */
+export function soundLetters(word: string, id: SoundId): readonly [number, number] | null {
+  const pattern = SOUND_LETTERS[id];
+  const match = pattern ? word.match(pattern) : null;
+  return match?.index === undefined ? null : [match.index, match.index + match[0].length];
+}

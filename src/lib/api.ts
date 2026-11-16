@@ -1,4 +1,4 @@
-import type { DrillResult, FinishResult, GateState, Help, Phrase, PracticeView, Progress, SpeechAudio, TurnResult, WordGuide } from "./types";
+import type { DrillResult, FinishResult, GateState, Help, Phrase, PracticeView, Progress, SpeechAudio, TurnEvent, TurnResult, WordGuide } from "./types";
 
 /** Typed calls to our own API. Every failure becomes an ApiError with a Spanish message. */
 
@@ -30,6 +30,47 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+type ErrorJson = { code?: string; message?: string; topUpUrl?: string | null } | undefined;
+const toApiError = (e: ErrorJson) => new ApiError(e?.code ?? "internal", e?.message ?? "Something went wrong. Please try again.", e?.topUpUrl ?? null);
+
+/** Reads a JSON-lines stream: each event goes to onEvent; "done" is the result and "error" throws. */
+async function streamRequest<T>(path: string, init: RequestInit, onEvent: (event: TurnEvent) => void): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(path, { credentials: "same-origin", ...init });
+  } catch {
+    throw new ApiError("offline", OFFLINE_MESSAGE);
+  }
+  if (!res.ok || !res.body || !(res.headers.get("content-type") ?? "").includes("ndjson")) {
+    const body = (await res.json().catch(() => null)) as { error?: ErrorJson } | null;
+    throw toApiError(body?.error);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    let chunk: ReadableStreamReadResult<Uint8Array>;
+    try {
+      chunk = await reader.read();
+    } catch {
+      throw new ApiError("offline", OFFLINE_MESSAGE);
+    }
+    buffer += decoder.decode(chunk.value ?? new Uint8Array(), { stream: !chunk.done });
+    const lines = buffer.split("\n");
+    buffer = chunk.done ? "" : (lines.pop() ?? "");
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const event = JSON.parse(line) as { type: string; error?: ErrorJson };
+      if (event.type === "done") {
+        return Object.fromEntries(Object.entries(event).filter(([k]) => k !== "type")) as T;
+      }
+      if (event.type === "error") throw toApiError(event.error);
+      onEvent(event as TurnEvent);
+    }
+    if (chunk.done) throw new ApiError("internal", "The answer was cut off. Please try again.");
+  }
+}
+
 const jsonInit = (method: string, body: unknown): RequestInit => ({
   method,
   headers: { "content-type": "application/json" },
@@ -44,10 +85,11 @@ export const api = {
     request<GateState>("/api/gate", jsonInit("POST", body)),
   telemetry: (event: "app_opened" | "active_session") =>
     request<{ result: string }>("/api/telemetry", jsonInit("POST", { event })),
-  start: (choice: { scenarioId: string; industryId: string; level: string; avatarId: string }) =>
+  start: (choice: { scenarioId: string; industryId: string; level: string; avatarId: string; context?: string }) =>
     request<{ practice: PracticeView; audio: SpeechAudio | null }>("/api/practice", jsonInit("POST", choice)),
   getPractice: (id: string) => request<{ practice: PracticeView }>(`/api/practice/${encodeURIComponent(id)}`),
-  turn: (id: string, answer: { audio: Blob } | { text: string }) => {
+  /** One answer, streamed: your words, the marks, the reply and its voice arrive as separate events. */
+  turn: (id: string, answer: { audio: Blob } | { text: string }, onEvent: (event: TurnEvent) => void = () => undefined) => {
     const form = new FormData();
     if ("audio" in answer) {
       const ext = answer.audio.type.includes("mp4") ? "mp4" : "webm";
@@ -55,10 +97,10 @@ export const api = {
     } else {
       form.append("text", answer.text);
     }
-    return request<TurnResult>(`/api/practice/${encodeURIComponent(id)}/turn`, { method: "POST", body: form });
+    return streamRequest<TurnResult>(`/api/practice/${encodeURIComponent(id)}/turn`, { method: "POST", body: form }, onEvent);
   },
-  speech: (id: string, turnIndex: number) =>
-    request<{ audio: SpeechAudio | null }>(`/api/practice/${encodeURIComponent(id)}/speech`, jsonInit("POST", { turnIndex })),
+  speech: (id: string, turnIndex: number, alternative?: number) =>
+    request<{ audio: SpeechAudio | null }>(`/api/practice/${encodeURIComponent(id)}/speech`, jsonInit("POST", { turnIndex, alternative })),
   drill: (phraseId: string, audio: Blob) => {
     const form = new FormData();
     form.append("audio", audio, `say.${audio.type.includes("mp4") ? "m4a" : "webm"}`);

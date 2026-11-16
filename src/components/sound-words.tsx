@@ -1,7 +1,34 @@
 import { Check, Ear, Snail, TriangleAlert, X } from "lucide-react";
+import { diffLetters } from "@/domain/diff";
+import { soundLetters } from "@/domain/sounds";
 import type { WordCheck, WordGuide } from "@/lib/types";
+import { DiffParts } from "./letter-diff";
 
-/** The phrase as tappable words: colors and icons for what was understood, dotted underline for sounds to watch. */
+/**
+ * The phrase as tappable words, colored letter by letter: before you speak, yellow letters carry the sound
+ * to watch; after, green letters came through, red ones were extra and yellow ones were missing.
+ */
+
+const WATCH = "rounded-sm bg-sun px-px text-on-sun underline decoration-dotted decoration-2 underline-offset-4";
+
+/** A word's letters, colored by what was heard (or by the sound to watch when nothing was said yet). */
+function WordLetters({ word, check }: { word: WordGuide; check: WordCheck | undefined }) {
+  if (check?.status === "clear") return <span className="text-accent-ink">{word.text}</span>;
+  if (check?.status === "missed") {
+    if (!check.heardAs) return <span className="text-error line-through decoration-2">{word.text}</span>;
+    const bare = word.text.replace(/[^\p{L}\p{N}'’-]/gu, "");
+    return <DiffParts parts={diffLetters(check.heardAs.replace(/[^\p{L}\p{N}'’ -]/gu, ""), bare)} />;
+  }
+  const span = word.focus && word.tips[0] ? soundLetters(word.text, word.tips[0].id) : null;
+  if (!span) return <>{word.text}</>;
+  return (
+    <>
+      {word.text.slice(0, span[0])}
+      <span className={WATCH}>{word.text.slice(span[0], span[1])}</span>
+      {word.text.slice(span[1])}
+    </>
+  );
+}
 
 interface SoundWordsProps {
   readonly words: readonly WordGuide[];
@@ -29,9 +56,9 @@ export function SoundWords({ words, checks, selected, onSelect }: SoundWordsProp
           check?.status === "clear"
             ? "bg-accent-soft text-accent-ink"
             : check?.status === "missed"
-              ? "bg-error-soft text-error underline decoration-wavy decoration-2 underline-offset-4"
+              ? "bg-surface-2 text-ink ring-1 ring-error"
               : w.focus
-                ? "bg-warn-soft text-warn underline decoration-dotted decoration-2 underline-offset-[6px]"
+                ? "bg-warn-soft text-ink"
                 : "bg-surface-2";
         return (
           <li key={`${w.text}-${i}`}>
@@ -46,8 +73,10 @@ export function SoundWords({ words, checks, selected, onSelect }: SoundWordsProp
               }`}
             >
               {check?.status === "clear" ? <Check aria-hidden="true" className="size-4" strokeWidth={3} /> : null}
-              {check?.status === "missed" ? <X aria-hidden="true" className="size-4" strokeWidth={3} /> : null}
-              {w.text}
+              {check?.status === "missed" ? <X aria-hidden="true" className="size-4 text-error" strokeWidth={3} /> : null}
+              <span aria-hidden="true">
+                <WordLetters word={w} check={check} />
+              </span>
             </button>{" "}
           </li>
         );
@@ -83,6 +112,11 @@ export function WordDetail({ word, check, tipsInSpanish, onHearIt, onHearMine }:
         <p className="flex items-center gap-1.5 font-semibold text-error">
           <X aria-hidden="true" className="size-4" />
           {check.heardAs ? `We heard “${check.heardAs}”.` : "We did not catch this word."}
+        </p>
+      ) : null}
+      {check?.status === "missed" && check.heardAs ? (
+        <p lang="en" className="font-display text-xl font-bold" aria-hidden="true">
+          <WordLetters word={word} check={check} />
         </p>
       ) : null}
       {word.tips.length > 0 ? (

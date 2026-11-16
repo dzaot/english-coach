@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { ChatMessage, Turn } from "./conversation";
 import type { Level } from "./levels";
 import { extractJsonObject } from "./json";
+import { contextBlock } from "./prompts";
 import type { Industry, Scenario } from "./scenarios";
 import { cleanDashes } from "./text";
 
@@ -34,13 +35,13 @@ function helpSpec(level: Level): string {
 Never use the em dash character.`;
 }
 
-export function helpMessages(scenario: Scenario, industry: Industry, level: Level, turns: readonly Turn[]): ChatMessage[] {
+export function helpMessages(scenario: Scenario, industry: Industry, level: Level, turns: readonly Turn[], context?: string | null): ChatMessage[] {
   const recent = turns.slice(-6).map((t) => `${t.role === "user" ? "USER" : "COUNTERPART"}: ${t.text}`).join("\n");
   return [
     { role: "system", content: `You help a Spanish-speaking professional who is stuck in an English role-play. ${helpSpec(level)}` },
     {
       role: "user",
-      content: `Role-play: ${scenario.title} with a ${scenario.counterpart.roleEn}. The user works as: ${industry.roleEn}. Level: ${level.label}.\nRecent conversation:\n${recent}`,
+      content: `Role-play: ${scenario.title} with a ${scenario.counterpart.roleEn}. The user works as: ${industry.roleEn}. Level: ${level.label}.${context?.trim() ? `\n${contextBlock(context)}` : ""}\nRecent conversation:\n${recent}`,
     },
   ];
 }

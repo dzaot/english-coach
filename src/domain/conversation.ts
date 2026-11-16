@@ -1,9 +1,12 @@
 /** Turn-based conversation rules. Immutable helpers only. */
+import type { TurnCheck } from "./turn-check";
 
 export type TurnRole = "counterpart" | "user";
 export interface Turn {
   readonly role: TurnRole;
   readonly text: string;
+  /** User turns: the live check of what they said (null when it could not be made). */
+  readonly check?: TurnCheck | null;
 }
 export interface ChatMessage {
   readonly role: "system" | "user" | "assistant";

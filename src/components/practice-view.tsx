@@ -5,14 +5,14 @@ import { Flag, Keyboard, LifeBuoy, Mic, Send } from "lucide-react";
 import { MAX_USER_TURNS, countUserTurns } from "@/domain/conversation";
 import { getAvatar } from "@/domain/avatars";
 import { getLevel } from "@/domain/levels";
-import { getScenario } from "@/domain/scenarios";
+import { CUSTOM_SCENARIO, getScenario } from "@/domain/scenarios";
 import { ApiError, api } from "@/lib/api";
 import { formatClock } from "@/lib/format";
 import { useElapsedSeconds } from "@/lib/hooks/use-elapsed";
 import { useMicLevel } from "@/lib/hooks/use-mic-level";
 import { useRecorder } from "@/lib/hooks/use-recorder";
 import { SLOW_RATE, useSpeaker } from "@/lib/hooks/use-speaker";
-import type { FinishResult, Help, PracticeView as Practice, SpeechAudio } from "@/lib/types";
+import type { FinishResult, Help, PracticeView as Practice, SpeechAudio, TurnEvent } from "@/lib/types";
 import type { PortraitState } from "./avatar-portrait";
 import { CallStage } from "./call-stage";
 import { ChatBubble } from "./chat-bubble";
@@ -29,7 +29,12 @@ interface Props {
 }
 
 type Phase = "ready" | "sending" | "finishing" | "helping";
+/** While an answer is on its way: reading your words, then your partner thinking. */
+type Stage = "hearing" | "thinking";
 const turnKey = (i: number) => `turn-${i}`;
+const altKey = (turn: number, alt: number) => `alt-${turn}-${alt}`;
+/** If the voice is slow, show the reply's text anyway after this long. */
+const REVEAL_WITHOUT_VOICE_MS = 7000;
 
 export function PracticeView({ initial, initialAudio, onFinished, onExit }: Props) {
   const [practice, setPractice] = useState(initial);
@@ -39,6 +44,10 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
   const [draft, setDraft] = useState("");
   const [announcement, setAnnouncement] = useState("");
   const [help, setHelp] = useState<Help | null>(null);
+  const [stage, setStage] = useState<Stage>("hearing");
+  const [checkingTurn, setCheckingTurn] = useState<number | null>(null);
+  const altAudio = useRef(new Map<string, SpeechAudio | null>());
+  const revealed = useRef(new Set<number>());
   const speaker = useSpeaker();
   const { play, stop: stopSpeaking } = speaker;
   const audioCache = useRef(new Map<number, SpeechAudio | null>(initialAudio ? [[0, initialAudio]] : []));
@@ -70,26 +79,89 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
     stopSpeaking();
   }, [stopSpeaking]);
 
+  /** Shows the partner's reply once: when its voice is ready, so text and voice arrive together. */
+  const reveal = useCallback(
+    (index: number, text: string) => {
+      if (revealed.current.has(index)) return;
+      revealed.current.add(index);
+      setPractice((p) => (p.turns.length === index ? { ...p, turns: [...p.turns, { role: "counterpart", text }] } : p));
+      setAnnouncement(`${name} says: ${text}`);
+    },
+    [name],
+  );
+
   const submit = useCallback(
     async (answer: { audio: Blob } | { text: string }) => {
       setPhase("sending");
+      setStage("hearing");
       setError(null);
       setHelp(null);
       setAnnouncement("Sending your answer…");
+      let reply: { index: number; text: string } | null = null;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const onEvent = (event: TurnEvent) => {
+        switch (event.type) {
+          case "heard":
+            setPractice((p) => ({ ...p, turns: [...p.turns, { role: "user", text: event.text }] }));
+            setCheckingTurn(event.turnIndex);
+            setStage("thinking");
+            setDraft("");
+            setAnnouncement(`You said: ${event.text}`);
+            break;
+          case "check":
+            setPractice((p) => ({ ...p, turns: p.turns.map((t, i) => (i === event.turnIndex ? { ...t, check: event.check } : t)) }));
+            setCheckingTurn(null);
+            break;
+          case "reply": {
+            const r = { index: event.turnIndex, text: event.text };
+            reply = r;
+            timer = setTimeout(() => reveal(r.index, r.text), REVEAL_WITHOUT_VOICE_MS);
+            break;
+          }
+          case "voice":
+            audioCache.current.set(event.turnIndex, event.audio);
+            if (reply) {
+              reveal(reply.index, reply.text);
+              void voice(reply.index, reply.text);
+            }
+            break;
+        }
+      };
       try {
-        const result = await api.turn(practice.id, answer);
+        const result = await api.turn(practice.id, answer, onEvent);
+        const index = result.practice.turns.length - 1;
+        const fresh = !revealed.current.has(index);
+        revealed.current.add(index);
         setPractice(result.practice);
-        setDraft("");
-        setAnnouncement(`${name} says: ${result.replyText}`);
-        void voice(result.practice.turns.length - 1, result.replyText);
+        if (fresh) {
+          setAnnouncement(`${name} says: ${result.replyText}`);
+          void voice(index, result.replyText);
+        }
       } catch (e) {
         setError({ message: e instanceof Error ? e.message : String(e), topUpUrl: e instanceof ApiError ? e.topUpUrl : null });
         setAnnouncement("");
       } finally {
+        if (timer) clearTimeout(timer);
+        setCheckingTurn(null);
         setPhase("ready");
       }
     },
-    [name, practice.id, voice],
+    [name, practice.id, reveal, voice],
+  );
+
+  /** "Other ways to say it": hear one in your partner's voice. */
+  const listenAlternative = useCallback(
+    async (turnIndex: number, alt: number, text: string) => {
+      const key = altKey(turnIndex, alt);
+      const token = ++voiceToken.current;
+      let audio = altAudio.current.get(key);
+      if (audio === undefined) {
+        audio = await api.speech(practice.id, turnIndex, alt).then((r) => r.audio, () => null);
+        altAudio.current.set(key, audio);
+      }
+      if (token === voiceToken.current) play(key, text, audio, baseRate);
+    },
+    [baseRate, play, practice.id],
   );
 
   const recorder = useRecorder({ onAutoStop: (audio) => void submit({ audio }) });
@@ -181,12 +253,22 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
 
       <CallStage
         avatar={avatar}
-        role={`${roleEn.charAt(0).toUpperCase()}${roleEn.slice(1)} · ${industryLabel(practice.industryId)}`}
+        role={`${scenario.id === CUSTOM_SCENARIO ? "Your situation" : `${roleEn.charAt(0).toUpperCase()}${roleEn.slice(1)}`} · ${industryLabel(practice.industryId)}`}
         state={portraitState}
         caption={practice.turns[lastLine]?.text ?? ""}
         captionProgress={speaker.progress?.id === turnKey(lastLine) ? speaker.progress.ratio : null}
         micLevel={micLevel}
-        status={portraitState === "speaking" ? `${name} is talking…` : portraitState === "listening" ? `${name} is listening…` : `Your turn · ${answered}/${MAX_USER_TURNS} answers`}
+        status={
+          portraitState === "speaking"
+            ? `${name} is talking…`
+            : portraitState === "listening"
+              ? `${name} is listening…`
+              : phase === "sending"
+                ? stage === "hearing"
+                  ? "Getting your words…"
+                  : `${name} is thinking…`
+                : `Your turn · ${answered}/${MAX_USER_TURNS} answers`
+        }
       />
 
       <h2 className="mb-2 mt-5 text-sm font-semibold uppercase tracking-wide text-muted">Transcript</h2>
@@ -199,6 +281,11 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
             speaking={speaker.speakingId === turnKey(i)}
             onListen={t.role === "counterpart" ? () => void voice(i, t.text) : undefined}
             onListenSlow={t.role === "counterpart" ? () => void voice(i, t.text, SLOW_RATE) : undefined}
+            checking={checkingTurn === i}
+            onListenAlternative={t.role === "user" ? (alt) => void listenAlternative(i, alt, t.check?.alternatives[alt]?.text ?? "") : undefined}
+            playingAlternative={
+              speaker.speakingId?.startsWith(`alt-${i}-`) ? Number(speaker.speakingId.slice(`alt-${i}-`.length)) : null
+            }
           />
         ))}
         {phase === "sending" ? (

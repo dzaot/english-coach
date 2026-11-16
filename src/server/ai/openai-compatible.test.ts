@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fakeFetch, json } from "@/test/fake-fetch";
-import { createOpenAiCompatibleProvider } from "./openai-compatible";
+import { VERBATIM_PROMPT, createOpenAiCompatibleProvider, isPromptEcho } from "./openai-compatible";
 
 const models = { fast: "publik-fast", balanced: "publik-balanced", transcribe: "whisper-1", speech: "tts-1" };
 const make = (f: typeof fetch) =>
@@ -31,6 +31,19 @@ describe("OpenAI-compatible provider", () => {
   it("returns no timings when the provider sends none", async () => {
     const { fetch } = fakeFetch({ "/audio/transcriptions": json({ text: "I agree." }) });
     expect(await make(fetch).transcribeTimed(audio, "say.webm")).toEqual({ text: "I agree.", words: [] });
+  });
+
+  it("asks for a word-for-word transcript so mistakes stay visible", async () => {
+    const { fetch, calls } = fakeFetch({ "/audio/transcriptions": json({ text: "I have work there." }) });
+    await make(fetch).transcribe(audio, "turn.webm");
+    const form = calls[0].init?.body as FormData;
+    expect(form.get("prompt")).toBe(VERBATIM_PROMPT);
+  });
+
+  it("treats Whisper repeating its own prompt as silence", async () => {
+    const { fetch } = fakeFetch({ "/audio/transcriptions": json({ text: VERBATIM_PROMPT }) });
+    await expect(make(fetch).transcribe(audio, "a.webm")).rejects.toMatchObject({ code: "transcription_empty" });
+    expect(isPromptEcho("I have worked here for two years.")).toBe(false);
   });
 
   it("reports an empty transcription", async () => {

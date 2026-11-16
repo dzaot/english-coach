@@ -281,3 +281,96 @@ describe("speakTurn", () => {
     expect(speak).not.toHaveBeenCalled();
   });
 });
+
+describe("takeTurn streaming", () => {
+  it("sends your words, the check, the reply and its voice, and saves the check", async () => {
+    const { ctx, practice } = await started();
+    const speak = vi.fn(async () => ({ base64: "AA", mime: "audio/mpeg" }));
+    const events: { type: string }[] = [];
+    const out = await takeTurn(ctx, { ...ai, speak }, SID, practice.id, { text: "Yes, I am agree with the plan." }, { onEvent: (e) => events.push(e), voice: true });
+    expect(events[0]).toEqual({ type: "heard", text: "Yes, I am agree with the plan.", turnIndex: 1 });
+    expect(events.map((e) => e.type)).toEqual(expect.arrayContaining(["check", "reply", "voice"]));
+    expect(events.findIndex((e) => e.type === "reply")).toBeLessThan(events.findIndex((e) => e.type === "voice"));
+    expect(out.audio).toEqual({ base64: "AA", mime: "audio/mpeg" });
+    expect(out.check?.issues[0]).toMatchObject({ said: "I am agree", better: "I agree", kind: "grammar" });
+    const saved = await getPractice(ctx, SID, practice.id);
+    expect(saved.turns[1].check?.issues).toHaveLength(1);
+    expect(saved.turns[2].role).toBe("counterpart");
+  });
+
+  it("keeps the conversation going when the check fails", async () => {
+    const { ctx, practice } = await started();
+    const flaky: AiProvider = {
+      ...ai,
+      chat: async (messages, opts) => {
+        if (messages[0].content.includes("TURN_CHECK_JSON")) throw new Error("boom");
+        return ai.chat(messages, opts);
+      },
+    };
+    const out = await takeTurn(ctx, flaky, SID, practice.id, { text: "Hello there" });
+    expect(out.check).toBeNull();
+    expect(out.replyText.length).toBeGreaterThan(0);
+    expect(out.audio).toBeNull();
+  });
+
+  it("speaks an alternative of your answer, never arbitrary text", async () => {
+    const { ctx, practice } = await started();
+    await takeTurn(ctx, ai, SID, practice.id, { text: "I am agree with the plan." });
+    const speak = vi.fn(async () => null);
+    await speakTurn(ctx, { ...ai, speak }, SID, practice.id, { turnIndex: 1, alternative: 0 });
+    expect(speak).toHaveBeenCalledWith(expect.stringContaining("agree"), "nova");
+    await expect(speakTurn(ctx, ai, SID, practice.id, { turnIndex: 1 })).rejects.toMatchObject({ code: "invalid_input" });
+    await expect(speakTurn(ctx, ai, SID, practice.id, { turnIndex: 1, alternative: 5 })).rejects.toMatchObject({ code: "invalid_input" });
+    await expect(speakTurn(ctx, ai, SID, practice.id, { turnIndex: 0, alternative: 0 })).rejects.toMatchObject({ code: "invalid_input" });
+    await expect(speakTurn(ctx, ai, SID, practice.id, { turnIndex: "x" })).rejects.toMatchObject({ code: "invalid_input" });
+  });
+});
+
+describe("startPractice with your situation", () => {
+  it("keeps your notes, writes a first line for them and uses them in every reply", async () => {
+    const ctx = testContext();
+    const chat = vi.fn(ai.chat);
+    const out = await startPractice(ctx, { ...ai, chat }, SID, {
+      scenarioId: "team_meeting",
+      industryId: "general",
+      context: "Weekly meeting with my lawyer about the lease dispute with my landlord.",
+    });
+    expect(out.practice.context).toContain("lease dispute");
+    expect(out.practice.turns[0].text).toContain("I read your notes");
+    await takeTurn(ctx, { ...ai, chat }, SID, out.practice.id, { text: "Hi, thanks for meeting me." });
+    const replyCall = chat.mock.calls.find(([m]) => m[0].content.startsWith("You are") && m.length > 2);
+    expect(replyCall?.[0][0].content).toContain("lease dispute");
+  });
+
+  it("needs a description for your own situation", async () => {
+    await expect(startPractice(testContext(), ai, SID, { scenarioId: "my_situation", industryId: "general", context: "hi" })).rejects.toMatchObject({
+      code: "context_required",
+    });
+    const ok = await startPractice(testContext(), ai, SID, { scenarioId: "my_situation", industryId: "general", context: "Call with my landlord about a repair." });
+    expect(ok.practice.scenarioId).toBe("my_situation");
+  });
+
+  it("reads a pasted job link and adds a short summary", async () => {
+    const page = `<html><body><h1>Sales Manager</h1><p>${"Acme Corp is hiring a Sales Manager to grow B2B accounts. ".repeat(4)}</p></body></html>`;
+    const ctx = testContext({ fetch: (async () => new Response(page, { headers: { "content-type": "text/html" } })) as typeof fetch });
+    const out = await startPractice(ctx, ai, SID, { scenarioId: "job_interview", industryId: "sales", context: "Applying here: https://93.184.216.34/jobs/1" });
+    expect(out.practice.context).toContain("From the link: Sales Manager at Acme Corp");
+  });
+
+  it("asks you to paste the text when the link cannot be read", async () => {
+    await expect(
+      startPractice(testContext(), ai, SID, { scenarioId: "job_interview", industryId: "sales", context: "https://127.0.0.1/admin" }),
+    ).rejects.toMatchObject({ code: "link_unreadable" });
+  });
+
+  it("falls back to the fixed first line when the AI fails, but not when the balance is empty", async () => {
+    const failing: AiProvider = { ...ai, chat: async () => { throw new Error("down"); } };
+    const out = await startPractice(testContext(), failing, SID, { scenarioId: "job_interview", industryId: "sales", context: "Interview at a bank." });
+    expect(out.practice.turns[0].text).toContain("tell me a little about yourself");
+    const { AppError } = await import("./errors");
+    const broke: AiProvider = { ...ai, chat: async () => { throw new AppError("ai_balance"); } };
+    await expect(startPractice(testContext(), broke, SID, { scenarioId: "job_interview", industryId: "sales", context: "Interview at a bank." })).rejects.toMatchObject({
+      code: "ai_balance",
+    });
+  });
+});

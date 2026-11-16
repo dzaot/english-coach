@@ -40,7 +40,7 @@ export function CoachApp() {
   const { level, avatarId } = prefs;
   const [view, setView] = useState<View>({ name: "home" });
   const [progress, setProgress] = useState<Progress | null>(null);
-  const [lastChoice, setLastChoice] = useState<{ scenarioId: ScenarioId; industryId: IndustryId } | null>(null);
+  const [lastChoice, setLastChoice] = useState<{ scenarioId: ScenarioId; industryId: IndustryId; context: string } | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<ShownError | null>(null);
 
@@ -74,12 +74,12 @@ export function CoachApp() {
     void loadProgress();
   }, [loadProgress]);
 
-  const start = useCallback(async (scenarioId: ScenarioId, industryId: IndustryId) => {
+  const start = useCallback(async (scenarioId: ScenarioId, industryId: IndustryId, context = "") => {
     setStarting(true);
     setError(null);
-    setLastChoice({ scenarioId, industryId });
+    setLastChoice({ scenarioId, industryId, context });
     try {
-      const { practice, audio } = await api.start({ scenarioId, industryId, level, avatarId });
+      const { practice, audio } = await api.start({ scenarioId, industryId, level, avatarId, ...(context ? { context } : {}) });
       setView({ name: "practice", practice, audio });
     } catch (e) {
       setError(toShown(e));
@@ -165,7 +165,9 @@ export function CoachApp() {
           phrases={progress?.phrases.filter((p) => p.practiceId === view.practice.id)}
           onDrilled={onDrilled}
           onHome={goHome}
-          onPracticeAgain={() => void start(lastChoice?.scenarioId ?? view.practice.scenarioId, lastChoice?.industryId ?? view.practice.industryId)}
+          onPracticeAgain={() =>
+            void start(lastChoice?.scenarioId ?? view.practice.scenarioId, lastChoice?.industryId ?? view.practice.industryId, lastChoice?.context ?? view.practice.context?.slice(0, 2000) ?? "")
+          }
         />
       );
     case "phrases":
@@ -204,7 +206,7 @@ export function CoachApp() {
             level={level}
             avatarId={avatarId}
             onChangePrefs={prefs.update}
-            onStart={(s, i) => void start(s, i)}
+            onStart={(s, i, c) => void start(s, i, c)}
             onOpenPhrases={() => setView({ name: "phrases" })}
             onOpenHistory={() => setView({ name: "history" })}
           />

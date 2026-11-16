@@ -11,13 +11,14 @@ import {
 } from "./scenarios";
 
 describe("scenarios catalog", () => {
-  it("offers the five work scenarios in a stable order", () => {
+  it("offers the five work scenarios, then your own situation, in a stable order", () => {
     expect(SCENARIOS.map((s) => s.id)).toEqual([
       "job_interview",
       "team_meeting",
       "client_call",
       "presentation",
       "salary_negotiation",
+      "my_situation",
     ]);
   });
 

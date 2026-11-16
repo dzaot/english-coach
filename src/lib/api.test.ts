@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, api } from "./api";
 
 const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+const ndjson = (lines: unknown[]) =>
+  new Response(lines.map((l) => JSON.stringify(l)).join("\n") + "\n", { headers: { "content-type": "application/x-ndjson" } });
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -17,13 +19,47 @@ describe("api client", () => {
   });
 
   it("sends audio as multipart and text as a field", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(ok({}));
+    const fetchMock = vi.fn().mockImplementation(async () => ndjson([{ type: "done", replyText: "ok" }]));
     vi.stubGlobal("fetch", fetchMock);
     await api.turn("p1", { audio: new Blob(["x"], { type: "audio/mp4" }) });
     await api.turn("p1", { text: "hello" });
     const audioForm = fetchMock.mock.calls[0][1].body as FormData;
     expect((audioForm.get("audio") as File).name).toBe("turn.mp4");
     expect((fetchMock.mock.calls[1][1].body as FormData).get("text")).toBe("hello");
+  });
+
+  it("reads a streamed turn: events in order, then the result", async () => {
+    const lines = [
+      { type: "heard", text: "I am agree", turnIndex: 1 },
+      { type: "reply", text: "Why?", turnIndex: 2 },
+      { type: "done", userText: "I am agree", replyText: "Why?" },
+    ];
+    const text = lines.map((l) => JSON.stringify(l)).join("\n") + "\n";
+    // Split mid-line to prove partial chunks are joined.
+    const body = new ReadableStream({
+      start(c) {
+        const enc = new TextEncoder();
+        c.enqueue(enc.encode(text.slice(0, 20)));
+        c.enqueue(enc.encode(text.slice(20)));
+        c.close();
+      },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, { headers: { "content-type": "application/x-ndjson" } })));
+    const seen: string[] = [];
+    const result = await api.turn("p1", { text: "I am agree" }, (e) => seen.push(e.type));
+    expect(seen).toEqual(["heard", "reply"]);
+    expect(result).toEqual({ userText: "I am agree", replyText: "Why?" });
+  });
+
+  it("throws the error sent inside a stream, or when the stream is cut", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(ndjson([{ type: "heard", text: "x", turnIndex: 1 }, { type: "error", error: { code: "ai_balance", message: "Saldo", topUpUrl: "https://publikhq.com/wallet" } }])));
+    await expect(api.turn("p1", { text: "x" })).rejects.toMatchObject({ code: "ai_balance", topUpUrl: "https://publikhq.com/wallet" });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(ndjson([{ type: "heard", text: "x", turnIndex: 1 }])));
+    await expect(api.turn("p1", { text: "x" })).rejects.toMatchObject({ code: "internal" });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { code: "turn_limit", message: "Limit" } }), { status: 409 })));
+    await expect(api.turn("p1", { text: "x" })).rejects.toMatchObject({ code: "turn_limit" });
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    await expect(api.turn("p1", { text: "x" })).rejects.toMatchObject({ code: "offline" });
   });
 
   it("turns API errors into ApiError with the Spanish message and top-up link", async () => {

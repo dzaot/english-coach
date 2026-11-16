@@ -11,7 +11,7 @@ const EnvSchema = z.object({
   PUBLIK_TTS_MODEL: z.string().min(1).default("tts-1-hd"),
   PUBLIK_TTS_VOICE: z.string().min(1).default("alloy"),
   PUBLIK_INSTALL_OS: z.enum(["linux", "macos", "windows"]).default("linux"),
-  REPLY_TIER: z.enum(["fast", "balanced"]).default("balanced"),
+  REPLY_TIER: z.enum(["fast", "balanced"]).default("fast"),
   PUBLIK_COST_LOG: z.enum(["0", "1"]).default("0"),
   DATABASE_PATH: z.string().min(1).default("./data/coach.db"),
   DATABASE_URL: z.string().regex(/^(libsql|https?|wss?):\/\//).optional(),

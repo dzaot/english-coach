@@ -7,6 +7,7 @@ import { ApiError, api } from "@/lib/api";
 import { useRecorder } from "@/lib/hooks/use-recorder";
 import { SLOW_RATE, useSpeaker } from "@/lib/hooks/use-speaker";
 import type { DrillResult, Phrase, WordGuide } from "@/lib/types";
+import { DiffLegend } from "./letter-diff";
 import { SoundWords, WordDetail } from "./sound-words";
 
 /** Natural conversational pace, in words per minute. */
@@ -118,6 +119,7 @@ export function SayItButton({ phraseId, text, tipsInSpanish = false, onDrilled }
         <AudioWaveform aria-hidden="true" className="size-4" /> Sound check · tap any word
       </p>
       <SoundWords words={guide} checks={result?.words ?? null} selected={selected} onSelect={(i) => setSelected(i === selected ? null : i)} />
+      {result && result.words.some((w) => w.status === "missed") ? <DiffLegend /> : null}
       {word && selected !== null ? (
         <WordDetail
           word={word}

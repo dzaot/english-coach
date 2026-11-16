@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installSpeechStub } from "@/test/browser-stubs";
@@ -31,7 +31,28 @@ describe("HomeView", () => {
     await userEvent.click(screen.getByLabelText("Construction"));
     expect(screen.getByText(/Intermediate · Construction/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Start talking/ }));
-    expect(onStart).toHaveBeenCalledWith("salary_negotiation", "construction");
+    expect(onStart).toHaveBeenCalledWith("salary_negotiation", "construction", "");
+  });
+
+  it("asks for the job post in interviews and needs a description for your own situation", async () => {
+    const onStart = vi.fn();
+    render(<HomeView level="intermediate" avatarId="sarah" onChangePrefs={vi.fn()} progress={progress()} starting={false} onStart={onStart} onOpenPhrases={vi.fn()} onOpenHistory={vi.fn()} />);
+    expect(screen.getByLabelText("The job you're applying for (optional)")).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText(/Your situation/));
+    const field = screen.getByLabelText("Describe the situation");
+    expect(screen.getByRole("button", { name: /Start talking/ })).toBeDisabled();
+    await userEvent.type(field, "  Call with my lawyer about the case.  ");
+    await userEvent.click(screen.getByRole("button", { name: /Start talking/ }));
+    expect(onStart).toHaveBeenCalledWith("my_situation", "general", "Call with my lawyer about the case.");
+  });
+
+  it("says it is reading the job post while a link loads", () => {
+    const { rerender } = render(
+      <HomeView level="intermediate" avatarId="sarah" onChangePrefs={vi.fn()} progress={progress()} starting={false} onStart={vi.fn()} onOpenPhrases={vi.fn()} onOpenHistory={vi.fn()} />,
+    );
+    fireEvent.change(screen.getByLabelText(/The job you're applying for/), { target: { value: "https://jobs.example.com/1" } });
+    rerender(<HomeView level="intermediate" avatarId="sarah" onChangePrefs={vi.fn()} progress={progress()} starting onStart={vi.fn()} onOpenPhrases={vi.fn()} onOpenHistory={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /Reading the job post/ })).toBeDisabled();
   });
 
   it("lets the person pick a partner and a level", async () => {

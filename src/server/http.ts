@@ -1,5 +1,5 @@
 import { getContext, type AppContext } from "./context";
-import { AppError, errorResponse } from "./errors";
+import { AppError, errorBody, errorResponse } from "./errors";
 import { createRateLimiter } from "./rate-limit";
 import { readSession, sessionCookieHeader } from "./session";
 
@@ -29,6 +29,29 @@ function isCrossSiteWrite(request: Request): boolean {
   }
 }
 
+/** A streamed answer: the handler sends events as they happen; its return value becomes the "done" event. */
+export class EventStream {
+  constructor(readonly run: (send: (event: { type: string } & Record<string, unknown>) => void) => Promise<Record<string, unknown>>) {}
+}
+
+/** Newline-delimited JSON: one event per line, then "done" or "error". */
+function streamResponse(stream: EventStream): Response {
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (event: Record<string, unknown>) => controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+      try {
+        send({ type: "done", ...(await stream.run(send)) });
+      } catch (e) {
+        send({ type: "error", error: errorBody(e).body });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+  return new Response(body, { headers: { "content-type": "application/x-ndjson; charset=utf-8", "x-accel-buffering": "no" } });
+}
+
 export async function handle(
   request: Request,
   fn: (args: HandlerArgs) => Promise<unknown>,
@@ -40,7 +63,8 @@ export async function handle(
     if (isCrossSiteWrite(request)) throw new AppError("forbidden", { detail: "cross-site request" });
     const ctx = getContext();
     if (opts.usesAi && !aiLimiter.allow(session.sid, ctx.now().getTime())) throw new AppError("ai_rate_limited");
-    res = Response.json(await fn({ ctx, sid: session.sid }));
+    const out = await fn({ ctx, sid: session.sid });
+    res = out instanceof EventStream ? streamResponse(out) : Response.json(out);
   } catch (e) {
     res = errorResponse(e);
   }

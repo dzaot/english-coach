@@ -5,7 +5,7 @@ import Image from "next/image";
 import { BookmarkCheck, CalendarClock, ChevronDown, ChevronRight, History, Mic, SlidersHorizontal } from "lucide-react";
 import { getAvatar, type AvatarId } from "@/domain/avatars";
 import { getLevel, type LevelId } from "@/domain/levels";
-import { SCENARIOS, type IndustryId, type ScenarioId } from "@/domain/scenarios";
+import { CUSTOM_SCENARIO, SCENARIOS, type IndustryId, type ScenarioId } from "@/domain/scenarios";
 import type { Progress } from "@/lib/types";
 import { FOCUS_WITHIN, IndustryPicker, LevelPicker, PartnerPicker } from "./home-pickers";
 import { ResultsCard } from "./results-card";
@@ -19,19 +19,49 @@ interface HomeViewProps {
   level: LevelId;
   avatarId: AvatarId;
   onChangePrefs: (patch: { level?: LevelId; avatarId?: AvatarId }) => void;
-  onStart: (scenarioId: ScenarioId, industryId: IndustryId) => void;
+  onStart: (scenarioId: ScenarioId, industryId: IndustryId, context: string) => void;
   onOpenPhrases: () => void;
   onOpenHistory: () => void;
 }
 
 const PARTNER_PHOTO = 64;
+/** Matches the server's limit on what you can type about your situation. */
+const MAX_DETAILS = 2000;
+const MIN_CUSTOM_DETAILS = 10;
+
+/** What to ask for, by scenario: a job post for interviews, the situation itself for "Your situation". */
+function detailsCopy(id: ScenarioId): { label: string; hint: string; placeholder: string } {
+  if (id === "job_interview") {
+    return {
+      label: "The job you're applying for (optional)",
+      hint: "Paste the job link or description. Your interviewer will ask about it.",
+      placeholder: "https://… or: Sales Manager at Acme, B2B accounts in Texas",
+    };
+  }
+  if (id === CUSTOM_SCENARIO) {
+    return {
+      label: "Describe the situation",
+      hint: "Who you'll talk to and what it's about. Your partner plays that person.",
+      placeholder: "Meeting with my lawyer to follow up on my case. I need to ask about the next steps and the fees.",
+    };
+  }
+  return {
+    label: "Your real situation (optional)",
+    hint: "Add details so the practice feels like the real thing.",
+    placeholder: "Tomorrow's meeting is about the delayed shipment to our biggest client.",
+  };
+}
 
 export function HomeView({ progress, starting, level, avatarId, onChangePrefs, onStart, onOpenPhrases, onOpenHistory }: HomeViewProps) {
   const [scenarioId, setScenarioId] = useState<ScenarioId>("job_interview");
   const [industryId, setIndustryId] = useState<IndustryId>("general");
+  const [details, setDetails] = useState("");
   const firstTime = !progress || progress.history.length === 0;
   const [customizing, setCustomizing] = useState(firstTime);
   const avatar = getAvatar(avatarId);
+  const copy = detailsCopy(scenarioId);
+  const needsDetails = scenarioId === CUSTOM_SCENARIO && details.trim().length < MIN_CUSTOM_DETAILS;
+  const hasLink = /https?:\/\//i.test(details);
 
   return (
     <div className="animate-rise space-y-5">
@@ -84,9 +114,28 @@ export function HomeView({ progress, starting, level, avatarId, onChangePrefs, o
           </div>
         </fieldset>
 
-        <Button size="lg" className="relative mt-4 w-full" disabled={starting} onClick={() => onStart(scenarioId, industryId)}>
+        <div className="relative mt-4 space-y-1.5">
+          <label htmlFor="practice-details" className="block text-sm font-semibold">
+            {copy.label}
+          </label>
+          <p id="practice-details-hint" className="text-sm text-on-night/80">
+            {copy.hint}
+          </p>
+          <textarea
+            id="practice-details"
+            aria-describedby="practice-details-hint"
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+            maxLength={MAX_DETAILS}
+            rows={3}
+            placeholder={copy.placeholder}
+            className="w-full rounded-2xl border border-on-night/30 bg-on-night/10 p-3 text-base text-on-night placeholder:text-on-night/70"
+          />
+        </div>
+
+        <Button size="lg" className="relative mt-4 w-full" disabled={starting || needsDetails} onClick={() => onStart(scenarioId, industryId, details.trim())}>
           <Mic aria-hidden="true" className="size-5" />
-          {starting ? "Getting ready…" : "Start talking"}
+          {starting ? (hasLink ? "Reading the job post…" : "Getting ready…") : "Start talking"}
         </Button>
         <p className="relative mt-2 text-center text-sm text-on-night/80">About 5 minutes · push to talk or type</p>
       </section>

@@ -18,6 +18,8 @@ const CATALOG = {
   ai_unavailable: { status: 503, msg: "The AI service is not responding right now. Try again in a moment." },
   feedback_invalid: { status: 502, msg: "We couldn't prepare your feedback. Please try again." },
   help_invalid: { status: 502, msg: "We couldn't prepare a hint. Please try again." },
+  context_required: { status: 400, msg: "Tell us a little about your situation first, so your partner can play it." },
+  link_unreadable: { status: 422, msg: "We couldn't read that link. Paste the text of the job post instead." },
   internal: { status: 500, msg: "Something went wrong on our side. Please try again." },
 } as const;
 
@@ -61,13 +63,22 @@ export function fromPublikStatus(status: number, body: unknown): AppError {
   return new AppError("ai_unavailable", { detail: detail ?? `upstream status ${status}` });
 }
 
-export function errorResponse(error: unknown): Response {
+export interface ErrorBody {
+  readonly code: string;
+  readonly message: string;
+  readonly topUpUrl: string | null;
+}
+
+/** What the browser sees for an error. Logs unexpected and server-side errors (code and message only). */
+export function errorBody(error: unknown): { status: number; body: ErrorBody } {
   const appError = error instanceof AppError ? error : new AppError("internal");
   if (!(error instanceof AppError) || appError.status >= 500) {
     console.error("[api]", appError.code, error instanceof Error ? error.message : error);
   }
-  return Response.json(
-    { error: { code: appError.code, message: appError.userMessage, topUpUrl: appError.topUpUrl } },
-    { status: appError.status },
-  );
+  return { status: appError.status, body: { code: appError.code, message: appError.userMessage, topUpUrl: appError.topUpUrl } };
+}
+
+export function errorResponse(error: unknown): Response {
+  const { status, body } = errorBody(error);
+  return Response.json({ error: body }, { status });
 }

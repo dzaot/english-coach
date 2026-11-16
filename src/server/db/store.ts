@@ -34,6 +34,8 @@ export interface PracticeRecord {
   readonly turns: readonly Turn[];
   readonly feedback: Feedback | null;
   readonly score: number | null;
+  /** What the person told us about their real situation (job post, meeting topic). */
+  readonly context: string | null;
 }
 
 export interface NewPractice {
@@ -44,6 +46,7 @@ export interface NewPractice {
   readonly avatarId: AvatarId;
   readonly startedAt: string;
   readonly turns: readonly Turn[];
+  readonly context?: string | null;
 }
 
 export interface PhraseRecord {

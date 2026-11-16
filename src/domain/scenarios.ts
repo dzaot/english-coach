@@ -8,6 +8,7 @@ export const SCENARIO_IDS = [
   "client_call",
   "presentation",
   "salary_negotiation",
+  "my_situation",
 ] as const;
 export type ScenarioId = (typeof SCENARIO_IDS)[number];
 
@@ -74,7 +75,17 @@ export const SCENARIOS: readonly Scenario[] = [
     counterpart: { roleEn: "HR manager" },
     goalEn: "make a job offer slightly below market and negotiate politely but firmly",
   },
+  {
+    id: "my_situation",
+    title: "Your situation",
+    description: "Describe a real conversation coming up, like a meeting with your lawyer or a call with your landlord.",
+    counterpart: { roleEn: "other person in the conversation" },
+    goalEn: "play the other person in the situation the user describes, realistically, and bring up what would really come up",
+  },
 ];
+
+/** The person describes their own situation; it needs that description to start. */
+export const CUSTOM_SCENARIO: ScenarioId = "my_situation";
 
 export const INDUSTRIES: readonly Industry[] = [
   { id: "general", label: "General", roleEn: "this position", contextEn: "a mid-size company" },
@@ -139,5 +150,7 @@ export function buildOpener(scenario: Scenario, industry: Industry, avatar: Avat
       return `Thanks for joining. I'm ${name}. We have about two minutes, so go ahead and walk me through your idea.`;
     case "salary_negotiation":
       return `Hi, I'm ${name} from HR. We're excited to offer you ${roleText(industry)}. Before we send the paperwork, how do you feel about the offer we discussed?`;
+    case "my_situation":
+      return `Hi, I'm ${name}. Thanks for making the time. Where would you like to start?`;
   }
 }
