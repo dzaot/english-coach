@@ -9,6 +9,9 @@ import { SLOW_RATE, useSpeaker } from "@/lib/hooks/use-speaker";
 import type { DrillResult, Phrase, WordGuide } from "@/lib/types";
 import { DiffLegend } from "./letter-diff";
 import { SoundWords, WordDetail } from "./sound-words";
+import type { Locale } from "@/domain/locales";
+import type { Messages } from "@/i18n/messages";
+import { useI18n } from "@/i18n/provider";
 
 /** Natural conversational pace, in words per minute. */
 const PACE_SLOW = 100;
@@ -19,25 +22,26 @@ const WORD_PADDING_SECONDS = 0.08;
 interface SayItProps {
   readonly phraseId: string;
   readonly text: string;
-  /** Beginner and intermediate learners read the sound tips in Spanish. */
-  readonly tipsInSpanish?: boolean;
+  /** Language of the sound tips: the person's own below advanced, else English. */
+  readonly tipsLocale?: Locale;
   readonly onDrilled?: (phrase: Phrase) => void;
 }
 
 const bareGuide = (text: string): WordGuide[] =>
   text.split(/\s+/).filter(Boolean).map((w) => ({ text: w, key: w.toLowerCase(), respelling: null, syllables: 0, stressed: null, tips: [], focus: false }));
 
-function paceNote(wpm: number): string {
-  if (wpm < PACE_SLOW) return "a little slow, keep it flowing";
-  if (wpm > PACE_FAST) return "a little fast, slow down a bit";
-  return "a natural pace";
+function paceNote(wpm: number, t: Messages): string {
+  if (wpm < PACE_SLOW) return t.sayIt.paceSlow;
+  if (wpm > PACE_FAST) return t.sayIt.paceFast;
+  return t.sayIt.paceOk;
 }
 
 /**
  * "Say it" with a sound check: the phrase word by word, how each word sounds in American English,
  * then which words the AI understood when you said it, your pace, and your own voice per word.
  */
-export function SayItButton({ phraseId, text, tipsInSpanish = false, onDrilled }: SayItProps) {
+export function SayItButton({ phraseId, text, tipsLocale = "en", onDrilled }: SayItProps) {
+  const { t } = useI18n();
   const [guide, setGuide] = useState<WordGuide[]>(() => bareGuide(text));
   const [selected, setSelected] = useState<number | null>(null);
   const [checking, setChecking] = useState(false);
@@ -108,7 +112,7 @@ export function SayItButton({ phraseId, text, tipsInSpanish = false, onDrilled }
     window.setTimeout(() => el.pause(), (t.end - t.start + 2 * WORD_PADDING_SECONDS) * 1000);
   };
 
-  const label = checking ? "Checking…" : recording ? "Tap to finish" : result ? "Try again" : "Say it";
+  const label = checking ? t.sayIt.checking : recording ? t.sayIt.finishRecording : result ? t.sayIt.again : t.sayIt.say;
   const Icon = checking ? Loader2 : recording ? Square : result ? RotateCcw : Mic;
   const clearCount = result?.words.filter((w) => w.status === "clear").length ?? 0;
   const word = selected === null ? null : guide[selected];
@@ -116,7 +120,7 @@ export function SayItButton({ phraseId, text, tipsInSpanish = false, onDrilled }
   return (
     <div className="space-y-3">
       <p className="flex items-center gap-1.5 text-sm font-semibold text-muted">
-        <AudioWaveform aria-hidden="true" className="size-4" /> Sound check · tap any word
+        <AudioWaveform aria-hidden="true" className="size-4" /> {t.sayIt.soundCheck}
       </p>
       <SoundWords words={guide} checks={result?.words ?? null} selected={selected} onSelect={(i) => setSelected(i === selected ? null : i)} />
       {result && result.words.some((w) => w.status === "missed") ? <DiffLegend /> : null}
@@ -124,7 +128,7 @@ export function SayItButton({ phraseId, text, tipsInSpanish = false, onDrilled }
         <WordDetail
           word={word}
           check={result?.words[selected]}
-          tipsInSpanish={tipsInSpanish}
+          tipsLocale={tipsLocale}
           onHearIt={() => speaker.play(`word-${selected}`, word.text, null, SLOW_RATE)}
           onHearMine={timings[selected] && takeUrl ? () => hearMine(selected) : null}
         />
@@ -148,24 +152,24 @@ export function SayItButton({ phraseId, text, tipsInSpanish = false, onDrilled }
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {result.passed ? (
               <span className="animate-pop inline-flex items-center gap-1 rounded-full bg-sun px-3 py-1 font-bold text-on-sun">
-                <Sparkles aria-hidden="true" className="size-4" /> Well said!
+                <Sparkles aria-hidden="true" className="size-4" /> {t.sayIt.wellSaid}
               </span>
             ) : (
-              <span className="font-bold">Almost.</span>
+              <span className="font-bold">{t.sayIt.almost}</span>
             )}
             <span className="inline-flex items-center gap-1 font-semibold">
               <Check aria-hidden="true" className="size-4 text-accent-ink" />
-              <span className="tabular">{`${clearCount} of ${result.words.length} words clear`}</span>
+              <span className="tabular">{t.sayIt.clear(clearCount, result.words.length)}</span>
             </span>
           </p>
         ) : null}
         {result?.pace ? (
           <p>
-            <span className="tabular font-semibold">{result.pace.wordsPerMinute} words a minute</span>, {paceNote(result.pace.wordsPerMinute)}.
-            {result.pace.longPauses > 0 ? ` ${result.pace.longPauses === 1 ? "1 long pause" : `${result.pace.longPauses} long pauses`}.` : ""}
+            <span className="tabular font-semibold">{t.sayIt.wpm(result.pace.wordsPerMinute)}</span>, {paceNote(result.pace.wordsPerMinute, t)}.
+            {result.pace.longPauses > 0 ? ` ${t.sayIt.pauses(result.pace.longPauses)}` : ""}
           </p>
         ) : null}
-        {result ? <p className="text-muted">“Clear” means the AI understood the word. Tap any word to work on its sounds.</p> : null}
+        {result ? <p className="text-muted">{t.sayIt.clearMeans}</p> : null}
         {error || recorder.error ? (
           <p role="alert" className="text-error">
             {error ?? recorder.error}

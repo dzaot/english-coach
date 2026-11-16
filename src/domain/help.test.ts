@@ -6,10 +6,17 @@ import { getIndustry, getScenario } from "./scenarios";
 describe("helpMessages", () => {
   it("translates to Spanish below advanced, and rephrases in English for advanced", () => {
     const turns = [{ role: "counterpart" as const, text: "Tell me about yourself." }];
-    expect(helpMessages(getScenario("job_interview"), getIndustry("sales"), getLevel("beginner"), turns)[0].content).toMatch(/Spanish, speaking to the user as tú/);
+    expect(helpMessages(getScenario("job_interview"), getIndustry("sales"), getLevel("beginner"), turns)[0].content).toMatch(/Spanish, speaking to the user as "tú"/);
     const advanced = helpMessages(getScenario("job_interview"), getIndustry("sales"), getLevel("advanced"), turns)[0].content;
     expect(advanced).toMatch(/simpler English/);
     expect(advanced).not.toMatch(/translated to neutral Latin American Spanish/);
+  });
+
+  it("translates into the person's own language", () => {
+    const turns = [{ role: "counterpart" as const, text: "Tell me about yourself." }];
+    const french = helpMessages(getScenario("job_interview"), getIndustry("sales"), getLevel("intermediate"), turns, null, "fr")[0].content;
+    expect(french).toMatch(/translated to French/);
+    expect(french).toMatch(/a French speaker/);
   });
 
   it("asks for the translation of the counterpart's last line and a short suggested answer", () => {

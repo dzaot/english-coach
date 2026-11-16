@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { useI18n } from "@/i18n/provider";
 
 /** Dilo ("say it"): a speech bubble with three voice bars, coral to sun. Same shapes as public/brand/dilo-icon.svg. */
 export function BrandIcon({ size = 32 }: { size?: number }) {
@@ -23,11 +24,12 @@ export function BrandIcon({ size = 32 }: { size?: number }) {
 }
 
 export function BrandMark({ compact = false }: { compact?: boolean }) {
+  const { t } = useI18n();
   return (
     <p className={`flex items-center gap-2 font-display font-extrabold tracking-tight ${compact ? "text-xl" : "text-2xl"}`}>
       <BrandIcon size={compact ? 30 : 36} />
       dilo
-      <span className="sr-only">: spoken English practice for work</span>
+      <span className="sr-only">{t.app.brandSuffix}</span>
     </p>
   );
 }

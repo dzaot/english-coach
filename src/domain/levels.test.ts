@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { LEVELS, getLevel, isLevelId } from "./levels";
+import { LEVELS, getLevel, isLevelId, explanationLocale, translationLocale } from "./levels";
 
 describe("levels", () => {
   it("offers beginner, intermediate and advanced", () => {
     expect(LEVELS.map((l) => l.id)).toEqual(["beginner", "intermediate", "advanced"]);
   });
 
-  it("gives beginners Spanish support and advanced learners English only", () => {
-    expect(getLevel("beginner").explanationLanguage).toBe("Spanish");
-    expect(getLevel("beginner").helpTranslation).toBe("Spanish");
-    expect(getLevel("intermediate").explanationLanguage).toBe("English");
-    expect(getLevel("intermediate").helpTranslation).toBe("Spanish");
-    expect(getLevel("advanced").explanationLanguage).toBe("English");
-    expect(getLevel("advanced").helpTranslation).toBe("English");
+  it("gives beginners support in their own language and advanced learners English only", () => {
+    expect(explanationLocale(getLevel("beginner"), "fr")).toBe("fr");
+    expect(translationLocale(getLevel("beginner"), "fr")).toBe("fr");
+    expect(explanationLocale(getLevel("intermediate"), "pt")).toBe("en");
+    expect(translationLocale(getLevel("intermediate"), "pt")).toBe("pt");
+    expect(explanationLocale(getLevel("advanced"), "es")).toBe("en");
+    expect(translationLocale(getLevel("advanced"), "es")).toBe("en");
   });
 
   it("slows the voice down for beginners", () => {

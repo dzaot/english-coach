@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ChatMessage, Turn } from "./conversation";
-import type { Level } from "./levels";
+import { explanationLocale, translationLocale, type Level } from "./levels";
+import { PROMPT_LANGUAGE, speakerOf, type Locale } from "./locales";
 import { extractJsonObject } from "./json";
 import { contextBlock } from "./prompts";
 import type { Industry, Scenario } from "./scenarios";
@@ -22,12 +23,13 @@ export class HelpParseError extends Error {
   }
 }
 
-function helpSpec(level: Level): string {
+function helpSpec(level: Level, locale: Locale): string {
+  const into = translationLocale(level, locale);
   const translation =
-    level.helpTranslation === "Spanish"
-      ? "the COUNTERPART's last message translated to neutral Latin American Spanish"
-      : "the COUNTERPART's last message rephrased in simpler English, max 25 words";
-  const tip = level.explanationLanguage === "Spanish" ? "in Spanish, speaking to the user as tú" : "in simple English";
+    into === "en"
+      ? "the COUNTERPART's last message rephrased in simpler English, max 25 words"
+      : `the COUNTERPART's last message translated to ${PROMPT_LANGUAGE[into].split(",")[0]}`;
+  const tip = `in ${PROMPT_LANGUAGE[explanationLocale(level, locale)]}`;
   return `HELP_JSON. Return ONLY a JSON object, no prose:
 {"translation": "${translation}",
  "suggestion": "one natural answer the user could say out loud, first person, max 30 words, ${level.id === "advanced" ? "confident professional" : "simple workplace"} English",
@@ -35,10 +37,17 @@ function helpSpec(level: Level): string {
 Never use the em dash character.`;
 }
 
-export function helpMessages(scenario: Scenario, industry: Industry, level: Level, turns: readonly Turn[], context?: string | null): ChatMessage[] {
+export function helpMessages(
+  scenario: Scenario,
+  industry: Industry,
+  level: Level,
+  turns: readonly Turn[],
+  context?: string | null,
+  locale: Locale = "es",
+): ChatMessage[] {
   const recent = turns.slice(-6).map((t) => `${t.role === "user" ? "USER" : "COUNTERPART"}: ${t.text}`).join("\n");
   return [
-    { role: "system", content: `You help a Spanish-speaking professional who is stuck in an English role-play. ${helpSpec(level)}` },
+    { role: "system", content: `You help ${speakerOf(locale)}, a professional who is stuck in an English role-play. ${helpSpec(level, locale)}` },
     {
       role: "user",
       content: `Role-play: ${scenario.title} with a ${scenario.counterpart.roleEn}. The user works as: ${industry.roleEn}. Level: ${level.label}.${context?.trim() ? `\n${contextBlock(context)}` : ""}\nRecent conversation:\n${recent}`,

@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 import { AVATARS, type AvatarId } from "@/domain/avatars";
 import { LEVELS, type LevelId } from "@/domain/levels";
 import { INDUSTRIES, type IndustryId } from "@/domain/scenarios";
+import { useI18n } from "@/i18n/provider";
 import { AvatarPortrait } from "./avatar-portrait";
 
 /** Partner, industry and level pickers. Radios styled as cards; the native input keeps keyboard support. */
@@ -12,9 +13,10 @@ export const FOCUS_WITHIN =
 const card = (checked: boolean) => (checked ? "border-primary bg-primary-soft" : "border-border bg-surface hover:bg-surface-2");
 
 export function PartnerPicker({ avatarId, onChange }: { avatarId: AvatarId; onChange: (id: AvatarId) => void }) {
+  const { t } = useI18n();
   return (
     <fieldset>
-      <legend className="mb-3 font-display text-lg font-bold">Your partner</legend>
+      <legend className="mb-3 font-display text-lg font-bold">{t.home.yourPartner}</legend>
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {AVATARS.map((a) => {
           const checked = a.id === avatarId;
@@ -32,7 +34,7 @@ export function PartnerPicker({ avatarId, onChange }: { avatarId: AvatarId; onCh
               <AvatarPortrait avatar={a} size={72} />
               <span>
                 <span className="block font-semibold">{a.name}</span>
-                <span className="block text-xs text-muted">{a.vibe}</span>
+                <span className="block text-xs text-muted">{t.avatars[a.id].vibe}</span>
               </span>
             </label>
           );
@@ -43,9 +45,10 @@ export function PartnerPicker({ avatarId, onChange }: { avatarId: AvatarId; onCh
 }
 
 export function IndustryPicker({ industryId, onChange }: { industryId: IndustryId; onChange: (id: IndustryId) => void }) {
+  const { t } = useI18n();
   return (
     <fieldset>
-      <legend className="mb-3 font-display text-lg font-bold">Your industry</legend>
+      <legend className="mb-3 font-display text-lg font-bold">{t.home.yourIndustry}</legend>
       <div className="flex flex-wrap gap-2">
         {INDUSTRIES.map((i) => {
           const checked = i.id === industryId;
@@ -57,7 +60,7 @@ export function IndustryPicker({ industryId, onChange }: { industryId: IndustryI
               }`}
             >
               <input type="radio" name="industry" value={i.id} checked={checked} onChange={() => onChange(i.id)} className="sr-only" />
-              {i.label}
+              {t.industries[i.id]}
             </label>
           );
         })}
@@ -67,9 +70,10 @@ export function IndustryPicker({ industryId, onChange }: { industryId: IndustryI
 }
 
 export function LevelPicker({ level, onChange }: { level: LevelId; onChange: (id: LevelId) => void }) {
+  const { t } = useI18n();
   return (
     <fieldset>
-      <legend className="mb-3 font-display text-lg font-bold">Your English level</legend>
+      <legend className="mb-3 font-display text-lg font-bold">{t.home.yourLevel}</legend>
       <div className="grid gap-2 sm:grid-cols-3">
         {LEVELS.map((l) => {
           const checked = l.id === level;
@@ -78,9 +82,9 @@ export function LevelPicker({ level, onChange }: { level: LevelId; onChange: (id
               <input type="radio" name="level" value={l.id} checked={checked} onChange={() => onChange(l.id)} className="sr-only" />
               <span className="flex items-center gap-1.5 font-semibold">
                 {checked ? <Check aria-hidden="true" className="size-4 text-primary-ink" strokeWidth={3} /> : null}
-                {l.label}
+                {t.levels[l.id].label}
               </span>
-              <span className="text-sm text-muted">{l.description}</span>
+              <span className="text-sm text-muted">{t.levels[l.id].description}</span>
             </label>
           );
         })}

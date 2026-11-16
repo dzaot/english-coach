@@ -1,6 +1,7 @@
 import type { Avatar } from "./avatars";
 import type { ChatMessage, Turn } from "./conversation";
-import type { Level } from "./levels";
+import { explanationLocale, type Level } from "./levels";
+import { PROMPT_LANGUAGE, speakerOf, type Locale } from "./locales";
 import type { Industry, Scenario } from "./scenarios";
 
 /** Longest situation description kept (user notes plus a summary of a pasted link). */
@@ -51,8 +52,8 @@ export function linkBriefMessages(pageText: string): ChatMessage[] {
   ];
 }
 
-function feedbackSpec(level: Level): string {
-  const lang = level.explanationLanguage === "Spanish" ? "neutral Latin American Spanish, speaking to the user as \"tú\"" : "simple, friendly English, speaking to the user as \"you\"";
+function feedbackSpec(level: Level, locale: Locale): string {
+  const lang = PROMPT_LANGUAGE[explanationLocale(level, locale)];
   return `Return ONLY a JSON object with this exact shape, no prose:
 {
   "summary": "2 short sentences about how it went",
@@ -71,10 +72,17 @@ Never use the em dash character; use commas or periods.`;
 }
 
 /** Messages for the end-of-session feedback call. */
-export function feedbackMessages(scenario: Scenario, industry: Industry, level: Level, turns: readonly Turn[], context?: string | null): ChatMessage[] {
+export function feedbackMessages(
+  scenario: Scenario,
+  industry: Industry,
+  level: Level,
+  turns: readonly Turn[],
+  context?: string | null,
+  locale: Locale = "es",
+): ChatMessage[] {
   const transcript = turns.map((t) => `${t.role === "user" ? "USER" : "COUNTERPART"}: ${t.text}`).join("\n");
   return [
-    { role: "system", content: `You are a friendly English coach for Spanish-speaking professionals. ${feedbackSpec(level)}` },
+    { role: "system", content: `You are a friendly English coach for professionals who are not native speakers; this one is ${speakerOf(locale)}. ${feedbackSpec(level, locale)}` },
     {
       role: "user",
       content: `Scenario: ${scenario.title} (${scenario.counterpart.roleEn}). Industry: ${industry.label}. Level: ${level.label}.${context?.trim() ? `\n${contextBlock(context)}` : ""}\nTranscript (word-for-word speech-to-text: the mistakes are what they really said):\n${transcript}`,

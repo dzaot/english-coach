@@ -55,6 +55,16 @@ export function parseFeedback(raw: string): Feedback {
   };
 }
 
+export type ScoreTier = "excellent" | "great" | "getting" | "keep";
+
+/** The score band, so the interface can name it in any language. */
+export function scoreTier(score: number): ScoreTier {
+  if (score >= 85) return "excellent";
+  if (score >= 70) return "great";
+  if (score >= 50) return "getting";
+  return "keep";
+}
+
 export function scoreLabel(score: number): string {
   if (score >= 85) return "Excellent";
   if (score >= 70) return "Great job";

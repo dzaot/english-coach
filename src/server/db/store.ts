@@ -1,3 +1,4 @@
+import type { Locale } from "@/domain/locales";
 import type { Turn } from "@/domain/conversation";
 import type { Feedback } from "@/domain/feedback";
 import type { AvatarId } from "@/domain/avatars";
@@ -36,6 +37,8 @@ export interface PracticeRecord {
   readonly score: number | null;
   /** What the person told us about their real situation (job post, meeting topic). */
   readonly context: string | null;
+  /** The person's app language: explanations and translations use it, depending on the level. */
+  readonly locale: Locale;
 }
 
 export interface NewPractice {
@@ -47,6 +50,7 @@ export interface NewPractice {
   readonly startedAt: string;
   readonly turns: readonly Turn[];
   readonly context?: string | null;
+  readonly locale?: Locale;
 }
 
 export interface PhraseRecord {

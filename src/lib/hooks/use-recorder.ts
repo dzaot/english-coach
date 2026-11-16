@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { runtimeMessages } from "@/i18n/messages";
 
 /** Push-to-talk recording with MediaRecorder. Tap to start, tap to stop. Auto-stops at the max length. */
 
@@ -10,6 +11,7 @@ const MIME_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/
 
 export type RecorderStatus = "idle" | "starting" | "recording";
 
+/** English texts (tests and reference); the hook shows them in the person's language. */
 export const RECORDER_ERRORS = {
   unsupported: "Your browser cannot record audio. You can type your answer instead.",
   denied: "We need permission to use the microphone. Allow it in your browser or type your answer.",
@@ -61,7 +63,7 @@ export function useRecorder(opts: { onAutoStop?: (blob: Blob) => void; maxMs?: n
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
         const tooShort = Date.now() - startedAtRef.current < MIN_RECORDING_MS || blob.size === 0;
         release();
-        if (tooShort) setError(RECORDER_ERRORS.tooShort);
+        if (tooShort) setError(runtimeMessages().recorder.tooShort);
         resolve(tooShort ? null : blob);
       };
       recorder.stop();
@@ -71,7 +73,7 @@ export function useRecorder(opts: { onAutoStop?: (blob: Blob) => void; maxMs?: n
   const start = useCallback(async (): Promise<boolean> => {
     setError(null);
     if (!isRecordingSupported()) {
-      setError(RECORDER_ERRORS.unsupported);
+      setError(runtimeMessages().recorder.unsupported);
       return false;
     }
     setStatus("starting");
@@ -96,7 +98,8 @@ export function useRecorder(opts: { onAutoStop?: (blob: Blob) => void; maxMs?: n
       return true;
     } catch (e) {
       const name = e instanceof Error ? e.name : "";
-      setError(name === "NotAllowedError" ? RECORDER_ERRORS.denied : name === "NotFoundError" ? RECORDER_ERRORS.noMic : RECORDER_ERRORS.failed);
+      const texts = runtimeMessages().recorder;
+      setError(name === "NotAllowedError" ? texts.denied : name === "NotFoundError" ? texts.noMic : texts.failed);
       release();
       return false;
     }

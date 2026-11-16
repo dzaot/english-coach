@@ -7,6 +7,15 @@
 > - Abre con **Sign in with publik**. Sin sesión, la práctica responde `gate_required`.
 > - El token de la app (`PUBLIK_APP_TOKEN`) solo está en Vercel; publik respondió `installs: 201`.
 
+> **Idiomas (2026-11-16, noche):** la interfaz está en inglés, español, portugués, francés, italiano y alemán.
+> - Un botón arriba (en el inicio y en la pantalla de publik) cambia el idioma. La primera vez se usa el del navegador, y la elección se guarda en el navegador.
+> - La conversación sigue en inglés, que es lo que se practica.
+> - Según el nivel, las explicaciones, los tips de sonido, las razones de cada corrección y las traducciones de "Help me" llegan en el idioma elegido. Beginner: todo en tu idioma. Intermediate: traducciones en tu idioma y explicaciones en inglés. Advanced: todo en inglés.
+> - Los textos de publik (título y botones de inicio de sesión) quedan en inglés, por la regla de publik.
+> - Probado con la IA real en francés: correcciones y "Help me" llegaron en francés.
+> - Las traducciones las escribió la IA; conviene que un hablante nativo revise portugués, francés, italiano y alemán.
+> - 362 tests, 96,8% de líneas.
+
 > **Cambios del 2026-11-16 (noche), tras la primera prueba de David en producción:**
 > - **Turnos más rápidos.** Un solo pedido en streaming: tus palabras aparecen a los ~2,5 s (antes ~7 s) y la respuesta llega junto con su voz a los ~7 a 8 s (antes ~10 a 11 s). Las respuestas usan `publik-fast` (antes `publik-balanced`, 2 s más lento). El cuello de botella que queda es la voz HD de publik: 2,3 a 4,8 s por llamada, sin streaming real.
 > - **Tus errores se ven.** whisper-1 corregía tu gramática ("I have work" volvía como "worked"). Ahora se le pasa un prompt con errores típicos y transcribe palabra por palabra. Cada respuesta se revisa en paralelo (`publik-fast`, con un ejemplo resuelto en el prompt): gramática y palabras en rojo, corregidas **letra por letra** dentro de tu frase (verde bien, rojo sobra, amarillo falta), frases poco naturales en amarillo, la razón de cada una y **2 formas más de decirlo** con su voz.

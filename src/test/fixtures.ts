@@ -27,6 +27,7 @@ export function practice(over: Partial<PracticeView> = {}): PracticeView {
     canFinish: false,
     limitReached: false,
     context: null,
+    locale: "es",
     ...over,
   };
 }

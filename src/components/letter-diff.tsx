@@ -1,4 +1,5 @@
 import { diffPhrase, type DiffPart } from "@/domain/diff";
+import { useI18n } from "@/i18n/provider";
 
 /**
  * A correction shown letter by letter: green letters were right, red ones (struck through) go away,
@@ -25,28 +26,30 @@ export function DiffParts({ parts }: { parts: readonly DiffPart[] }) {
 
 /** "I am agree" to "I agree", with a screen-reader sentence in place of the colored letters. */
 export function LetterDiff({ said, better, className = "" }: { said: string; better: string; className?: string }) {
+  const { t } = useI18n();
   return (
     <span className={`font-semibold ${className}`}>
       <span aria-hidden="true">
         <DiffParts parts={diffPhrase(said, better)} />
       </span>
-      <span className="sr-only">{`You said "${said}". Better: "${better}".`}</span>
+      <span className="sr-only">{t.check.diffSr(said, better)}</span>
     </span>
   );
 }
 
 /** Explains the three colors once, with the same styles. */
 export function DiffLegend() {
+  const { t } = useI18n();
   return (
     <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-muted">
       <span>
-        <span className={PART_CLASS.same}>Green</span> right
+        <span className={PART_CLASS.same}>{t.check.legendGreen}</span> {t.check.legendGreenText}
       </span>
       <span>
-        <span className={PART_CLASS.del}>Red</span> remove
+        <span className={PART_CLASS.del}>{t.check.legendRed}</span> {t.check.legendRedText}
       </span>
       <span>
-        <span className={PART_CLASS.add}>Yellow</span> add or change
+        <span className={PART_CLASS.add}>{t.check.legendYellow}</span> {t.check.legendYellowText}
       </span>
     </p>
   );

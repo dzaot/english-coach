@@ -7,6 +7,7 @@ import type { DrillResult, WordGuide } from "@/lib/types";
 import { installRecorderStub, installSpeechStub } from "@/test/browser-stubs";
 import { progress } from "@/test/fixtures";
 import { SayItButton } from "./say-it-button";
+import { MESSAGES } from "@/i18n/messages";
 
 vi.mock("@/lib/api", async (orig) => {
   const real = await orig<typeof import("@/lib/api")>();
@@ -65,19 +66,20 @@ async function sayIt() {
 
 describe("SayItButton (sound check)", () => {
   it("shows how each word sounds and which sounds to watch", async () => {
-    render(<SayItButton phraseId={phrase.id} text={phrase.better} tipsInSpanish />);
+    render(<SayItButton phraseId={phrase.id} text={phrase.better} tipsLocale="es" />);
     const word = await screen.findByRole("button", { name: /meeting/ });
     expect(word).toHaveAccessibleName(/practice this one: 1 sound to watch/);
     await userEvent.click(word);
     expect(screen.getByText("MEE-ding")).toBeInTheDocument();
-    expect(screen.getByText("Entre vocales la t suena suave.")).toBeInTheDocument();
+    expect(screen.getByText(MESSAGES.es.sounds.flap_t.tip)).toBeInTheDocument();
+    expect(screen.getByText(MESSAGES.es.sounds.flap_t.label)).toHaveAttribute("lang", "es");
     await userEvent.click(screen.getByRole("button", { name: /Hear it slowly/ }));
   });
 
   it("gives English tips when the learner is advanced", async () => {
     render(<SayItButton phraseId={phrase.id} text={phrase.better} />);
     await userEvent.click(await screen.findByRole("button", { name: /meeting/ }));
-    expect(screen.getByText("Between vowels the t is soft.")).toBeInTheDocument();
+    expect(screen.getByText(MESSAGES.en.sounds.flap_t.tip)).toBeInTheDocument();
   });
 
   it("celebrates a phrase said clearly, with its pace, and reports the new schedule", async () => {

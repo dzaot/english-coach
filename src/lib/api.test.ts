@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, api } from "./api";
+import { MESSAGES, setRuntimeLocale } from "@/i18n/messages";
 
 const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
 const ndjson = (lines: unknown[]) =>
@@ -62,9 +63,18 @@ describe("api client", () => {
     await expect(api.turn("p1", { text: "x" })).rejects.toMatchObject({ code: "offline" });
   });
 
-  it("turns API errors into ApiError with the Spanish message and top-up link", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { code: "ai_balance", message: "Se acabó tu saldo", topUpUrl: "https://publikhq.com/wallet" } }), { status: 402 })));
-    await expect(api.finish("p1")).rejects.toMatchObject({ code: "ai_balance", message: "Se acabó tu saldo", topUpUrl: "https://publikhq.com/wallet" });
+  it("turns API errors into ApiError in the person's language, with the top-up link", async () => {
+    const balance = () => new Response(JSON.stringify({ error: { code: "ai_balance", message: "Your publik AI balance has run out.", topUpUrl: "https://publikhq.com/wallet" } }), { status: 402 });
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => balance()));
+    await expect(api.finish("p1")).rejects.toMatchObject({ code: "ai_balance", message: "Your publik AI balance has run out.", topUpUrl: "https://publikhq.com/wallet" });
+    setRuntimeLocale("es");
+    await expect(api.finish("p1")).rejects.toMatchObject({ message: MESSAGES.es.errors.ai_balance });
+    setRuntimeLocale("en");
+  });
+
+  it("keeps the server's message for an error code the app does not know", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { code: "brand_new", message: "Something new happened." } }), { status: 500 })));
+    await expect(api.finish("p1")).rejects.toMatchObject({ code: "brand_new", message: "Something new happened." });
   });
 
   it("explains when there is no connection", async () => {

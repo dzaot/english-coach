@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { ChatMessage } from "./conversation";
 import { extractJsonObject } from "./json";
-import type { Level } from "./levels";
+import { explanationLocale, type Level } from "./levels";
+import { PROMPT_LANGUAGE, speakerOf, type Locale } from "./locales";
 import { cleanDashes } from "./text";
 
 /**
@@ -54,10 +55,10 @@ export function isMistake(kind: IssueKind): boolean {
   return kind === "grammar" || kind === "word";
 }
 
-function spec(level: Level): string {
-  const why = level.explanationLanguage === "Spanish" ? "in neutral Latin American Spanish, speaking as tú" : "in simple English";
+function spec(level: Level, locale: Locale): string {
+  const why = `in ${PROMPT_LANGUAGE[explanationLocale(level, locale)]}`;
   const second = level.id === "beginner" ? "Simpler" : "More confident";
-  return `${TURN_CHECK_MARK}. The USER line is a word-for-word speech-to-text transcript of a Spanish speaker practicing work English, so its mistakes are real.
+  return `${TURN_CHECK_MARK}. The USER line is a word-for-word speech-to-text transcript of ${speakerOf(locale)} practicing work English, so its mistakes are real.
 Return ONLY a JSON object, no prose:
 {"issues": [{"said": "1 to 6 words copied exactly from the USER line", "better": "what a native US professional would say instead", "kind": "grammar | word | natural | sound", "why": "one short reason ${why}, max 14 words"}],
  "alternatives": [{"label": "Natural", "text": "the whole answer said naturally, max 30 words"}, {"label": "${second}", "text": "another way, max 30 words"}]}
@@ -67,13 +68,23 @@ At most ${MAX_ISSUES} issues, the most important first. Ignore capital letters, 
 Never use the em dash character.`;
 }
 
+/** The example's two reasons, in each language. */
+const EXAMPLE_WHY: Readonly<Record<Locale, readonly [string, string]>> = {
+  en: ["Use doesn't with he, she and it.", "Use for with a length of time."],
+  es: ["Con he, she o it se usa doesn't.", "Para una duración se usa for."],
+  pt: ["Com he, she ou it se usa doesn't.", "Para uma duração se usa for."],
+  fr: ["Avec he, she ou it, on dit doesn't.", "Pour une durée, on utilise for."],
+  it: ["Con he, she o it si usa doesn't.", "Per una durata si usa for."],
+  de: ["Bei he, she oder it sagt man doesn't.", "Für eine Zeitdauer benutzt man for."],
+};
+
 /** One worked example: small models copy it closely, so it shows keeping the speaker's subject and meaning. */
-function example(level: Level): ChatMessage[] {
-  const spanish = level.explanationLanguage === "Spanish";
+function example(level: Level, locale: Locale): ChatMessage[] {
+  const [whyDoesnt, whyFor] = EXAMPLE_WHY[explanationLocale(level, locale)];
   const answer = {
     issues: [
-      { said: "He don't like", better: "He doesn't like", kind: "grammar", why: spanish ? "Con he, she o it se usa doesn't." : "Use doesn't with he, she and it." },
-      { said: "since two years", better: "for two years", kind: "word", why: spanish ? "Para una duración se usa for." : "Use for with a length of time." },
+      { said: "He don't like", better: "He doesn't like", kind: "grammar", why: whyDoesnt },
+      { said: "since two years", better: "for two years", kind: "word", why: whyFor },
     ],
     alternatives: [
       { label: "Natural", text: "My manager doesn't like long meetings. We've worked together for two years." },
@@ -87,10 +98,10 @@ function example(level: Level): ChatMessage[] {
 }
 
 /** Messages for the live check of the user's last answer (fast tier). */
-export function turnCheckMessages(level: Level, counterpartLine: string, userLine: string): ChatMessage[] {
+export function turnCheckMessages(level: Level, counterpartLine: string, userLine: string, locale: Locale = "es"): ChatMessage[] {
   return [
-    { role: "system", content: `You are a precise, friendly English coach. ${spec(level)}` },
-    ...example(level),
+    { role: "system", content: `You are a precise, friendly English coach. ${spec(level, locale)}` },
+    ...example(level, locale),
     { role: "user", content: `COUNTERPART: ${counterpartLine}\nUSER: ${userLine}` },
   ];
 }

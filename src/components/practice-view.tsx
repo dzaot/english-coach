@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Flag, Keyboard, LifeBuoy, Mic, Send } from "lucide-react";
 import { MAX_USER_TURNS, countUserTurns } from "@/domain/conversation";
 import { getAvatar } from "@/domain/avatars";
-import { getLevel } from "@/domain/levels";
-import { CUSTOM_SCENARIO, getScenario } from "@/domain/scenarios";
+import { getLevel, translationLocale } from "@/domain/levels";
+import { getScenario } from "@/domain/scenarios";
 import { ApiError, api } from "@/lib/api";
 import { formatClock } from "@/lib/format";
 import { useElapsedSeconds } from "@/lib/hooks/use-elapsed";
@@ -18,8 +18,8 @@ import { CallStage } from "./call-stage";
 import { ChatBubble } from "./chat-bubble";
 import { HelpCard } from "./help-card";
 import { RecordButton, micLabel, type MicState } from "./record-button";
-import { industryLabel } from "./scenario-meta";
 import { Button, ErrorBanner, TopBar } from "./ui";
+import { useI18n } from "@/i18n/provider";
 
 interface Props {
   initial: Practice;
@@ -48,6 +48,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
   const [checkingTurn, setCheckingTurn] = useState<number | null>(null);
   const altAudio = useRef(new Map<string, SpeechAudio | null>());
   const revealed = useRef(new Set<number>());
+  const { t } = useI18n();
   const speaker = useSpeaker();
   const { play, stop: stopSpeaking } = speaker;
   const audioCache = useRef(new Map<number, SpeechAudio | null>(initialAudio ? [[0, initialAudio]] : []));
@@ -55,7 +56,6 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
   const elapsed = useElapsedSeconds(initial.startedAt);
   const endRef = useRef<HTMLLIElement | null>(null);
   const scenario = getScenario(practice.scenarioId);
-  const { roleEn } = scenario.counterpart;
   const avatar = getAvatar(practice.avatarId);
   const { name } = avatar;
   const baseRate = getLevel(practice.level).playbackRate;
@@ -85,9 +85,9 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
       if (revealed.current.has(index)) return;
       revealed.current.add(index);
       setPractice((p) => (p.turns.length === index ? { ...p, turns: [...p.turns, { role: "counterpart", text }] } : p));
-      setAnnouncement(`${name} says: ${text}`);
+      setAnnouncement(t.practice.partnerSays(name, text));
     },
-    [name],
+    [name, t],
   );
 
   const submit = useCallback(
@@ -96,7 +96,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
       setStage("hearing");
       setError(null);
       setHelp(null);
-      setAnnouncement("Sending your answer…");
+      setAnnouncement(t.practice.sending);
       let reply: { index: number; text: string } | null = null;
       let timer: ReturnType<typeof setTimeout> | null = null;
       const onEvent = (event: TurnEvent) => {
@@ -106,7 +106,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
             setCheckingTurn(event.turnIndex);
             setStage("thinking");
             setDraft("");
-            setAnnouncement(`You said: ${event.text}`);
+            setAnnouncement(t.practice.youSaid(event.text));
             break;
           case "check":
             setPractice((p) => ({ ...p, turns: p.turns.map((t, i) => (i === event.turnIndex ? { ...t, check: event.check } : t)) }));
@@ -134,7 +134,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
         revealed.current.add(index);
         setPractice(result.practice);
         if (fresh) {
-          setAnnouncement(`${name} says: ${result.replyText}`);
+          setAnnouncement(t.practice.partnerSays(name, result.replyText));
           void voice(index, result.replyText);
         }
       } catch (e) {
@@ -146,7 +146,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
         setPhase("ready");
       }
     },
-    [name, practice.id, reveal, voice],
+    [name, practice.id, reveal, t, voice],
   );
 
   /** "Other ways to say it": hear one in your partner's voice. */
@@ -184,8 +184,8 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
       return;
     }
     silence();
-    if (await recorder.start()) setAnnouncement("Recording. Tap again to send.");
-  }, [recorder, silence, submit]);
+    if (await recorder.start()) setAnnouncement(t.practice.recordingNow);
+  }, [recorder, silence, submit, t]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -207,7 +207,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
     try {
       const next = await api.help(practice.id);
       setHelp(next);
-      setAnnouncement(`You could say: ${next.suggestion}`);
+      setAnnouncement(t.practice.youCouldSay(next.suggestion));
     } catch (e) {
       setError({ message: e instanceof Error ? e.message : String(e), topUpUrl: e instanceof ApiError ? e.topUpUrl : null });
     } finally {
@@ -243,9 +243,9 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
           silence();
           onExit();
         }}
-        backLabel="Leave the practice"
+        backLabel={t.practice.leave}
         right={
-          <span className="tabular rounded-full bg-surface-2 px-3 py-1 text-sm font-semibold" aria-label={`Time: ${formatClock(elapsed)}`}>
+          <span className="tabular rounded-full bg-surface-2 px-3 py-1 text-sm font-semibold" aria-label={t.practice.time(formatClock(elapsed))}>
             {formatClock(elapsed)}
           </span>
         }
@@ -253,26 +253,26 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
 
       <CallStage
         avatar={avatar}
-        role={`${scenario.id === CUSTOM_SCENARIO ? "Your situation" : `${roleEn.charAt(0).toUpperCase()}${roleEn.slice(1)}`} · ${industryLabel(practice.industryId)}`}
+        role={`${t.scenarios[scenario.id].role} · ${t.industries[practice.industryId]}`}
         state={portraitState}
         caption={practice.turns[lastLine]?.text ?? ""}
         captionProgress={speaker.progress?.id === turnKey(lastLine) ? speaker.progress.ratio : null}
         micLevel={micLevel}
         status={
           portraitState === "speaking"
-            ? `${name} is talking…`
+            ? t.practice.talking(name)
             : portraitState === "listening"
-              ? `${name} is listening…`
+              ? t.practice.listening(name)
               : phase === "sending"
                 ? stage === "hearing"
-                  ? "Getting your words…"
-                  : `${name} is thinking…`
-                : `Your turn · ${answered}/${MAX_USER_TURNS} answers`
+                  ? t.practice.gettingWords
+                  : t.practice.thinking(name)
+                : t.practice.yourTurn(answered, MAX_USER_TURNS)
         }
       />
 
-      <h2 className="mb-2 mt-5 text-sm font-semibold uppercase tracking-wide text-muted">Transcript</h2>
-      <ol className="flex-1 space-y-3 pb-4" aria-label="Conversation">
+      <h2 className="mb-2 mt-5 text-sm font-semibold uppercase tracking-wide text-muted">{t.practice.transcript}</h2>
+      <ol className="flex-1 space-y-3 pb-4" aria-label={t.practice.conversation}>
         {practice.turns.map((t, i) => (
           <ChatBubble
             key={turnKey(i)}
@@ -305,9 +305,9 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
       </p>
 
       <div className="sticky bottom-0 -mx-4 space-y-3 border-t border-border bg-bg/95 px-4 pb-4 pt-3 backdrop-blur">
-        {help ? <HelpCard help={help} inSpanish={getLevel(practice.level).helpTranslation === "Spanish"} onListen={() => speaker.play("help", help.suggestion)} onClose={() => setHelp(null)} /> : null}
+        {help ? <HelpCard help={help} translationLocale={translationLocale(getLevel(practice.level), practice.locale)} onListen={() => speaker.play("help", help.suggestion)} onClose={() => setHelp(null)} /> : null}
         {error || recorder.error ? <ErrorBanner message={error?.message ?? recorder.error ?? ""} topUpUrl={error?.topUpUrl} /> : null}
-        {practice.limitReached ? <p className="text-center font-semibold">You reached the end of this practice. See your feedback.</p> : null}
+        {practice.limitReached ? <p className="text-center font-semibold">{t.practice.limitReached}</p> : null}
 
         {typing && !practice.limitReached ? (
           <form
@@ -318,7 +318,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
             }}
           >
             <label htmlFor="typed-answer" className="block font-semibold">
-              Your answer in English
+              {t.practice.answerLabel}
             </label>
             <textarea
               id="typed-answer"
@@ -331,10 +331,10 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
             />
             <div className="flex gap-2">
               <Button type="submit" disabled={busy || !draft.trim()} className="flex-1">
-                <Send aria-hidden="true" className="size-4" /> Send
+                <Send aria-hidden="true" className="size-4" /> {t.practice.send}
               </Button>
               <Button variant="secondary" onClick={() => setTyping(false)}>
-                <Mic aria-hidden="true" className="size-4" /> Use voice
+                <Mic aria-hidden="true" className="size-4" /> {t.practice.useVoice}
               </Button>
             </div>
           </form>
@@ -343,14 +343,14 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
         {!typing && !practice.limitReached ? (
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
             <Button variant="ghost" onClick={() => setTyping(true)} disabled={busy || recorder.status === "recording"} className="justify-self-start whitespace-nowrap px-2 text-sm">
-              <Keyboard aria-hidden="true" className="size-4" /> Type
+              <Keyboard aria-hidden="true" className="size-4" /> {t.practice.type}
             </Button>
             <RecordButton state={micState} onPress={() => void pressMic()} showLabel={false} level={micLevel} />
             <Button variant="ghost" onClick={() => void askHelp()} disabled={busy || recorder.status === "recording"} className="justify-self-end whitespace-nowrap px-2 text-sm">
-              <LifeBuoy aria-hidden="true" className="size-4" /> {phase === "helping" ? "Thinking…" : "Help me"}
+              <LifeBuoy aria-hidden="true" className="size-4" /> {phase === "helping" ? t.practice.thinkingShort : t.practice.helpMe}
             </Button>
             <p aria-hidden="true" className="col-span-3 -mt-1 text-center text-sm font-semibold text-muted">
-              {micLabel(micState)}
+              {micLabel(micState, t)}
             </p>
           </div>
         ) : null}
@@ -358,10 +358,10 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
         {practice.canFinish ? (
           <Button variant={practice.limitReached ? "primary" : "secondary"} className="w-full" disabled={busy || recorder.status === "recording"} onClick={() => void finish()}>
             <Flag aria-hidden="true" className="size-4" />
-            {phase === "finishing" ? "Preparing your feedback…" : "Finish and see my feedback"}
+            {phase === "finishing" ? t.practice.preparingFeedback : t.practice.finish}
           </Button>
         ) : (
-          <p className="text-center text-sm text-muted">Answer twice to unlock your feedback.</p>
+          <p className="text-center text-sm text-muted">{t.practice.answerTwice}</p>
         )}
       </div>
     </div>

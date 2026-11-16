@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { AlertCircle, ArrowLeft, RotateCcw } from "lucide-react";
+import { useI18n } from "@/i18n/provider";
 
 /** Small shared UI pieces. Every interactive element: 44px+ target, visible focus, pointer cursor. */
 
@@ -34,13 +35,14 @@ export function Card({ children, className = "", as: Tag = "section" }: { childr
   return <Tag className={`rounded-3xl border border-border bg-surface p-5 shadow-card ${className}`}>{children}</Tag>;
 }
 
-export function TopBar({ title, onBack, backLabel = "Back", right }: { title: string; onBack: () => void; backLabel?: string; right?: ReactNode }) {
+export function TopBar({ title, onBack, backLabel, right }: { title: string; onBack: () => void; backLabel?: string; right?: ReactNode }) {
+  const { t } = useI18n();
   return (
     <header className="mb-4 flex items-center gap-2">
       <button
         type="button"
         onClick={onBack}
-        aria-label={backLabel}
+        aria-label={backLabel ?? t.ui.back}
         className="inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink transition duration-200 hover:bg-surface-2"
       >
         <ArrowLeft aria-hidden="true" className="size-5" />
@@ -55,6 +57,7 @@ export function TopBar({ title, onBack, backLabel = "Back", right }: { title: st
 
 /** An error the person can act on. publik's 402 rule: its message plus exactly one link. */
 export function ErrorBanner({ message, topUpUrl, onRetry }: { message: string; topUpUrl?: string | null; onRetry?: () => void }) {
+  const { t } = useI18n();
   return (
     <div role="alert" className="flex items-start gap-3 rounded-2xl border border-error/40 bg-error-soft p-4 text-ink">
       <AlertCircle aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-error" />
@@ -63,12 +66,12 @@ export function ErrorBanner({ message, topUpUrl, onRetry }: { message: string; t
         <div className="flex flex-wrap gap-3">
           {topUpUrl ? (
             <a href={topUpUrl} target="_blank" rel="noopener noreferrer" className="cursor-pointer font-semibold text-primary-ink underline underline-offset-4">
-              Top up on publik
+              {t.ui.topUp}
             </a>
           ) : null}
           {onRetry ? (
             <button type="button" onClick={onRetry} className="inline-flex min-h-11 cursor-pointer items-center gap-1 font-semibold underline underline-offset-4">
-              <RotateCcw aria-hidden="true" className="size-4" /> Try again
+              <RotateCcw aria-hidden="true" className="size-4" /> {t.ui.tryAgain}
             </button>
           ) : null}
         </div>

@@ -61,7 +61,7 @@ describe("PracticeView", () => {
     mocked.help.mockResolvedValue({ translation: "Cuéntame de ti.", suggestion: "I'm a rep.", tip: "Sé breve." });
     const { unmount } = render(<PracticeView initial={practice({ level: "beginner" })} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /Help me/ }));
-    expect(await screen.findByText("In Spanish:")).toBeInTheDocument();
+    expect(await screen.findByText("In your language:")).toBeInTheDocument();
     unmount();
     render(<PracticeView initial={practice({ level: "advanced" })} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /Help me/ }));

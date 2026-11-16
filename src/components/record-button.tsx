@@ -1,19 +1,14 @@
 import { Loader2, Mic, Square } from "lucide-react";
+import type { Messages } from "@/i18n/messages";
+import { useI18n } from "@/i18n/provider";
 
 export type MicState = "idle" | "starting" | "recording" | "busy";
-
-const LABELS: Record<MicState, string> = {
-  idle: "Tap to talk",
-  starting: "Opening microphone…",
-  recording: "Tap to send",
-  busy: "One moment…",
-};
 
 /** How much the ring grows at full loudness. */
 const VOICE_RING_SCALE = 0.6;
 
-export function micLabel(state: MicState): string {
-  return LABELS[state];
+export function micLabel(state: MicState, t: Messages): string {
+  return t.mic[state];
 }
 
 /** The big push-to-talk control: tap to record, tap again to send. Space bar works too (see PracticeView). */
@@ -32,6 +27,7 @@ export function RecordButton({
   /** Microphone loudness 0 to 1: the ring follows your voice while recording. */
   level?: number;
 }) {
+  const { t } = useI18n();
   const recording = state === "recording";
   return (
     <div className="flex flex-col items-center gap-2">
@@ -49,7 +45,7 @@ export function RecordButton({
           onClick={onPress}
           disabled={disabled || state === "busy" || state === "starting"}
           aria-pressed={recording}
-          aria-label={recording ? "Stop and send your answer" : "Record your answer"}
+          aria-label={recording ? t.mic.stop : t.mic.record}
           className={`relative flex size-20 cursor-pointer items-center justify-center rounded-full shadow-card transition duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${
             recording ? "bg-ink text-bg" : "bg-primary text-on-primary hover:brightness-110"
           }`}
@@ -65,7 +61,7 @@ export function RecordButton({
       </div>
       {showLabel ? (
         <p className="text-sm font-semibold text-muted" aria-hidden="true">
-          {LABELS[state]}
+          {t.mic[state]}
         </p>
       ) : null}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getLevel } from "@/domain/levels";
+import { getLevel, translationLocale } from "@/domain/levels";
 import type { IndustryId, ScenarioId } from "@/domain/scenarios";
 import { ApiError, api } from "@/lib/api";
 import { useGate } from "@/lib/hooks/use-gate";
@@ -17,6 +17,8 @@ import { HomeView } from "./home-view";
 import { PhrasesView } from "./phrases-view";
 import { PracticeView } from "./practice-view";
 import { ErrorBanner, Spinner } from "./ui";
+import { useI18n } from "@/i18n/provider";
+import { LanguageMenu } from "./language-menu";
 
 type View =
   | { name: "home" }
@@ -36,6 +38,7 @@ export function CoachApp() {
   const ready = gate.state?.state === "ready";
   useTelemetry(ready);
 
+  const { t, locale } = useI18n();
   const prefs = usePreferences();
   const { level, avatarId } = prefs;
   const [view, setView] = useState<View>({ name: "home" });
@@ -79,7 +82,7 @@ export function CoachApp() {
     setError(null);
     setLastChoice({ scenarioId, industryId, context });
     try {
-      const { practice, audio } = await api.start({ scenarioId, industryId, level, avatarId, ...(context ? { context } : {}) });
+      const { practice, audio } = await api.start({ scenarioId, industryId, level, avatarId, locale, ...(context ? { context } : {}) });
       setView({ name: "practice", practice, audio });
     } catch (e) {
       setError(toShown(e));
@@ -87,7 +90,7 @@ export function CoachApp() {
     } finally {
       setStarting(false);
     }
-  }, [avatarId, level]);
+  }, [avatarId, level, locale]);
 
   const openPractice = useCallback(async (id: string) => {
     setError(null);
@@ -115,11 +118,14 @@ export function CoachApp() {
   if (!gate.state) {
     return gate.error ? (
       <div className="flex flex-1 flex-col justify-center gap-6">
-        <BrandMark />
+        <div className="flex items-center justify-between gap-2">
+          <BrandMark />
+          <LanguageMenu />
+        </div>
         <ErrorBanner message={gate.error} onRetry={() => void gate.refresh()} />
       </div>
     ) : (
-      <Spinner label="Loading…" />
+      <Spinner label={t.app.loading} />
     );
   }
 
@@ -178,7 +184,7 @@ export function CoachApp() {
             phrases={progress?.phrases ?? []}
             onToggle={(id, r) => void togglePhrase(id, r)}
             onDrilled={onDrilled}
-            tipsInSpanish={getLevel(prefs.level).helpTranslation === "Spanish"}
+            tipsLocale={translationLocale(getLevel(prefs.level), locale)}
             onBack={goHome}
           />
         </>
@@ -193,12 +199,13 @@ export function CoachApp() {
     default:
       return (
         <>
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-2 flex items-center justify-between gap-2">
             <BrandMark compact />
-            {mode.mode === "demo" ? (
-              <span className="rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-muted">Demo mode: simulated AI</span>
-            ) : null}
+            <LanguageMenu />
           </div>
+          {mode.mode === "demo" ? (
+            <p className="mb-2 inline-flex rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-muted">{t.app.demoMode}</p>
+          ) : null}
           {banner ? <div className="mb-4">{banner}</div> : null}
           <HomeView
             progress={progress}
@@ -217,16 +224,17 @@ export function CoachApp() {
 }
 
 function AppFooter({ mode, usedPercent, onChangePayment }: { mode: "demo" | "publik" | "own_key"; usedPercent: number | null; onChangePayment: () => void }) {
+  const { t } = useI18n();
   return (
     <footer className="mt-8 space-y-2 border-t border-border pt-4 text-sm text-muted">
-      {usedPercent !== null ? <p className="tabular">You have used {usedPercent}% of your publik plan this period.</p> : null}
+      {usedPercent !== null ? <p className="tabular">{t.app.usedPlan(usedPercent)}</p> : null}
       {mode !== "demo" ? (
         <button type="button" onClick={onChangePayment} className="min-h-11 cursor-pointer font-semibold text-ink underline underline-offset-4">
-          Change how I pay for AI
+          {t.app.changePayment}
         </button>
       ) : null}
       <p>
-        Open source. AI runs on publik. Your voice is transcribed for the practice; the audio is not stored.
+        {t.app.footer}
       </p>
     </footer>
   );

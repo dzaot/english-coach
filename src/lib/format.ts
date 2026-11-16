@@ -1,19 +1,17 @@
-/** Small display helpers (English). */
+/** Small display helpers. Dates follow the interface language. */
 
 export function formatClock(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-export function formatDay(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric", month: "short" }).format(new Date(iso));
+export function formatDay(iso: string, locale = "en"): string {
+  return new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", month: "short" }).format(new Date(iso));
 }
 
-const WEEKDAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
-
-/** "2026-11-15" (a Sunday) -> "S". */
-export function weekdayInitial(day: string): string {
-  return WEEKDAY_INITIALS[new Date(`${day}T12:00:00Z`).getUTCDay()];
+/** "2026-11-15" (a Sunday) -> "S" in English, "D" in Spanish. */
+export function weekdayInitial(day: string, locale = "en"): string {
+  return new Intl.DateTimeFormat(locale, { weekday: "narrow", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
 }
 
 export function daysLabel(n: number): string {
@@ -21,7 +19,7 @@ export function daysLabel(n: number): string {
 }
 
 /** "2026-11-15" -> "Sunday 15". For screen readers. */
-export function weekdayName(day: string): string {
+export function weekdayName(day: string, locale = "en"): string {
   const date = new Date(`${day}T12:00:00Z`);
-  return `${new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: "UTC" }).format(date)} ${date.getUTCDate()}`;
+  return `${new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(date)} ${date.getUTCDate()}`;
 }

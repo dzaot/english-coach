@@ -1,13 +1,15 @@
-import { scoreLabel } from "@/domain/feedback";
+import { scoreTier } from "@/domain/feedback";
+import { useI18n } from "@/i18n/provider";
 
 const RADIUS = 52;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export function ScoreRing({ score }: { score: number }) {
+  const { t } = useI18n();
   const offset = CIRCUMFERENCE * (1 - score / 100);
   return (
     <div className="flex items-center gap-4">
-      <svg viewBox="0 0 120 120" className="size-28 shrink-0 -rotate-90" role="img" aria-label={`Score: ${score} out of 100`}>
+      <svg viewBox="0 0 120 120" className="size-28 shrink-0 -rotate-90" role="img" aria-label={t.feedback.scoreAria(score)}>
         <circle cx="60" cy="60" r={RADIUS} fill="none" strokeWidth="12" className="stroke-surface-2" />
         <circle
           cx="60"
@@ -25,8 +27,8 @@ export function ScoreRing({ score }: { score: number }) {
         </text>
       </svg>
       <div>
-        <p className="text-sm font-medium uppercase tracking-wide text-muted">Your score</p>
-        <p className="text-2xl font-extrabold">{scoreLabel(score)}</p>
+        <p className="text-sm font-medium uppercase tracking-wide text-muted">{t.feedback.scoreLabel}</p>
+        <p className="text-2xl font-extrabold">{t.feedback.scoreWords[scoreTier(score)]}</p>
       </div>
     </div>
   );

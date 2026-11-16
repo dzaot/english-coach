@@ -6,6 +6,9 @@ import type { Waiting } from "@/lib/hooks/use-gate";
 import type { GateState } from "@/lib/types";
 import { BrandMark } from "./brand-mark";
 import { Button, Card, ErrorBanner } from "./ui";
+import type { Messages } from "@/i18n/messages";
+import { useI18n } from "@/i18n/provider";
+import { LanguageMenu } from "./language-menu";
 
 type Screen = Extract<GateState, { state: "screen" }>;
 
@@ -21,23 +24,16 @@ interface Props {
   onOwnKey: (key: string) => Promise<boolean>;
 }
 
-/** The publik gate. Titles and buttons keep publik's exact words; one helper line below. */
-const HELP: Record<Screen["screen"]["id"], string> = {
-  sign_in: "Sign in for free with your publik account (Google or GitHub). It opens in a new tab. Come back when you are done: this page continues on its own.",
-  unreachable: "We could not reach publik. Check your connection and try again.",
-  choose: "Practice uses AI to listen and answer you. Use your publik plan or your own OpenAI key.",
-};
-
-const NOTES: Record<Waiting, { waiting: string; timeout: string }> = {
-  sign_in: {
-    waiting: "Waiting for you to sign in in your browser.",
-    timeout: "No sign-in after 10 minutes. Click Sign in with publik to try again.",
-  },
-  get_plan: {
-    waiting: "Waiting for your plan. Finish in your browser.",
-    timeout: "No plan after 10 minutes. Click Get a plan to try again.",
-  },
-};
+/**
+ * The publik gate. Titles and buttons keep publik's exact English words (publik's rule); the helper line
+ * and the waiting notes below them are in the person's language.
+ */
+function notes(t: Messages): Record<Waiting, { waiting: string; timeout: string }> {
+  return {
+    sign_in: { waiting: t.gate.waitingSignIn, timeout: t.gate.timeoutSignIn },
+    get_plan: { waiting: t.gate.waitingPlan, timeout: t.gate.timeoutPlan },
+  };
+}
 
 const linkButton =
   "inline-flex min-h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl px-6 text-lg font-semibold transition duration-200";
@@ -45,16 +41,20 @@ const linkButton =
 export function GatePanel({ gate, error, waiting, timedOut, busy, onRetry, onWait, onConnect, onOwnKey }: Props) {
   const [showKeyForm, setShowKeyForm] = useState(false);
   const [key, setKey] = useState("");
+  const { t } = useI18n();
   const { screen, links } = gate;
-  const note = waiting ? NOTES[waiting].waiting : timedOut ? NOTES[timedOut].timeout : null;
+  const note = waiting ? notes(t)[waiting].waiting : timedOut ? notes(t)[timedOut].timeout : null;
 
   return (
     <div className="animate-rise flex flex-1 flex-col justify-center gap-6 py-6">
-      <BrandMark />
+      <div className="flex items-center justify-between gap-2">
+        <BrandMark />
+        <LanguageMenu />
+      </div>
       <Card className="space-y-4">
-        <h1 className="text-2xl font-extrabold">{screen.title}</h1>
-        <p className="text-muted">{screen.body}</p>
-        <p>{HELP[screen.id]}</p>
+        <h1 lang="en" className="text-2xl font-extrabold">{screen.title}</h1>
+        <p lang="en" className="text-muted">{screen.body}</p>
+        <p>{t.gate.help[screen.id]}</p>
         {note ? (
           <p role="status" className="rounded-2xl bg-surface-2 p-3 text-sm">
             {note}
@@ -112,7 +112,7 @@ export function GatePanel({ gate, error, waiting, timedOut, busy, onRetry, onWai
             }}
           >
             <label htmlFor="own-key" className="block font-semibold">
-              Your OpenAI key (starts with sk-)
+              {t.gate.ownKeyLabel}
             </label>
             <input
               id="own-key"
@@ -123,13 +123,13 @@ export function GatePanel({ gate, error, waiting, timedOut, busy, onRetry, onWai
               onChange={(e) => setKey(e.target.value)}
               className="min-h-11 w-full rounded-2xl border border-border bg-surface px-3 text-base text-ink"
             />
-            <p className="text-sm text-muted">We store it encrypted on the server and only use it for your practices.</p>
+            <p className="text-sm text-muted">{t.gate.ownKeyNote}</p>
             <div className="flex gap-2">
               <Button type="submit" disabled={busy || key.trim().length === 0} className="flex-1">
-                Save key
+                {t.gate.saveKey}
               </Button>
               <Button variant="ghost" onClick={() => setShowKeyForm(false)}>
-                Cancel
+                {t.gate.cancel}
               </Button>
             </div>
           </form>

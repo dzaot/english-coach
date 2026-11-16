@@ -12,7 +12,7 @@ Dilo (Spanish for "say it") is a daily speaking practice for Spanish-speaking pr
 5. "Say it" with a sound check: each better phrase shows how its words sound in General American English (respelling, strong syllable, the three sounds Spanish speakers should focus on). Say it out loud and see, letter by letter, what the AI heard, your pace and your own voice word by word. It comes back 1, 3 and 7 days later in "Today's review".
 6. Come back tomorrow: daily streak, your results (words spoken in English, phrases learned, score trend), session history and phrases to review.
 
-The interface and the conversation are in English. Each learner picks a level: **Beginner** (simpler English, slower voice, tips and translations in Spanish), **Intermediate** (tips in English, translations in Spanish) or **Advanced** (natural speed, English only). They also pick a practice partner: four photo avatars (AI-generated portraits of fictional people, made with Blotato), each with its own voice.
+The interface comes in English, Spanish, Portuguese, French, Italian and German (a language menu at the top; the browser's language is picked the first time). The conversation is always in English. Each learner picks a level: **Beginner** (simpler English, slower voice, tips and translations in your language), **Intermediate** (tips in English, translations in your language) or **Advanced** (natural speed, English only). They also pick a practice partner: four photo avatars (AI-generated portraits of fictional people, made with Blotato), each with its own voice.
 
 ## Run it locally
 

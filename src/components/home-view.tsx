@@ -4,14 +4,16 @@ import { useState } from "react";
 import Image from "next/image";
 import { BookmarkCheck, CalendarClock, ChevronDown, ChevronRight, History, Mic, SlidersHorizontal } from "lucide-react";
 import { getAvatar, type AvatarId } from "@/domain/avatars";
-import { getLevel, type LevelId } from "@/domain/levels";
+import type { LevelId } from "@/domain/levels";
 import { CUSTOM_SCENARIO, SCENARIOS, type IndustryId, type ScenarioId } from "@/domain/scenarios";
 import type { Progress } from "@/lib/types";
 import { FOCUS_WITHIN, IndustryPicker, LevelPicker, PartnerPicker } from "./home-pickers";
 import { ResultsCard } from "./results-card";
-import { SCENARIO_ICONS, industryLabel } from "./scenario-meta";
+import { SCENARIO_ICONS } from "./scenario-meta";
 import { StreakCard } from "./streak-card";
 import { Button } from "./ui";
+import type { Messages } from "@/i18n/messages";
+import { useI18n } from "@/i18n/provider";
 
 interface HomeViewProps {
   progress: Progress | null;
@@ -30,26 +32,10 @@ const MAX_DETAILS = 2000;
 const MIN_CUSTOM_DETAILS = 10;
 
 /** What to ask for, by scenario: a job post for interviews, the situation itself for "Your situation". */
-function detailsCopy(id: ScenarioId): { label: string; hint: string; placeholder: string } {
-  if (id === "job_interview") {
-    return {
-      label: "The job you're applying for (optional)",
-      hint: "Paste the job link or description. Your interviewer will ask about it.",
-      placeholder: "https://… or: Sales Manager at Acme, B2B accounts in Texas",
-    };
-  }
-  if (id === CUSTOM_SCENARIO) {
-    return {
-      label: "Describe the situation",
-      hint: "Who you'll talk to and what it's about. Your partner plays that person.",
-      placeholder: "Meeting with my lawyer to follow up on my case. I need to ask about the next steps and the fees.",
-    };
-  }
-  return {
-    label: "Your real situation (optional)",
-    hint: "Add details so the practice feels like the real thing.",
-    placeholder: "Tomorrow's meeting is about the delayed shipment to our biggest client.",
-  };
+function detailsCopy(id: ScenarioId, t: Messages): { label: string; hint: string; placeholder: string } {
+  if (id === "job_interview") return t.home.details.job;
+  if (id === CUSTOM_SCENARIO) return t.home.details.custom;
+  return t.home.details.other;
 }
 
 export function HomeView({ progress, starting, level, avatarId, onChangePrefs, onStart, onOpenPhrases, onOpenHistory }: HomeViewProps) {
@@ -58,8 +44,9 @@ export function HomeView({ progress, starting, level, avatarId, onChangePrefs, o
   const [details, setDetails] = useState("");
   const firstTime = !progress || progress.history.length === 0;
   const [customizing, setCustomizing] = useState(firstTime);
+  const { t } = useI18n();
   const avatar = getAvatar(avatarId);
-  const copy = detailsCopy(scenarioId);
+  const copy = detailsCopy(scenarioId, t);
   const needsDetails = scenarioId === CUSTOM_SCENARIO && details.trim().length < MIN_CUSTOM_DETAILS;
   const hasLink = /https?:\/\//i.test(details);
 
@@ -67,9 +54,9 @@ export function HomeView({ progress, starting, level, avatarId, onChangePrefs, o
     <div className="animate-rise space-y-5">
       <header className="space-y-2 pt-1">
         <h1 className="font-display text-[2rem] font-extrabold leading-[1.1] tracking-tight">
-          Say it out loud <span className="text-primary-ink">before it matters.</span>
+          {t.home.titleStart} <span className="text-primary-ink">{t.home.titleEnd}</span>
         </h1>
-        <p className="text-muted">Practice your work English on a call with a US coworker. Get feedback on every phrase.</p>
+        <p className="text-muted">{t.home.subtitle}</p>
       </header>
 
       <section aria-labelledby="next-call" className="relative overflow-hidden rounded-[2rem] bg-night p-5 text-on-night shadow-card">
@@ -77,20 +64,20 @@ export function HomeView({ progress, starting, level, avatarId, onChangePrefs, o
         <div className="relative flex items-center gap-3">
           <div className="relative shrink-0">
             <span aria-hidden="true" className="bg-brand absolute -inset-1.5 rounded-full opacity-80" />
-            <Image src={avatar.image} alt={avatar.alt} width={PARTNER_PHOTO} height={PARTNER_PHOTO} priority className="relative rounded-full object-cover ring-2 ring-night" />
+            <Image src={avatar.image} alt={t.avatars[avatar.id].alt} width={PARTNER_PHOTO} height={PARTNER_PHOTO} priority className="relative rounded-full object-cover ring-2 ring-night" />
           </div>
           <div className="min-w-0">
             <h2 id="next-call" className="font-display text-xl font-bold leading-tight">
-              Your call with {avatar.name}
+              {t.home.yourCallWith(avatar.name)}
             </h2>
             <p className="text-sm text-on-night/80">
-              {getLevel(level).label} · {industryLabel(industryId)}
+              {t.levels[level].label} · {t.industries[industryId]}
             </p>
           </div>
         </div>
 
         <fieldset className="relative mt-4">
-          <legend className="mb-2 text-sm font-semibold text-on-night/80">What do you want to practice?</legend>
+          <legend className="mb-2 text-sm font-semibold text-on-night/80">{t.home.whatToPractice}</legend>
           <div className="grid gap-2">
             {SCENARIOS.map((s) => {
               const Icon = SCENARIO_ICONS[s.id];
@@ -105,8 +92,8 @@ export function HomeView({ progress, starting, level, avatarId, onChangePrefs, o
                   <input type="radio" name="scenario" value={s.id} checked={checked} onChange={() => setScenarioId(s.id)} className="sr-only" />
                   <Icon aria-hidden="true" className="size-5 shrink-0" />
                   <span className="min-w-0">
-                    <span className="block font-semibold">{s.title}</span>
-                    {checked ? <span className="block text-sm opacity-80">{s.description}</span> : null}
+                    <span className="block font-semibold">{t.scenarios[s.id].title}</span>
+                    {checked ? <span className="block text-sm opacity-80">{t.scenarios[s.id].description}</span> : null}
                   </span>
                 </label>
               );
@@ -135,9 +122,9 @@ export function HomeView({ progress, starting, level, avatarId, onChangePrefs, o
 
         <Button size="lg" className="relative mt-4 w-full" disabled={starting || needsDetails} onClick={() => onStart(scenarioId, industryId, details.trim())}>
           <Mic aria-hidden="true" className="size-5" />
-          {starting ? (hasLink ? "Reading the job post…" : "Getting ready…") : "Start talking"}
+          {starting ? (hasLink ? t.home.readingJob : t.home.gettingReady) : t.home.startTalking}
         </Button>
-        <p className="relative mt-2 text-center text-sm text-on-night/80">About 5 minutes · push to talk or type</p>
+        <p className="relative mt-2 text-center text-sm text-on-night/80">{t.home.duration}</p>
       </section>
 
       {progress && progress.dueToday > 0 ? (
@@ -148,16 +135,14 @@ export function HomeView({ progress, starting, level, avatarId, onChangePrefs, o
         >
           <CalendarClock aria-hidden="true" className="size-7 shrink-0 text-primary-ink" />
           <span className="flex-1">
-            <span className="block font-bold">Today&apos;s review</span>
-            <span className="block text-sm">
-              {progress.dueToday === 1 ? "1 phrase is waiting" : `${progress.dueToday} phrases are waiting`}. Say them out loud in 1 minute.
-            </span>
+            <span className="block font-bold">{t.home.todaysReview}</span>
+            <span className="block text-sm">{t.home.phrasesWaiting(progress.dueToday)}</span>
           </span>
           <ChevronRight aria-hidden="true" className="size-5" />
         </button>
       ) : null}
 
-      <section aria-label="Partner, industry and level" className="rounded-3xl border border-border bg-surface">
+      <section aria-label={t.home.customizeSection} className="rounded-3xl border border-border bg-surface">
         <button
           type="button"
           aria-expanded={customizing}
@@ -166,7 +151,7 @@ export function HomeView({ progress, starting, level, avatarId, onChangePrefs, o
           className="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-3xl px-4 text-left font-semibold transition duration-200 hover:bg-surface-2"
         >
           <SlidersHorizontal aria-hidden="true" className="size-5 text-primary-ink" />
-          <span className="flex-1">Change partner, industry or level</span>
+          <span className="flex-1">{t.home.customize}</span>
           <ChevronDown aria-hidden="true" className={`size-5 transition duration-200 ${customizing ? "rotate-180" : ""}`} />
         </button>
         {customizing ? (
@@ -181,9 +166,9 @@ export function HomeView({ progress, starting, level, avatarId, onChangePrefs, o
       {progress && progress.stats.practices > 0 ? <ResultsCard stats={progress.stats} /> : null}
       {progress ? <StreakCard progress={progress} /> : null}
 
-      <nav aria-label="Your progress" className="grid gap-2.5">
-        <NavRow icon={<BookmarkCheck aria-hidden="true" className="size-5" />} label="Phrases to review" count={progress?.toReview ?? 0} onClick={onOpenPhrases} />
-        <NavRow icon={<History aria-hidden="true" className="size-5" />} label="Practice history" count={progress?.history.length ?? 0} onClick={onOpenHistory} />
+      <nav aria-label={t.home.progressNav} className="grid gap-2.5">
+        <NavRow icon={<BookmarkCheck aria-hidden="true" className="size-5" />} label={t.home.phrasesToReview} count={progress?.toReview ?? 0} onClick={onOpenPhrases} />
+        <NavRow icon={<History aria-hidden="true" className="size-5" />} label={t.home.practiceHistory} count={progress?.history.length ?? 0} onClick={onOpenHistory} />
       </nav>
     </div>
   );

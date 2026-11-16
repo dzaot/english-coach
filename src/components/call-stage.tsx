@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { Avatar } from "@/domain/avatars";
+import { useI18n } from "@/i18n/provider";
 import { captionWords } from "@/lib/caption";
 import type { PortraitState } from "./avatar-portrait";
 
@@ -23,6 +24,7 @@ const PHOTO = 168;
 const MIC_SCALE = 0.35;
 
 export function CallStage({ avatar, role, state, caption, captionProgress, micLevel, status }: CallStageProps) {
+  const { t } = useI18n();
   const glow =
     state === "speaking"
       ? "bg-brand opacity-80 animate-orb"
@@ -32,10 +34,10 @@ export function CallStage({ avatar, role, state, caption, captionProgress, micLe
   const words = captionWords(caption, state === "speaking" ? captionProgress : null);
 
   return (
-    <section aria-label={`Call with ${avatar.name}`} className="relative overflow-hidden rounded-[2rem] bg-night px-5 pb-6 pt-5 text-on-night shadow-card">
+    <section aria-label={t.practice.callWith(avatar.name)} className="relative overflow-hidden rounded-[2rem] bg-night px-5 pb-6 pt-5 text-on-night shadow-card">
       <div className="flex items-center justify-between text-sm">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-on-night/10 px-2.5 py-1 font-semibold">
-          <span aria-hidden="true" className="size-2 rounded-full bg-sun" /> Live practice
+          <span aria-hidden="true" className="size-2 rounded-full bg-sun" /> {t.practice.live}
         </span>
         <span className="text-on-night/80">{role}</span>
       </div>
@@ -49,7 +51,7 @@ export function CallStage({ avatar, role, state, caption, captionProgress, micLe
           />
           <Image
             src={avatar.image}
-            alt={avatar.alt}
+            alt={t.avatars[avatar.id].alt}
             width={PHOTO}
             height={PHOTO}
             priority

@@ -1,4 +1,5 @@
 import { TrendingUp } from "lucide-react";
+import { useI18n } from "@/i18n/provider";
 import type { ProgressStats } from "@/lib/types";
 
 /** Visible results: how much English you have spoken and how your score moved. Numbers come from your own practices. */
@@ -21,23 +22,23 @@ export function sparklinePoints(scores: readonly number[]): string {
     .join(" ");
 }
 
-const fmt = new Intl.NumberFormat("en-US");
-
 export function ResultsCard({ stats }: { stats: ProgressStats }) {
+  const { t, locale } = useI18n();
+  const fmt = new Intl.NumberFormat(locale);
   const { scores } = stats;
   const first = scores[0];
   const last = scores[scores.length - 1];
   const delta = scores.length >= 2 ? last - first : null;
   const tiles = [
-    { value: fmt.format(stats.wordsSpoken), label: "words in English" },
-    { value: fmt.format(stats.practices), label: stats.practices === 1 ? "practice" : "practices" },
-    { value: fmt.format(stats.phrasesLearned), label: stats.phrasesLearned === 1 ? "phrase learned" : "phrases learned" },
+    { value: fmt.format(stats.wordsSpoken), label: t.results.words },
+    { value: fmt.format(stats.practices), label: t.results.practices(stats.practices) },
+    { value: fmt.format(stats.phrasesLearned), label: t.results.phrases(stats.phrasesLearned) },
   ];
 
   return (
     <section aria-labelledby="results-title" className="rounded-3xl border border-border bg-surface p-5 shadow-card">
       <h2 id="results-title" className="font-display text-lg font-bold">
-        Your results
+        {t.results.title}
       </h2>
       <dl className="mt-3 grid grid-cols-3 gap-2">
         {tiles.map((t) => (
@@ -53,7 +54,7 @@ export function ResultsCard({ stats }: { stats: ProgressStats }) {
             viewBox={`0 0 ${CHART_W} ${CHART_H}`}
             preserveAspectRatio="none"
             role="img"
-            aria-label={`Scores of your last ${scores.length} practices: ${scores.join(", ")}`}
+            aria-label={t.results.chart(scores.length, scores.join(", "))}
             className="h-12 flex-1 overflow-visible text-primary"
           >
             <polyline points={sparklinePoints(scores)} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
@@ -65,7 +66,7 @@ export function ResultsCard({ stats }: { stats: ProgressStats }) {
                 {first} → {last}
               </span>
             </span>
-            <span className="text-muted">{delta > 0 ? `+${delta} since practice 1` : delta === 0 ? "steady" : `${delta} since practice 1`}</span>
+            <span className="text-muted">{t.results.since(delta)}</span>
           </p>
         </div>
       ) : null}

@@ -19,8 +19,17 @@ describe("turnCheckMessages", () => {
 
   it("asks for English reasons at the advanced level", () => {
     const [system] = turnCheckMessages(getLevel("advanced"), "Hi.", LINE);
-    expect(system.content).toContain("in simple English");
+    expect(system.content).toContain("in simple, friendly English");
     expect(system.content).toContain('"More confident"');
+  });
+});
+
+describe("turnCheckMessages in other languages", () => {
+  it("writes reasons and the example in the person's language", () => {
+    const messages = turnCheckMessages(getLevel("beginner"), "Hi.", LINE, "pt");
+    expect(messages[0].content).toContain("Brazilian Portuguese");
+    expect(messages[0].content).toContain("a Portuguese speaker");
+    expect(JSON.parse(messages[2].content).issues[0].why).toBe("Com he, she ou it se usa doesn't.");
   });
 });
 

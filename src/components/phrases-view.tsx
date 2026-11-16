@@ -8,13 +8,15 @@ import { useSpeaker } from "@/lib/hooks/use-speaker";
 import type { Phrase } from "@/lib/types";
 import { SayItButton } from "./say-it-button";
 import { Card, TopBar } from "./ui";
+import type { Locale } from "@/domain/locales";
+import { useI18n } from "@/i18n/provider";
 
 interface Props {
   phrases: readonly Phrase[];
   onToggle: (id: string, reviewed: boolean) => void;
   onDrilled?: (phrase: Phrase) => void;
-  /** Sound tips in Spanish (beginner and intermediate levels). */
-  tipsInSpanish?: boolean;
+  /** Language of the sound tips: the person's own below advanced, else English. */
+  tipsLocale?: Locale;
   onBack: () => void;
 }
 
@@ -25,7 +27,8 @@ function rank(p: Phrase, today: string): number {
 }
 
 /** Phrases to review: the better versions from past feedback. Pending ones first. */
-export function PhrasesView({ phrases, onToggle, onDrilled, tipsInSpanish = false, onBack }: Props) {
+export function PhrasesView({ phrases, onToggle, onDrilled, tipsLocale = "en", onBack }: Props) {
+  const { t, locale } = useI18n();
   const speaker = useSpeaker();
   const today = localToday();
   const sorted = [...phrases].sort((a, b) => rank(a, today) - rank(b, today));
@@ -34,23 +37,24 @@ export function PhrasesView({ phrases, onToggle, onDrilled, tipsInSpanish = fals
 
   return (
     <div className="animate-rise">
-      <TopBar title="Phrases to review" onBack={onBack} />
+      <TopBar title={t.phrases.title} onBack={onBack} />
       {phrases.length === 0 ? (
         <Card className="text-center">
           <BookmarkCheck aria-hidden="true" className="mx-auto mb-2 size-8 text-muted" />
-          <p className="font-semibold">No phrases yet.</p>
-          <p className="text-muted">Finish a practice and we will save the 3 phrases to say more naturally here.</p>
+          <p className="font-semibold">{t.phrases.empty}</p>
+          <p className="text-muted">{t.phrases.emptyHint}</p>
         </Card>
       ) : (
         <>
           <p className="mb-3 text-muted">
-            <span className="tabular font-semibold text-ink">{pending}</span> left to learn
+            <span className="tabular font-semibold text-ink">{t.phrases.left(pending)}</span>
             {due > 0 ? (
               <>
-                {", "}<span className="tabular font-semibold text-ink">{due}</span> due today
+                {", "}
+                <span className="tabular font-semibold text-ink">{t.phrases.due(due)}</span>
               </>
             ) : null}
-            . Listen and say them out loud: each one you get right comes back 1, 3 and 7 days later.
+            . {t.phrases.howItWorks}
           </p>
           <ul className="space-y-3">
             {sorted.map((p) => {
@@ -60,26 +64,26 @@ export function PhrasesView({ phrases, onToggle, onDrilled, tipsInSpanish = fals
                 <Card as="li" key={p.id} className={`space-y-2 ${done ? "opacity-75" : ""} ${dueNow ? "border-2 border-primary" : ""}`}>
                   {dueNow ? (
                     <p className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-bold text-primary-ink">
-                      <CalendarClock aria-hidden="true" className="size-3.5" /> Due today
+                      <CalendarClock aria-hidden="true" className="size-3.5" /> {t.phrases.dueToday}
                     </p>
                   ) : null}
                   {done ? <p lang="en" className="text-lg font-semibold">{p.better}</p> : null}
                   <p className="text-sm text-muted">
-                    <span className="font-semibold">Before: </span>
+                    <span className="font-semibold">{t.phrases.before}</span>
                     <span lang="en">{p.original}</span>
                   </p>
                   <p className="text-sm text-muted">{p.why}</p>
                   {!done && !dueNow && p.dueDay ? (
-                    <p className="text-sm text-muted">Next review: {formatDay(`${p.dueDay}T12:00:00Z`)}</p>
+                    <p className="text-sm text-muted">{t.phrases.nextReview(formatDay(`${p.dueDay}T12:00:00Z`, locale))}</p>
                   ) : null}
-                  {!done ? <SayItButton phraseId={p.id} text={p.better} tipsInSpanish={tipsInSpanish} onDrilled={onDrilled} /> : null}
+                  {!done ? <SayItButton phraseId={p.id} text={p.better} tipsLocale={tipsLocale} onDrilled={onDrilled} /> : null}
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => speaker.play(p.id, p.better)}
                       className="-ml-2 inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full px-2 text-sm font-semibold text-primary-ink transition duration-200 hover:bg-surface-2"
                     >
-                      <Volume2 aria-hidden="true" className="size-4" /> Listen
+                      <Volume2 aria-hidden="true" className="size-4" /> {t.phrases.listen}
                     </button>
                     <label className="ml-auto inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
                       <input
@@ -88,7 +92,7 @@ export function PhrasesView({ phrases, onToggle, onDrilled, tipsInSpanish = fals
                         onChange={(e) => onToggle(p.id, e.target.checked)}
                         className="size-5 cursor-pointer accent-[var(--accent)]"
                       />
-                      I know this one
+                      {t.phrases.known}
                     </label>
                   </div>
                 </Card>

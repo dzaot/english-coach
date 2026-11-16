@@ -1,3 +1,4 @@
+import { runtimeMessages } from "@/i18n/messages";
 import type { DrillResult, FinishResult, GateState, Help, Phrase, PracticeView, Progress, SpeechAudio, TurnEvent, TurnResult, WordGuide } from "./types";
 
 /** Typed calls to our own API. Every failure becomes an ApiError with a Spanish message. */
@@ -13,25 +14,30 @@ export class ApiError extends Error {
   }
 }
 
-const OFFLINE_MESSAGE = "No connection. Check your internet and try again.";
+/** Error texts in the person's language; the server's English message is the fallback for unknown codes. */
+const errorText = (code: string, fallback?: string): string => {
+  const known = runtimeMessages().errors as Record<string, string>;
+  return known[code] ?? fallback ?? known.internal;
+};
+const offline = () => new ApiError("offline", errorText("offline"));
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, { credentials: "same-origin", ...init });
   } catch {
-    throw new ApiError("offline", OFFLINE_MESSAGE);
+    throw offline();
   }
   const body = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string; topUpUrl?: string | null } } | null;
   if (!res.ok) {
     const e = body?.error;
-    throw new ApiError(e?.code ?? "internal", e?.message ?? "Something went wrong. Please try again.", e?.topUpUrl ?? null);
+    throw new ApiError(e?.code ?? "internal", errorText(e?.code ?? "internal", e?.message), e?.topUpUrl ?? null);
   }
   return body as T;
 }
 
 type ErrorJson = { code?: string; message?: string; topUpUrl?: string | null } | undefined;
-const toApiError = (e: ErrorJson) => new ApiError(e?.code ?? "internal", e?.message ?? "Something went wrong. Please try again.", e?.topUpUrl ?? null);
+const toApiError = (e: ErrorJson) => new ApiError(e?.code ?? "internal", errorText(e?.code ?? "internal", e?.message), e?.topUpUrl ?? null);
 
 /** Reads a JSON-lines stream: each event goes to onEvent; "done" is the result and "error" throws. */
 async function streamRequest<T>(path: string, init: RequestInit, onEvent: (event: TurnEvent) => void): Promise<T> {
@@ -39,7 +45,7 @@ async function streamRequest<T>(path: string, init: RequestInit, onEvent: (event
   try {
     res = await fetch(path, { credentials: "same-origin", ...init });
   } catch {
-    throw new ApiError("offline", OFFLINE_MESSAGE);
+    throw offline();
   }
   if (!res.ok || !res.body || !(res.headers.get("content-type") ?? "").includes("ndjson")) {
     const body = (await res.json().catch(() => null)) as { error?: ErrorJson } | null;
@@ -53,7 +59,7 @@ async function streamRequest<T>(path: string, init: RequestInit, onEvent: (event
     try {
       chunk = await reader.read();
     } catch {
-      throw new ApiError("offline", OFFLINE_MESSAGE);
+      throw offline();
     }
     buffer += decoder.decode(chunk.value ?? new Uint8Array(), { stream: !chunk.done });
     const lines = buffer.split("\n");
@@ -67,7 +73,7 @@ async function streamRequest<T>(path: string, init: RequestInit, onEvent: (event
       if (event.type === "error") throw toApiError(event.error);
       onEvent(event as TurnEvent);
     }
-    if (chunk.done) throw new ApiError("internal", "The answer was cut off. Please try again.");
+    if (chunk.done) throw new ApiError("internal", errorText("cutOff"));
   }
 }
 
@@ -85,7 +91,7 @@ export const api = {
     request<GateState>("/api/gate", jsonInit("POST", body)),
   telemetry: (event: "app_opened" | "active_session") =>
     request<{ result: string }>("/api/telemetry", jsonInit("POST", { event })),
-  start: (choice: { scenarioId: string; industryId: string; level: string; avatarId: string; context?: string }) =>
+  start: (choice: { scenarioId: string; industryId: string; level: string; avatarId: string; context?: string; locale?: string }) =>
     request<{ practice: PracticeView; audio: SpeechAudio | null }>("/api/practice", jsonInit("POST", choice)),
   getPractice: (id: string) => request<{ practice: PracticeView }>(`/api/practice/${encodeURIComponent(id)}`),
   /** One answer, streamed: your words, the marks, the reply and its voice arrive as separate events. */

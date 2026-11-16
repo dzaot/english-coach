@@ -16,6 +16,7 @@ import { parseTurnCheck, turnCheckMessages, type TurnCheck } from "@/domain/turn
 import { cleanDashes } from "@/domain/text";
 import { AVATAR_IDS, getAvatar } from "@/domain/avatars";
 import { LEVEL_IDS, getLevel } from "@/domain/levels";
+import { LOCALES } from "@/domain/locales";
 import { CUSTOM_SCENARIO, INDUSTRY_IDS, SCENARIO_IDS, buildOpener, getIndustry, getScenario } from "@/domain/scenarios";
 import { addDays, computeStreak, localDay, type Streak } from "@/domain/streak";
 import type { AiProvider, SpeechAudio, Tier } from "./ai/provider";
@@ -57,6 +58,7 @@ export interface PracticeView {
   readonly canFinish: boolean;
   readonly limitReached: boolean;
   readonly context: string | null;
+  readonly locale: PracticeRecord["locale"];
 }
 
 function view(p: PracticeRecord): PracticeView {
@@ -74,6 +76,7 @@ function view(p: PracticeRecord): PracticeView {
     canFinish: canFinish(p.turns),
     limitReached: isTurnLimitReached(p.turns),
     context: p.context,
+    locale: p.locale,
   };
 }
 
@@ -104,6 +107,7 @@ const StartSchema = z.object({
   level: z.enum(LEVEL_IDS).default("intermediate"),
   avatarId: z.enum(AVATAR_IDS).default("sarah"),
   context: z.string().max(MAX_CONTEXT_INPUT).default(""),
+  locale: z.enum(LOCALES).default("es"),
 });
 const TzSchema = z.number().int().min(-840).max(840);
 
@@ -207,7 +211,7 @@ export interface TurnOptions {
 async function checkTurn(ai: AiProvider, practice: PracticeRecord, userText: string): Promise<TurnCheck | null> {
   const lastLine = practice.turns.findLast((t) => t.role === "counterpart")?.text ?? "";
   try {
-    return parseTurnCheck(await ai.chat(turnCheckMessages(getLevel(practice.level), lastLine, userText), { tier: "fast", maxTokens: CHECK_MAX_TOKENS }), userText);
+    return parseTurnCheck(await ai.chat(turnCheckMessages(getLevel(practice.level), lastLine, userText, practice.locale), { tier: "fast", maxTokens: CHECK_MAX_TOKENS }), userText);
   } catch {
     return null;
   }
@@ -269,7 +273,7 @@ export async function takeTurn(
 export async function getHelp(ctx: AppContext, ai: AiProvider, sid: string, id: string): Promise<Help> {
   const practice = await load(ctx, sid, id);
   if (practice.finishedAt) throw new AppError("session_finished");
-  const messages = helpMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), getLevel(practice.level), practice.turns, practice.context);
+  const messages = helpMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), getLevel(practice.level), practice.turns, practice.context, practice.locale);
   try {
     return parseHelp(await ai.chat(messages, { tier: "fast", maxTokens: HELP_MAX_TOKENS }));
   } catch (e) {
@@ -299,7 +303,7 @@ export async function speakTurn(ctx: AppContext, ai: AiProvider, sid: string, id
 }
 
 async function generateFeedback(ai: AiProvider, practice: PracticeRecord): Promise<Feedback> {
-  const messages = feedbackMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), getLevel(practice.level), practice.turns, practice.context);
+  const messages = feedbackMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), getLevel(practice.level), practice.turns, practice.context, practice.locale);
   const tiers: Tier[] = ["balanced", "fast"];
   for (const tier of tiers) {
     try {

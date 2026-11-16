@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { isAvatarId } from "@/domain/avatars";
 import type { Feedback } from "@/domain/feedback";
 import { isLevelId } from "@/domain/levels";
+import { isLocale } from "@/domain/locales";
 import type { Row, SqlDb } from "./sql";
 import type { NewPractice, PhraseRecord, PracticeRecord, Store, UserPatch, UserRecord } from "./store";
 
@@ -32,6 +33,8 @@ const MIGRATIONS: Record<"phrases" | "practices", Record<string, string>> = {
     level: "ALTER TABLE practices ADD COLUMN level TEXT NOT NULL DEFAULT 'intermediate'",
     avatar_id: "ALTER TABLE practices ADD COLUMN avatar_id TEXT NOT NULL DEFAULT 'sarah'",
     context: "ALTER TABLE practices ADD COLUMN context TEXT",
+    // Practices made before languages were added had Spanish support.
+    locale: "ALTER TABLE practices ADD COLUMN locale TEXT NOT NULL DEFAULT 'es'",
   },
 };
 
@@ -73,6 +76,7 @@ function toPractice(r: Row): PracticeRecord {
     feedback: r.feedback ? (JSON.parse(String(r.feedback)) as Feedback) : null,
     score: r.score === null || r.score === undefined ? null : Number(r.score),
     context: str(r.context),
+    locale: isLocale(r.locale) ? r.locale : "es",
   };
 }
 
@@ -139,8 +143,8 @@ export function createSqlStore(open: SqlDb | Promise<SqlDb>): Store {
     async createPractice(input: NewPractice) {
       const id = randomUUID();
       await (await ready).run(
-        "INSERT INTO practices (id, sid, scenario_id, industry_id, level, avatar_id, started_at, turns, context) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [id, input.sid, input.scenarioId, input.industryId, input.level, input.avatarId, input.startedAt, JSON.stringify(input.turns), input.context ?? null],
+        "INSERT INTO practices (id, sid, scenario_id, industry_id, level, avatar_id, started_at, turns, context, locale) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [id, input.sid, input.scenarioId, input.industryId, input.level, input.avatarId, input.startedAt, JSON.stringify(input.turns), input.context ?? null, input.locale ?? "es"],
       );
       return requirePractice(input.sid, id);
     },
