@@ -127,11 +127,13 @@ describe("finishPractice", () => {
 describe("progress and phrases", () => {
   it("summarizes streak, history and phrases to review", async () => {
     const { ctx, practice } = await started();
-    await takeTurn(ctx, ai, SID, practice.id, { text: "one" });
+    await takeTurn(ctx, ai, SID, practice.id, { text: "I lead a team of five." });
     await takeTurn(ctx, ai, SID, practice.id, { text: "two" });
     await finishPractice(ctx, ai, SID, practice.id, { tzOffset: 480 });
-    await startPractice(ctx, ai, SID, { scenarioId: "team_meeting", industryId: "tech" });
+    const next = await startPractice(ctx, ai, SID, { scenarioId: "team_meeting", industryId: "tech" });
+    await takeTurn(ctx, ai, SID, next.practice.id, { text: "not finished yet" });
     const progress = getProgress(ctx, SID, 480);
+    expect(progress.stats).toEqual({ wordsSpoken: 10, practices: 1, phrasesLearned: 0, scores: [72] });
     expect(progress.streak.current).toBe(1);
     expect(progress.history).toHaveLength(1);
     expect(progress.history[0]).toMatchObject({ scenarioId: "job_interview", score: 72 });

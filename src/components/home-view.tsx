@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { BookmarkCheck, CalendarClock, Check, ChevronRight, History, Mic } from "lucide-react";
-import { AVATARS, type AvatarId } from "@/domain/avatars";
-import { LEVELS, type LevelId } from "@/domain/levels";
-import { INDUSTRIES, SCENARIOS, type IndustryId, type ScenarioId } from "@/domain/scenarios";
+import Image from "next/image";
+import { BookmarkCheck, CalendarClock, ChevronDown, ChevronRight, History, Mic, SlidersHorizontal } from "lucide-react";
+import { getAvatar, type AvatarId } from "@/domain/avatars";
+import { getLevel, type LevelId } from "@/domain/levels";
+import { SCENARIOS, type IndustryId, type ScenarioId } from "@/domain/scenarios";
 import type { Progress } from "@/lib/types";
-import { AvatarPortrait } from "./avatar-portrait";
-import { SCENARIO_ICONS } from "./scenario-meta";
+import { FOCUS_WITHIN, IndustryPicker, LevelPicker, PartnerPicker } from "./home-pickers";
+import { ResultsCard } from "./results-card";
+import { SCENARIO_ICONS, industryLabel } from "./scenario-meta";
 import { StreakCard } from "./streak-card";
 import { Button } from "./ui";
 
@@ -22,25 +24,72 @@ interface HomeViewProps {
   onOpenHistory: () => void;
 }
 
-const FOCUS_WITHIN = "has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus";
+const PARTNER_PHOTO = 64;
 
 export function HomeView({ progress, starting, level, avatarId, onChangePrefs, onStart, onOpenPhrases, onOpenHistory }: HomeViewProps) {
   const [scenarioId, setScenarioId] = useState<ScenarioId>("job_interview");
   const [industryId, setIndustryId] = useState<IndustryId>("general");
+  const firstTime = !progress || progress.history.length === 0;
+  const [customizing, setCustomizing] = useState(firstTime);
+  const avatar = getAvatar(avatarId);
 
   return (
-    <div className="animate-rise space-y-6">
-      <header className="space-y-2 pt-2">
-        <p className="inline-flex items-center gap-2 rounded-full bg-primary-soft px-3 py-1 text-sm font-semibold text-primary-ink">
-          <Mic aria-hidden="true" className="size-4" /> Free · out loud · 5 minutes
-        </p>
-        <h1 className="text-[2rem] font-extrabold leading-tight tracking-tight">
-          Practice your work English <span className="text-primary-ink">out loud</span>
+    <div className="animate-rise space-y-5">
+      <header className="space-y-2 pt-1">
+        <h1 className="font-display text-[2rem] font-extrabold leading-[1.1] tracking-tight">
+          Say it out loud <span className="text-primary-ink">before it matters.</span>
         </h1>
-        <p className="text-muted">Pick a situation, talk with your partner in English and get instant feedback.</p>
+        <p className="text-muted">Practice your work English on a call with a US coworker. Get feedback on every phrase.</p>
       </header>
 
-      {progress ? <StreakCard progress={progress} /> : null}
+      <section aria-labelledby="next-call" className="relative overflow-hidden rounded-[2rem] bg-night p-5 text-on-night shadow-card">
+        <span aria-hidden="true" className="bg-brand absolute -right-16 -top-16 size-48 rounded-full opacity-40 blur-3xl" />
+        <div className="relative flex items-center gap-3">
+          <div className="relative shrink-0">
+            <span aria-hidden="true" className="bg-brand absolute -inset-1.5 rounded-full opacity-80" />
+            <Image src={avatar.image} alt={avatar.alt} width={PARTNER_PHOTO} height={PARTNER_PHOTO} priority className="relative rounded-full object-cover ring-2 ring-night" />
+          </div>
+          <div className="min-w-0">
+            <h2 id="next-call" className="font-display text-xl font-bold leading-tight">
+              Your call with {avatar.name}
+            </h2>
+            <p className="text-sm text-on-night/80">
+              {getLevel(level).label} · {industryLabel(industryId)}
+            </p>
+          </div>
+        </div>
+
+        <fieldset className="relative mt-4">
+          <legend className="mb-2 text-sm font-semibold text-on-night/80">What do you want to practice?</legend>
+          <div className="grid gap-2">
+            {SCENARIOS.map((s) => {
+              const Icon = SCENARIO_ICONS[s.id];
+              const checked = s.id === scenarioId;
+              return (
+                <label
+                  key={s.id}
+                  className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2 transition duration-200 ${FOCUS_WITHIN} ${
+                    checked ? "bg-on-night text-night" : "bg-on-night/10 hover:bg-on-night/15"
+                  }`}
+                >
+                  <input type="radio" name="scenario" value={s.id} checked={checked} onChange={() => setScenarioId(s.id)} className="sr-only" />
+                  <Icon aria-hidden="true" className="size-5 shrink-0" />
+                  <span className="min-w-0">
+                    <span className="block font-semibold">{s.title}</span>
+                    {checked ? <span className="block text-sm opacity-80">{s.description}</span> : null}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <Button size="lg" className="relative mt-4 w-full" disabled={starting} onClick={() => onStart(scenarioId, industryId)}>
+          <Mic aria-hidden="true" className="size-5" />
+          {starting ? "Getting ready…" : "Start talking"}
+        </Button>
+        <p className="relative mt-2 text-center text-sm text-on-night/80">About 5 minutes · push to talk or type</p>
+      </section>
 
       {progress && progress.dueToday > 0 ? (
         <button
@@ -59,110 +108,29 @@ export function HomeView({ progress, starting, level, avatarId, onChangePrefs, o
         </button>
       ) : null}
 
-      <fieldset>
-        <legend className="mb-3 text-lg font-bold">1. Pick your partner</legend>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          {AVATARS.map((a) => {
-            const checked = a.id === avatarId;
-            return (
-              <label
-                key={a.id}
-                className={`relative flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 p-3 text-center transition duration-200 ${FOCUS_WITHIN} ${
-                  checked ? "border-primary bg-primary-soft" : "border-border bg-surface hover:bg-surface-2"
-                }`}
-              >
-                <input type="radio" name="avatar" value={a.id} checked={checked} onChange={() => onChangePrefs({ avatarId: a.id })} className="sr-only" />
-                {checked ? (
-                  <span className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full bg-primary text-on-primary">
-                    <Check aria-hidden="true" className="size-4" strokeWidth={3} />
-                  </span>
-                ) : null}
-                <AvatarPortrait avatar={a} size={72} />
-                <span>
-                  <span className="block font-semibold">{a.name}</span>
-                  <span className="block text-xs text-muted">{a.vibe}</span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
+      <section aria-label="Partner, industry and level" className="rounded-3xl border border-border bg-surface">
+        <button
+          type="button"
+          aria-expanded={customizing}
+          aria-controls="customize-panel"
+          onClick={() => setCustomizing((v) => !v)}
+          className="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-3xl px-4 text-left font-semibold transition duration-200 hover:bg-surface-2"
+        >
+          <SlidersHorizontal aria-hidden="true" className="size-5 text-primary-ink" />
+          <span className="flex-1">Change partner, industry or level</span>
+          <ChevronDown aria-hidden="true" className={`size-5 transition duration-200 ${customizing ? "rotate-180" : ""}`} />
+        </button>
+        {customizing ? (
+          <div id="customize-panel" className="space-y-5 px-4 pb-5 pt-1">
+            <PartnerPicker avatarId={avatarId} onChange={(id) => onChangePrefs({ avatarId: id })} />
+            <IndustryPicker industryId={industryId} onChange={setIndustryId} />
+            <LevelPicker level={level} onChange={(id) => onChangePrefs({ level: id })} />
+          </div>
+        ) : null}
+      </section>
 
-      <fieldset className="space-y-3">
-        <legend className="mb-3 text-lg font-bold">2. What do you want to practice?</legend>
-        <div className="grid gap-2.5">
-          {SCENARIOS.map((s) => {
-            const Icon = SCENARIO_ICONS[s.id];
-            const checked = s.id === scenarioId;
-            return (
-              <label
-                key={s.id}
-                className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 p-3.5 transition duration-200 ${FOCUS_WITHIN} ${
-                  checked ? "border-primary bg-primary-soft" : "border-border bg-surface hover:bg-surface-2"
-                }`}
-              >
-                <input type="radio" name="scenario" value={s.id} checked={checked} onChange={() => setScenarioId(s.id)} className="sr-only" />
-                <span className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${checked ? "bg-primary text-on-primary" : "bg-surface-2 text-ink"}`}>
-                  <Icon aria-hidden="true" className="size-5" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block font-semibold">{s.title}</span>
-                  <span className="block text-sm text-muted">{s.description}</span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend className="mb-3 text-lg font-bold">3. Your industry</legend>
-        <div className="flex flex-wrap gap-2">
-          {INDUSTRIES.map((i) => {
-            const checked = i.id === industryId;
-            return (
-              <label
-                key={i.id}
-                className={`inline-flex min-h-11 cursor-pointer items-center rounded-full border-2 px-4 text-sm font-semibold transition duration-200 ${FOCUS_WITHIN} ${
-                  checked ? "border-ink bg-ink text-bg" : "border-border bg-surface hover:bg-surface-2"
-                }`}
-              >
-                <input type="radio" name="industry" value={i.id} checked={checked} onChange={() => setIndustryId(i.id)} className="sr-only" />
-                {i.label}
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend className="mb-3 text-lg font-bold">4. Your English level</legend>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {LEVELS.map((l) => {
-            const checked = l.id === level;
-            return (
-              <label
-                key={l.id}
-                className={`flex cursor-pointer flex-col rounded-2xl border-2 p-3 transition duration-200 ${FOCUS_WITHIN} ${
-                  checked ? "border-primary bg-primary-soft" : "border-border bg-surface hover:bg-surface-2"
-                }`}
-              >
-                <input type="radio" name="level" value={l.id} checked={checked} onChange={() => onChangePrefs({ level: l.id })} className="sr-only" />
-                <span className="flex items-center gap-1.5 font-semibold">
-                  {checked ? <Check aria-hidden="true" className="size-4 text-primary-ink" strokeWidth={3} /> : null}
-                  {l.label}
-                </span>
-                <span className="text-sm text-muted">{l.description}</span>
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      <Button size="lg" className="w-full" disabled={starting} onClick={() => onStart(scenarioId, industryId)}>
-        <Mic aria-hidden="true" className="size-5" />
-        {starting ? "Getting ready…" : "Start talking"}
-      </Button>
+      {progress && progress.stats.practices > 0 ? <ResultsCard stats={progress.stats} /> : null}
+      {progress ? <StreakCard progress={progress} /> : null}
 
       <nav aria-label="Your progress" className="grid gap-2.5">
         <NavRow icon={<BookmarkCheck aria-hidden="true" className="size-5" />} label="Phrases to review" count={progress?.toReview ?? 0} onClick={onOpenPhrases} />

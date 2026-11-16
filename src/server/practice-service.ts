@@ -29,6 +29,10 @@ const REPLY_MAX_TOKENS = 160;
 const FEEDBACK_MAX_TOKENS = 900;
 const HELP_MAX_TOKENS = 300;
 const HISTORY_LIMIT = 30;
+/** Practices counted for lifetime stats. */
+const STATS_LIMIT = 1000;
+/** Scores shown in the progress chart. */
+const SCORE_TREND = 10;
 const WEEK_DAYS = 7;
 
 export interface PracticeView {
@@ -233,6 +237,31 @@ export interface HistoryItem {
   readonly score: number | null;
 }
 
+export interface ProgressStats {
+  /** Words the person said (or typed) in English across all practices. */
+  readonly wordsSpoken: number;
+  readonly practices: number;
+  readonly phrasesLearned: number;
+  /** Scores of the latest finished practices, oldest first. */
+  readonly scores: readonly number[];
+}
+
+function statsFor(practices: readonly PracticeRecord[], phrases: readonly PhraseRecord[]): ProgressStats {
+  const finished = practices.filter((p) => p.finishedAt);
+  return {
+    wordsSpoken: practices.reduce(
+      (n, p) => n + p.turns.filter((t) => t.role === "user").reduce((m, t) => m + t.text.split(/\s+/).filter(Boolean).length, 0),
+      0,
+    ),
+    practices: finished.length,
+    phrasesLearned: phrases.filter((p) => p.reviewedAt).length,
+    scores: finished
+      .flatMap((p) => (p.score === null ? [] : [p.score]))
+      .slice(0, SCORE_TREND)
+      .reverse(),
+  };
+}
+
 export function getProgress(ctx: AppContext, sid: string, tzOffset: unknown) {
   const tz = parseTz(tzOffset);
   const history: HistoryItem[] = ctx.store
@@ -250,6 +279,7 @@ export function getProgress(ctx: AppContext, sid: string, tzOffset: unknown) {
     streak: streakFor(ctx, sid, tz),
     week,
     history,
+    stats: statsFor(ctx.store.listPractices(sid, STATS_LIMIT), phrases),
     phrases: phrases.map(publicPhrase),
     toReview: phrases.filter((p) => !p.reviewedAt).length,
     dueToday: phrases.filter((p) => isDue(p, today)).length,

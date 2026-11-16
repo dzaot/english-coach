@@ -51,7 +51,7 @@ describe("CoachApp", () => {
     mocked.finish.mockResolvedValue(finishResult);
     render(<CoachApp />);
     expect(await screen.findByText("Demo mode: simulated AI")).toBeInTheDocument();
-    expect(mocked.telemetry).toHaveBeenCalledWith("app_opened");
+    await waitFor(() => expect(mocked.telemetry).toHaveBeenCalledWith("app_opened"));
     await screen.findByText("2 days");
     await userEvent.click(screen.getByRole("button", { name: /Start talking/ }));
     await userEvent.click(await screen.findByRole("button", { name: /Finish and see my feedback/ }));

@@ -26,7 +26,10 @@ describe("HomeView", () => {
     const onStart = vi.fn();
     render(<HomeView level="intermediate" avatarId="sarah" onChangePrefs={vi.fn()} progress={progress()} starting={false} onStart={onStart} onOpenPhrases={vi.fn()} onOpenHistory={vi.fn()} />);
     await userEvent.click(screen.getByLabelText(/Salary negotiation/));
+    expect(screen.queryByLabelText("Construction")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Change partner, industry or level/ }));
     await userEvent.click(screen.getByLabelText("Construction"));
+    expect(screen.getByText(/Intermediate · Construction/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Start talking/ }));
     expect(onStart).toHaveBeenCalledWith("salary_negotiation", "construction");
   });
@@ -34,6 +37,8 @@ describe("HomeView", () => {
   it("lets the person pick a partner and a level", async () => {
     const onChangePrefs = vi.fn();
     render(<HomeView level="intermediate" avatarId="sarah" onChangePrefs={onChangePrefs} progress={progress()} starting={false} onStart={vi.fn()} onOpenPhrases={vi.fn()} onOpenHistory={vi.fn()} />);
+    expect(screen.getByRole("heading", { name: "Your call with Sarah" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Change partner, industry or level/ }));
     expect(screen.getByAltText(/Emily, a woman/)).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText(/James/));
     expect(onChangePrefs).toHaveBeenCalledWith({ avatarId: "james" });
@@ -81,9 +86,17 @@ describe("HomeView", () => {
     expect(screen.getAllByText("1 day")).toHaveLength(2);
   });
 
-  it("renders without progress yet", () => {
+  it("renders without progress yet, with the choices open for a first call", () => {
     render(<HomeView level="intermediate" avatarId="sarah" onChangePrefs={vi.fn()} progress={null} starting={false} onStart={vi.fn()} onOpenPhrases={vi.fn()} onOpenHistory={vi.fn()} />);
-    expect(screen.queryByText("Tu racha")).not.toBeInTheDocument();
+    expect(screen.queryByText("Your streak")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Change partner/ })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.queryByText("Your results")).not.toBeInTheDocument();
+  });
+
+  it("shows your results once you have practiced", () => {
+    render(<HomeView level="intermediate" avatarId="sarah" onChangePrefs={vi.fn()} progress={progress()} starting={false} onStart={vi.fn()} onOpenPhrases={vi.fn()} onOpenHistory={vi.fn()} />);
+    expect(screen.getByText("Your results")).toBeInTheDocument();
+    expect(screen.getByText("1,240")).toBeInTheDocument();
   });
 });
 
