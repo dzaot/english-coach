@@ -173,6 +173,9 @@ describe("small pieces", () => {
     expect(screen.getByRole("button", { name: /Detener y enviar/ })).toHaveAttribute("aria-pressed", "true");
     rerender(<RecordButton state="busy" onPress={vi.fn()} />);
     expect(screen.getByRole("button")).toBeDisabled();
+    expect(screen.getByText("Espera un momento…")).toBeInTheDocument();
+    rerender(<RecordButton state="idle" onPress={vi.fn()} showLabel={false} />);
+    expect(screen.queryByText("Toca para hablar")).not.toBeInTheDocument();
   });
 
   it("ChatBubble labels who speaks and replays the counterpart", async () => {

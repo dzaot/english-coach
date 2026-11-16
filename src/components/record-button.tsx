@@ -9,8 +9,23 @@ const LABELS: Record<MicState, string> = {
   busy: "Espera un momento…",
 };
 
+export function micLabel(state: MicState): string {
+  return LABELS[state];
+}
+
 /** The big push-to-talk control: tap to record, tap again to send. Space bar works too (see PracticeView). */
-export function RecordButton({ state, onPress, disabled }: { state: MicState; onPress: () => void; disabled?: boolean }) {
+export function RecordButton({
+  state,
+  onPress,
+  disabled,
+  showLabel = true,
+}: {
+  state: MicState;
+  onPress: () => void;
+  disabled?: boolean;
+  /** false when the parent shows micLabel() itself, for example below a toolbar. */
+  showLabel?: boolean;
+}) {
   const recording = state === "recording";
   return (
     <div className="flex flex-col items-center gap-2">
@@ -35,9 +50,11 @@ export function RecordButton({ state, onPress, disabled }: { state: MicState; on
           )}
         </button>
       </div>
-      <p className="text-sm font-semibold text-muted" aria-hidden="true">
-        {LABELS[state]}
-      </p>
+      {showLabel ? (
+        <p className="text-sm font-semibold text-muted" aria-hidden="true">
+          {LABELS[state]}
+        </p>
+      ) : null}
     </div>
   );
 }

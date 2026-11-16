@@ -12,7 +12,7 @@ import { SLOW_RATE, useSpeaker } from "@/lib/hooks/use-speaker";
 import type { FinishResult, Help, PracticeView as Practice, SpeechAudio } from "@/lib/types";
 import { ChatBubble } from "./chat-bubble";
 import { HelpCard } from "./help-card";
-import { RecordButton, type MicState } from "./record-button";
+import { RecordButton, micLabel, type MicState } from "./record-button";
 import { industryLabel } from "./scenario-meta";
 import { Button, ErrorBanner, TopBar } from "./ui";
 
@@ -247,13 +247,16 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
 
         {!typing && !practice.limitReached ? (
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-            <Button variant="ghost" onClick={() => setTyping(true)} disabled={busy || recorder.status === "recording"} className="justify-self-start text-sm">
+            <Button variant="ghost" onClick={() => setTyping(true)} disabled={busy || recorder.status === "recording"} className="justify-self-start whitespace-nowrap px-2 text-sm">
               <Keyboard aria-hidden="true" className="size-4" /> Escribir
             </Button>
-            <RecordButton state={micState} onPress={() => void pressMic()} />
-            <Button variant="ghost" onClick={() => void askHelp()} disabled={busy || recorder.status === "recording"} className="justify-self-end text-sm">
+            <RecordButton state={micState} onPress={() => void pressMic()} showLabel={false} />
+            <Button variant="ghost" onClick={() => void askHelp()} disabled={busy || recorder.status === "recording"} className="justify-self-end whitespace-nowrap px-2 text-sm">
               <LifeBuoy aria-hidden="true" className="size-4" /> {phase === "helping" ? "Pensando…" : "¿Qué digo?"}
             </Button>
+            <p aria-hidden="true" className="col-span-3 -mt-1 text-center text-sm font-semibold text-muted">
+              {micLabel(micState)}
+            </p>
           </div>
         ) : null}
 
