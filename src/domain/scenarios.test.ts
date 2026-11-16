@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getAvatar } from "./avatars";
 import {
   INDUSTRIES,
   SCENARIOS,
@@ -31,13 +32,14 @@ describe("scenarios catalog", () => {
     ]);
   });
 
-  it("gives every scenario Spanish copy and an English counterpart", () => {
+  it("gives every scenario English copy and a counterpart role", () => {
     for (const s of SCENARIOS) {
       expect(s.title.length).toBeGreaterThan(3);
       expect(s.description.length).toBeGreaterThan(10);
-      expect(s.counterpart.name.length).toBeGreaterThan(1);
       expect(s.counterpart.roleEn.length).toBeGreaterThan(3);
     }
+    expect(getScenario("job_interview").title).toBe("Job interview");
+    expect(INDUSTRIES.find((i) => i.id === "healthcare_admin")?.label).toBe("Healthcare admin");
   });
 
   it("validates ids at the boundary", () => {
@@ -49,7 +51,7 @@ describe("scenarios catalog", () => {
   });
 
   it("finds a scenario and an industry by id", () => {
-    expect(getScenario("client_call").counterpart.name).toBe("Michael");
+    expect(getScenario("client_call").counterpart.roleEn).toBe("client");
     expect(getIndustry("sales").roleEn).toBe("sales representative");
   });
 
@@ -61,19 +63,20 @@ describe("scenarios catalog", () => {
 
 describe("buildOpener", () => {
   it("opens a job interview for the chosen industry role", () => {
-    const text = buildOpener(getScenario("job_interview"), getIndustry("healthcare_admin"));
+    const text = buildOpener(getScenario("job_interview"), getIndustry("healthcare_admin"), getAvatar("priya"));
     expect(text).toContain("medical office administrator");
+    expect(text).toContain("I'm Priya");
     expect(text).toMatch(/tell me a little about yourself/i);
   });
 
   it("uses a neutral role for the general preset", () => {
-    const text = buildOpener(getScenario("job_interview"), getIndustry("general"));
+    const text = buildOpener(getScenario("job_interview"), getIndustry("general"), getAvatar("sarah"));
     expect(text).toContain("this position");
   });
 
   it("returns a non-empty English line for every scenario", () => {
     for (const s of SCENARIOS) {
-      expect(buildOpener(s, getIndustry("tech")).length).toBeGreaterThan(20);
+      expect(buildOpener(s, getIndustry("tech"), getAvatar("daniel")).length).toBeGreaterThan(20);
     }
   });
 });

@@ -54,10 +54,10 @@ describe("parseFeedback", () => {
 });
 
 describe("scoreLabel", () => {
-  it("maps a score to a Spanish label", () => {
-    expect(scoreLabel(92)).toBe("Excelente");
-    expect(scoreLabel(75)).toBe("Muy bien");
-    expect(scoreLabel(55)).toBe("Vas bien");
-    expect(scoreLabel(20)).toBe("Sigue practicando");
+  it("maps a score to a label", () => {
+    expect(scoreLabel(92)).toBe("Excellent");
+    expect(scoreLabel(75)).toBe("Great job");
+    expect(scoreLabel(55)).toBe("Getting there");
+    expect(scoreLabel(20)).toBe("Keep practicing");
   });
 });

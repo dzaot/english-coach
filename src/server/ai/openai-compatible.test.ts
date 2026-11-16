@@ -67,6 +67,12 @@ describe("OpenAI-compatible provider", () => {
     expect(JSON.parse(String(calls[0].init?.body))).toMatchObject({ model: "tts-1", voice: "alloy", input: "Hello there" });
   });
 
+  it("speaks in the avatar's voice when given", async () => {
+    const { fetch, calls } = fakeFetch({ "/audio/speech": new Response(new Uint8Array([1]), { headers: { "content-type": "audio/mpeg" } }) });
+    await make(fetch).speak("Hi", "onyx");
+    expect(JSON.parse(String(calls[0].init?.body)).voice).toBe("onyx");
+  });
+
   it("falls back to the browser voice when speech fails", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { fetch } = fakeFetch({ "/audio/speech": json({ error: { message: "x" } }, 500) });

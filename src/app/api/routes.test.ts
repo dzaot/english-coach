@@ -34,7 +34,7 @@ describe("practice flow over HTTP (mock AI)", () => {
     setContext(testContext());
     const started = await (await practice.POST(post("/api/practice", { scenarioId: "client_call", industryId: "customer_support" }))).json();
     const id = started.practice.id;
-    expect(started.practice.turns[0].text).toContain("Michael");
+    expect(started.practice.turns[0].text).toContain("frustrated");
 
     const spoken = await (await speech.POST(post(`/api/practice/${id}/speech`, { turnIndex: 0 }), params(id))).json();
     expect(spoken).toEqual({ audio: null });

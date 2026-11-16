@@ -23,6 +23,16 @@ describe("startPractice", () => {
     expect(out.practice.canFinish).toBe(false);
   });
 
+  it("uses the chosen avatar and level", async () => {
+    const ctx = testContext();
+    const out = await startPractice(ctx, ai, SID, { scenarioId: "team_meeting", industryId: "tech", level: "beginner", avatarId: "james" });
+    expect(out.practice).toMatchObject({ level: "beginner", avatarId: "james" });
+    const speak = vi.fn<AiProvider["speak"]>().mockResolvedValue(null);
+    await speakTurn(ctx, { ...ai, speak }, SID, out.practice.id, { turnIndex: 0 });
+    expect(speak).toHaveBeenCalledWith(expect.any(String), "onyx");
+    await expect(startPractice(ctx, ai, SID, { scenarioId: "team_meeting", industryId: "tech", level: "expert" })).rejects.toMatchObject({ code: "invalid_input" });
+  });
+
   it("rejects unknown scenarios", async () => {
     await expect(startPractice(testContext(), ai, SID, { scenarioId: "karaoke", industryId: "sales" })).rejects.toMatchObject({ code: "invalid_input" });
   });
@@ -239,7 +249,7 @@ describe("speakTurn", () => {
     const speak = vi.fn<AiProvider["speak"]>().mockResolvedValue({ base64: "AA", mime: "audio/mpeg" });
     const out = await speakTurn(ctx, { ...ai, speak }, SID, practice.id, { turnIndex: 0 });
     expect(out.audio).toEqual({ base64: "AA", mime: "audio/mpeg" });
-    expect(speak).toHaveBeenCalledWith(practice.turns[0].text);
+    expect(speak).toHaveBeenCalledWith(practice.turns[0].text, "nova");
   });
 
   it("does not speak user turns, missing turns or other people's practices", async () => {

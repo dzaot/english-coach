@@ -19,10 +19,10 @@ const FOLLOW_UPS = [
 ];
 
 const BETTER: Record<string, { better: string; why: string }> = {
-  agree: { better: "I agree with the plan, but I'd like more details on the deadline.", why: "\"Agree\" ya es verbo: no lleva \"am\"." },
-  make: { better: "In my last role, I created a new returns process that cut handling time by 40%.", why: "\"Create\" o \"set up\" un proceso suena más natural que \"make\", y el pasado es \"created\"." },
-  perfect: { better: "I tend to be a perfectionist, so I'm learning to prioritize and move faster.", why: "Más directo y muestra que ya estás trabajando en ello." },
-  default: { better: "I bring five years of customer service experience, and I work really well with people.", why: "\"I bring\" suena más seguro en una entrevista." },
+  agree: { better: "I agree with the plan, but I'd like more details on the deadline.", why: "\"Agree\" is already a verb, so you don't need \"am\"." },
+  make: { better: "In my last role, I created a new returns process that cut handling time by 40%.", why: "You \"create\" or \"set up\" a process, and the past tense is \"created\"." },
+  perfect: { better: "I tend to be a perfectionist, so I'm learning to prioritize and move faster.", why: "More direct, and it shows you are already working on it." },
+  default: { better: "I bring five years of customer service experience, and I work really well with people.", why: "\"I bring\" sounds more confident in an interview." },
 };
 
 function userLines(transcript: string): string[] {
@@ -41,13 +41,13 @@ function mockFeedback(transcript: string): string {
   const candidates = [...userLines(transcript).slice(-3), ...SAMPLE_ANSWERS].map(improve);
   const picked = candidates.filter((c, i) => candidates.findIndex((o) => o.better === c.better) === i).slice(0, 3);
   return JSON.stringify({
-    summary: "Te comunicaste con claridad y mantuviste la conversación. Con unos ajustes de gramática vas a sonar todavía más seguro.",
-    wellDone: ["Respondiste cada pregunta sin quedarte callado", "Diste ejemplos concretos con cifras"],
+    summary: "You communicated clearly and kept the conversation going. A few grammar tweaks will make you sound even more confident.",
+    wellDone: ["You answered every question without freezing", "You gave concrete examples with numbers"],
     betterPhrases: picked,
     vocabulary: [
-      { term: "cut (time) by", meaning: "reducir (el tiempo) en" },
-      { term: "I tend to", meaning: "suelo, tiendo a" },
-      { term: "hands-on", meaning: "práctico, que se involucra" },
+      { term: "cut (time) by", meaning: "to reduce (time) by an amount" },
+      { term: "I tend to", meaning: "I usually do something" },
+      { term: "hands-on", meaning: "practical, actively involved" },
     ],
     score: 72,
   });
@@ -56,7 +56,7 @@ function mockFeedback(transcript: string): string {
 const MOCK_HELP = JSON.stringify({
   translation: "¿Puedes darme un ejemplo concreto de un resultado del que estés orgulloso?",
   suggestion: "Sure. Last year I improved our returns process and cut handling time by forty percent.",
-  tip: "Da una cifra concreta: hace tu respuesta más creíble.",
+  tip: "Give one concrete number: it makes your answer more believable.",
 });
 
 export function createMockProvider(): AiProvider {

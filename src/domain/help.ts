@@ -1,10 +1,11 @@
 import { z } from "zod";
 import type { ChatMessage, Turn } from "./conversation";
+import type { Level } from "./levels";
 import { extractJsonObject } from "./json";
 import type { Industry, Scenario } from "./scenarios";
 import { cleanDashes } from "./text";
 
-/** "¿Qué digo?": translate the counterpart's last line and suggest a short answer the user can read out loud. */
+/** "What do I say?": explain the counterpart's last line and suggest a short answer the user can read out loud. */
 
 export const HelpSchema = z.object({
   translation: z.string().min(1).max(600),
@@ -20,19 +21,26 @@ export class HelpParseError extends Error {
   }
 }
 
-const HELP_SPEC = `HELP_JSON. Return ONLY a JSON object, no prose:
-{"translation": "the COUNTERPART's last message translated to neutral Latin American Spanish",
- "suggestion": "one natural answer the user could say out loud, first person, max 30 words, simple workplace English",
- "tip": "one short tip in Spanish, max 20 words, speaking to the user as tú"}
+function helpSpec(level: Level): string {
+  const translation =
+    level.helpTranslation === "Spanish"
+      ? "the COUNTERPART's last message translated to neutral Latin American Spanish"
+      : "the COUNTERPART's last message rephrased in simpler English, max 25 words";
+  const tip = level.explanationLanguage === "Spanish" ? "in Spanish, speaking to the user as tú" : "in simple English";
+  return `HELP_JSON. Return ONLY a JSON object, no prose:
+{"translation": "${translation}",
+ "suggestion": "one natural answer the user could say out loud, first person, max 30 words, ${level.id === "advanced" ? "confident professional" : "simple workplace"} English",
+ "tip": "one short tip ${tip}, max 20 words"}
 Never use the em dash character.`;
+}
 
-export function helpMessages(scenario: Scenario, industry: Industry, turns: readonly Turn[]): ChatMessage[] {
+export function helpMessages(scenario: Scenario, industry: Industry, level: Level, turns: readonly Turn[]): ChatMessage[] {
   const recent = turns.slice(-6).map((t) => `${t.role === "user" ? "USER" : "COUNTERPART"}: ${t.text}`).join("\n");
   return [
-    { role: "system", content: `You help a Spanish-speaking professional who is stuck in an English role-play. ${HELP_SPEC}` },
+    { role: "system", content: `You help a Spanish-speaking professional who is stuck in an English role-play. ${helpSpec(level)}` },
     {
       role: "user",
-      content: `Role-play: ${scenario.title} with a ${scenario.counterpart.roleEn}. The user works as: ${industry.roleEn}.\nRecent conversation:\n${recent}`,
+      content: `Role-play: ${scenario.title} with a ${scenario.counterpart.roleEn}. The user works as: ${industry.roleEn}. Level: ${level.label}.\nRecent conversation:\n${recent}`,
     },
   ];
 }

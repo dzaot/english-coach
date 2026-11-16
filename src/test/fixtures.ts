@@ -17,6 +17,8 @@ export function practice(over: Partial<PracticeView> = {}): PracticeView {
     id: "p1",
     scenarioId: "job_interview",
     industryId: "sales",
+    level: "intermediate",
+    avatarId: "sarah",
     startedAt: new Date().toISOString(),
     finishedAt: null,
     turns: [{ role: "counterpart", text: "Tell me about yourself." }],

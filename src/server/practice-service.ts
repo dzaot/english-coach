@@ -12,6 +12,8 @@ import { FeedbackParseError, parseFeedback, type Feedback } from "@/domain/feedb
 import { HelpParseError, helpMessages, parseHelp, type Help } from "@/domain/help";
 import { counterpartSystemPrompt, feedbackMessages } from "@/domain/prompts";
 import { cleanDashes } from "@/domain/text";
+import { AVATAR_IDS, getAvatar } from "@/domain/avatars";
+import { LEVEL_IDS, getLevel } from "@/domain/levels";
 import { INDUSTRY_IDS, SCENARIO_IDS, buildOpener, getIndustry, getScenario } from "@/domain/scenarios";
 import { addDays, computeStreak, localDay, type Streak } from "@/domain/streak";
 import type { AiProvider, SpeechAudio, Tier } from "./ai/provider";
@@ -32,6 +34,8 @@ export interface PracticeView {
   readonly id: string;
   readonly scenarioId: PracticeRecord["scenarioId"];
   readonly industryId: PracticeRecord["industryId"];
+  readonly level: PracticeRecord["level"];
+  readonly avatarId: PracticeRecord["avatarId"];
   readonly startedAt: string;
   readonly finishedAt: string | null;
   readonly turns: readonly Turn[];
@@ -46,6 +50,8 @@ function view(p: PracticeRecord): PracticeView {
     id: p.id,
     scenarioId: p.scenarioId,
     industryId: p.industryId,
+    level: p.level,
+    avatarId: p.avatarId,
     startedAt: p.startedAt,
     finishedAt: p.finishedAt,
     turns: p.turns,
@@ -77,13 +83,18 @@ function load(ctx: AppContext, sid: string, id: string): PracticeRecord {
   return p;
 }
 
-const StartSchema = z.object({ scenarioId: z.enum(SCENARIO_IDS), industryId: z.enum(INDUSTRY_IDS) });
+const StartSchema = z.object({
+  scenarioId: z.enum(SCENARIO_IDS),
+  industryId: z.enum(INDUSTRY_IDS),
+  level: z.enum(LEVEL_IDS).default("intermediate"),
+  avatarId: z.enum(AVATAR_IDS).default("sarah"),
+});
 const TzSchema = z.number().int().min(-840).max(840);
 
 export async function startPractice(ctx: AppContext, ai: AiProvider, sid: string, input: unknown) {
   const parsed = StartSchema.safeParse(input);
   if (!parsed.success) throw new AppError("invalid_input");
-  const opener = buildOpener(getScenario(parsed.data.scenarioId), getIndustry(parsed.data.industryId));
+  const opener = buildOpener(getScenario(parsed.data.scenarioId), getIndustry(parsed.data.industryId), getAvatar(parsed.data.avatarId));
   const now = ctx.now().toISOString();
   ctx.store.getOrCreateUser(sid, now);
   const practice = ctx.store.createPractice({ sid, ...parsed.data, startedAt: now, turns: [{ role: "counterpart", text: opener }] });
@@ -137,7 +148,12 @@ export async function takeTurn(
   const check = validateUserText(await userTextFrom(ai, input));
   if (!check.ok) throw new AppError(input.audio ? "transcription_empty" : "invalid_input");
   const withUser = appendTurn(practice.turns, { role: "user", text: check.text });
-  const system = counterpartSystemPrompt(getScenario(practice.scenarioId), getIndustry(practice.industryId));
+  const system = counterpartSystemPrompt(
+    getScenario(practice.scenarioId),
+    getIndustry(practice.industryId),
+    getAvatar(practice.avatarId),
+    getLevel(practice.level),
+  );
   const replyText = cleanDashes(await ai.chat(toChatMessages(system, withUser), { tier: ctx.config.replyTier, maxTokens: REPLY_MAX_TOKENS }));
   const saved = ctx.store.savePracticeTurns(sid, id, appendTurn(withUser, { role: "counterpart", text: replyText }));
   return { userText: check.text, replyText, audio: null, practice: view(saved) };
@@ -147,7 +163,7 @@ export async function takeTurn(
 export async function getHelp(ctx: AppContext, ai: AiProvider, sid: string, id: string): Promise<Help> {
   const practice = load(ctx, sid, id);
   if (practice.finishedAt) throw new AppError("session_finished");
-  const messages = helpMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), practice.turns);
+  const messages = helpMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), getLevel(practice.level), practice.turns);
   try {
     return parseHelp(await ai.chat(messages, { tier: "fast", maxTokens: HELP_MAX_TOKENS }));
   } catch (e) {
@@ -164,11 +180,11 @@ export async function speakTurn(ctx: AppContext, ai: AiProvider, sid: string, id
   const parsed = SpeakSchema.safeParse(input);
   const turn = parsed.success ? practice.turns[parsed.data.turnIndex] : undefined;
   if (!turn || turn.role !== "counterpart") throw new AppError("invalid_input");
-  return { audio: await ai.speak(turn.text) };
+  return { audio: await ai.speak(turn.text, getAvatar(practice.avatarId).voice) };
 }
 
 async function generateFeedback(ai: AiProvider, practice: PracticeRecord): Promise<Feedback> {
-  const messages = feedbackMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), practice.turns);
+  const messages = feedbackMessages(getScenario(practice.scenarioId), getIndustry(practice.industryId), getLevel(practice.level), practice.turns);
   const tiers: Tier[] = ["balanced", "fast"];
   for (const tier of tiers) {
     try {

@@ -1,24 +1,24 @@
-/** Errors with friendly Spanish messages for the UI, and details kept for server logs. */
+/** Errors with friendly messages for the UI, and details kept for server logs. */
 
 const CATALOG = {
-  invalid_input: { status: 400, es: "Revisa los datos e inténtalo de nuevo." },
-  audio_empty: { status: 400, es: "No escuchamos nada. Mantén el micrófono cerca e inténtalo otra vez." },
-  audio_too_large: { status: 413, es: "El audio es muy largo. Responde en menos de un minuto y medio." },
-  transcription_empty: { status: 422, es: "No entendimos el audio. Habla un poco más fuerte o escribe tu respuesta." },
-  not_found: { status: 404, es: "No encontramos esa práctica." },
-  session_finished: { status: 409, es: "Esta práctica ya terminó. Empieza una nueva." },
-  turn_limit: { status: 409, es: "Llegaste al máximo de respuestas. Pide tu feedback." },
-  not_enough_turns: { status: 409, es: "Responde al menos dos veces para recibir feedback." },
-  gate_required: { status: 403, es: "Inicia sesión con publik para practicar." },
-  forbidden: { status: 403, es: "Esta solicitud no está permitida." },
-  own_key_invalid: { status: 400, es: "Esa clave no parece válida. Revisa que esté completa." },
-  ai_balance: { status: 402, es: "Se acabó tu saldo de IA en publik." },
-  ai_rate_limited: { status: 429, es: "Vas muy rápido. Espera unos segundos e inténtalo de nuevo." },
-  ai_auth: { status: 502, es: "Tu sesión de publik expiró. Recarga la página para entrar de nuevo." },
-  ai_unavailable: { status: 503, es: "El servicio de IA no responde ahora. Inténtalo en un momento." },
-  feedback_invalid: { status: 502, es: "No pudimos preparar tu feedback. Inténtalo otra vez." },
-  help_invalid: { status: 502, es: "No pudimos preparar una ayuda. Inténtalo otra vez." },
-  internal: { status: 500, es: "Algo salió mal de nuestro lado. Inténtalo de nuevo." },
+  invalid_input: { status: 400, msg: "Please check your input and try again." },
+  audio_empty: { status: 400, msg: "We didn't hear anything. Keep the microphone close and try again." },
+  audio_too_large: { status: 413, msg: "That recording is too long. Keep your answer under a minute and a half." },
+  transcription_empty: { status: 422, msg: "We couldn't understand the audio. Speak a bit louder or type your answer." },
+  not_found: { status: 404, msg: "We couldn't find that practice." },
+  session_finished: { status: 409, msg: "This practice is over. Start a new one." },
+  turn_limit: { status: 409, msg: "You reached the maximum number of answers. Get your feedback." },
+  not_enough_turns: { status: 409, msg: "Answer at least twice to get feedback." },
+  gate_required: { status: 403, msg: "Sign in with publik to practice." },
+  forbidden: { status: 403, msg: "This request is not allowed." },
+  own_key_invalid: { status: 400, msg: "That key doesn't look right. Check that it is complete." },
+  ai_balance: { status: 402, msg: "Your publik AI balance has run out." },
+  ai_rate_limited: { status: 429, msg: "You're going fast! Wait a few seconds and try again." },
+  ai_auth: { status: 502, msg: "Your publik session expired. Reload the page to sign in again." },
+  ai_unavailable: { status: 503, msg: "The AI service is not responding right now. Try again in a moment." },
+  feedback_invalid: { status: 502, msg: "We couldn't prepare your feedback. Please try again." },
+  help_invalid: { status: 502, msg: "We couldn't prepare a hint. Please try again." },
+  internal: { status: 500, msg: "Something went wrong on our side. Please try again." },
 } as const;
 
 export type ErrorCode = keyof typeof CATALOG;
@@ -26,7 +26,7 @@ export type ErrorCode = keyof typeof CATALOG;
 export class AppError extends Error {
   readonly code: ErrorCode;
   readonly status: number;
-  readonly messageEs: string;
+  readonly userMessage: string;
   readonly topUpUrl: string | null;
   readonly detail: string | null;
 
@@ -35,7 +35,7 @@ export class AppError extends Error {
     this.name = "AppError";
     this.code = code;
     this.status = CATALOG[code].status;
-    this.messageEs = CATALOG[code].es;
+    this.userMessage = CATALOG[code].msg;
     this.topUpUrl = opts.topUpUrl ?? null;
     this.detail = opts.detail ?? null;
   }
@@ -67,7 +67,7 @@ export function errorResponse(error: unknown): Response {
     console.error("[api]", appError.code, error instanceof Error ? error.message : error);
   }
   return Response.json(
-    { error: { code: appError.code, message: appError.messageEs, topUpUrl: appError.topUpUrl } },
+    { error: { code: appError.code, message: appError.userMessage, topUpUrl: appError.topUpUrl } },
     { status: appError.status },
   );
 }

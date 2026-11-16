@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { AppError, errorResponse, fromPublikStatus } from "./errors";
 
 describe("AppError", () => {
-  it("carries a Spanish message and an HTTP status", () => {
+  it("carries a friendly message and an HTTP status", () => {
     const e = new AppError("not_found");
     expect(e.status).toBe(404);
-    expect(e.messageEs).toMatch(/no encontramos/i);
+    expect(e.userMessage).toMatch(/couldn't find/i);
   });
 });
 
@@ -38,7 +38,7 @@ describe("errorResponse", () => {
     const body = await res.json();
     expect(body.error.code).toBe("ai_balance");
     expect(body.error.topUpUrl).toBe("https://x.test/top");
-    expect(body.error.message).toMatch(/saldo/i);
+    expect(body.error.message).toMatch(/balance/i);
   });
 
   it("hides unexpected errors behind a friendly 500 and logs them", async () => {

@@ -12,6 +12,6 @@ export interface AiProvider {
   /** Speech to text (English). Throws AppError("transcription_empty") when nothing was understood. */
   transcribe(audio: Blob, filename: string): Promise<string>;
   chat(messages: readonly ChatMessage[], opts: { tier: Tier; maxTokens?: number }): Promise<string>;
-  /** Text to speech. null means "use the browser's voice instead". */
-  speak(text: string): Promise<SpeechAudio | null>;
+  /** Text to speech, optionally in a given voice. null means "use the browser's voice instead". */
+  speak(text: string, voice?: string): Promise<SpeechAudio | null>;
 }

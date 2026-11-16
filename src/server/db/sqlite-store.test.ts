@@ -37,10 +37,14 @@ describe("SQLite store", () => {
       sid: SID,
       scenarioId: "job_interview",
       industryId: "tech",
+      level: "beginner",
+      avatarId: "priya",
       startedAt: "2026-11-15T10:00:00Z",
       turns: [{ role: "counterpart", text: "Hi" }],
     });
     expect(p.finishedAt).toBeNull();
+    expect(p.level).toBe("beginner");
+    expect(p.avatarId).toBe("priya");
     const withTurn = store.savePracticeTurns(SID, p.id, [...p.turns, { role: "user", text: "Hello" }]);
     expect(withTurn.turns).toHaveLength(2);
     const done = store.finishPractice(SID, p.id, { feedback, finishedAt: "2026-11-15T10:08:00Z", localDay: "2026-11-15" });
@@ -53,7 +57,7 @@ describe("SQLite store", () => {
   it("never returns another user's practice", () => {
     store.getOrCreateUser(SID, "t");
     store.getOrCreateUser("other", "t");
-    const p = store.createPractice({ sid: SID, scenarioId: "job_interview", industryId: "tech", startedAt: "t", turns: [] });
+    const p = store.createPractice({ sid: SID, scenarioId: "job_interview", industryId: "tech", level: "intermediate", avatarId: "sarah", startedAt: "t", turns: [] });
     expect(store.getPractice("other", p.id)).toBeNull();
     expect(() => store.savePracticeTurns("other", p.id, [])).toThrow(/not found/);
     expect(() => store.finishPractice("other", p.id, { feedback, finishedAt: "t", localDay: "d" })).toThrow(/not found/);
@@ -61,7 +65,7 @@ describe("SQLite store", () => {
 
   it("keeps phrases to review and marks them", () => {
     store.getOrCreateUser(SID, "t");
-    const p = store.createPractice({ sid: SID, scenarioId: "client_call", industryId: "sales", startedAt: "t", turns: [] });
+    const p = store.createPractice({ sid: SID, scenarioId: "client_call", industryId: "sales", level: "intermediate", avatarId: "sarah", startedAt: "t", turns: [] });
     const [phrase] = store.addPhrases(SID, p.id, feedback.betterPhrases, "2026-11-15T10:08:00Z", "2026-11-16");
     expect(phrase.reviewedAt).toBeNull();
     expect(phrase.step).toBe(0);
@@ -89,9 +93,12 @@ describe("SQLite store migration", () => {
     const old = new DatabaseSync(path);
     old.exec("CREATE TABLE phrases (id TEXT PRIMARY KEY, sid TEXT NOT NULL, practice_id TEXT NOT NULL, original TEXT NOT NULL, better TEXT NOT NULL, why_es TEXT NOT NULL, created_at TEXT NOT NULL, reviewed_at TEXT)");
     old.exec("INSERT INTO phrases VALUES ('ph1', 's', 'p', 'a', 'b', 'c', 't', NULL)");
+    old.exec("CREATE TABLE practices (id TEXT PRIMARY KEY, sid TEXT NOT NULL, scenario_id TEXT NOT NULL, industry_id TEXT NOT NULL, started_at TEXT NOT NULL, finished_at TEXT, local_day TEXT, turns TEXT NOT NULL, feedback TEXT, score INTEGER)");
+    old.exec("INSERT INTO practices (id, sid, scenario_id, industry_id, started_at, turns) VALUES ('p1', 's', 'job_interview', 'tech', 't', '[]')");
     old.close();
     const store = createSqliteStore(path);
     expect(store.listPhrases("s")[0]).toMatchObject({ id: "ph1", step: 0, dueDay: null });
+    expect(store.getPractice("s", "p1")).toMatchObject({ level: "intermediate", avatarId: "sarah" });
     expect(createSqliteStore(path).listPhrases("s")).toHaveLength(1);
   });
 });

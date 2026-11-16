@@ -1,5 +1,7 @@
 import type { Turn } from "@/domain/conversation";
 import type { Feedback } from "@/domain/feedback";
+import type { AvatarId } from "@/domain/avatars";
+import type { LevelId } from "@/domain/levels";
 import type { IndustryId, ScenarioId } from "@/domain/scenarios";
 
 /** Persistence port. The app depends on this interface; SQLite is one implementation. */
@@ -24,6 +26,8 @@ export interface PracticeRecord {
   readonly sid: string;
   readonly scenarioId: ScenarioId;
   readonly industryId: IndustryId;
+  readonly level: LevelId;
+  readonly avatarId: AvatarId;
   readonly startedAt: string;
   readonly finishedAt: string | null;
   readonly localDay: string | null;
@@ -36,6 +40,8 @@ export interface NewPractice {
   readonly sid: string;
   readonly scenarioId: ScenarioId;
   readonly industryId: IndustryId;
+  readonly level: LevelId;
+  readonly avatarId: AvatarId;
   readonly startedAt: string;
   readonly turns: readonly Turn[];
 }

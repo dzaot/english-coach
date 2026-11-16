@@ -83,14 +83,14 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): A
       return content.trim();
     },
 
-    async speak(text): Promise<SpeechAudio | null> {
+    async speak(text, voice): Promise<SpeechAudio | null> {
       try {
         const res = await call(
           "/audio/speech",
           {
             method: "POST",
             headers: { ...auth, "content-type": "application/json" },
-            body: JSON.stringify({ model: opts.models.speech, voice: opts.voice, input: text, response_format: "mp3" }),
+            body: JSON.stringify({ model: opts.models.speech, voice: voice ?? opts.voice, input: text, response_format: "mp3" }),
           },
           AUDIO_TIMEOUT_MS,
         );

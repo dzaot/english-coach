@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { isAvatarId } from "@/domain/avatars";
 import type { Feedback } from "@/domain/feedback";
+import { isLevelId } from "@/domain/levels";
 import type { NewPractice, PhraseRecord, PracticeRecord, Store, UserPatch, UserRecord } from "./store";
 
 const SCHEMA = `
@@ -23,15 +25,23 @@ CREATE INDEX IF NOT EXISTS phrases_sid ON phrases(sid, created_at);
 `;
 
 /** Columns added after the first release, applied to older databases on open. */
-const PHRASE_MIGRATIONS: Record<string, string> = {
-  step: "ALTER TABLE phrases ADD COLUMN step INTEGER NOT NULL DEFAULT 0",
-  due_day: "ALTER TABLE phrases ADD COLUMN due_day TEXT",
+const MIGRATIONS: Record<"phrases" | "practices", Record<string, string>> = {
+  phrases: {
+    step: "ALTER TABLE phrases ADD COLUMN step INTEGER NOT NULL DEFAULT 0",
+    due_day: "ALTER TABLE phrases ADD COLUMN due_day TEXT",
+  },
+  practices: {
+    level: "ALTER TABLE practices ADD COLUMN level TEXT NOT NULL DEFAULT 'intermediate'",
+    avatar_id: "ALTER TABLE practices ADD COLUMN avatar_id TEXT NOT NULL DEFAULT 'sarah'",
+  },
 };
 
 function migrate(db: DatabaseSync): void {
-  const existing = new Set((db.prepare("PRAGMA table_info(phrases)").all() as Row[]).map((c) => String(c.name)));
-  for (const [column, sql] of Object.entries(PHRASE_MIGRATIONS)) {
-    if (!existing.has(column)) db.exec(sql);
+  for (const [table, columns] of Object.entries(MIGRATIONS)) {
+    const existing = new Set((db.prepare(`PRAGMA table_info(${table})`).all() as Row[]).map((c) => String(c.name)));
+    for (const [column, sql] of Object.entries(columns)) {
+      if (!existing.has(column)) db.exec(sql);
+    }
   }
 }
 
@@ -57,6 +67,8 @@ function toPractice(r: Row): PracticeRecord {
     sid: String(r.sid),
     scenarioId: r.scenario_id as PracticeRecord["scenarioId"],
     industryId: r.industry_id as PracticeRecord["industryId"],
+    level: isLevelId(r.level) ? r.level : "intermediate",
+    avatarId: isAvatarId(r.avatar_id) ? r.avatar_id : "sarah",
     startedAt: String(r.started_at),
     finishedAt: str(r.finished_at),
     localDay: str(r.local_day),
@@ -124,8 +136,8 @@ export function createSqliteStore(path: string): Store {
     createPractice(input: NewPractice) {
       const id = randomUUID();
       db.prepare(
-        "INSERT INTO practices (id, sid, scenario_id, industry_id, started_at, turns) VALUES (?, ?, ?, ?, ?, ?)",
-      ).run(id, input.sid, input.scenarioId, input.industryId, input.startedAt, JSON.stringify(input.turns));
+        "INSERT INTO practices (id, sid, scenario_id, industry_id, level, avatar_id, started_at, turns) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      ).run(id, input.sid, input.scenarioId, input.industryId, input.level, input.avatarId, input.startedAt, JSON.stringify(input.turns));
       return requirePractice(input.sid, id);
     },
     getPractice(sid, id) {

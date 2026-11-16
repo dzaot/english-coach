@@ -2,7 +2,7 @@ import { z } from "zod";
 import { extractJsonObject } from "./json";
 import { cleanDashes } from "./text";
 
-/** Feedback the coach returns at the end of a session. Explanations in Spanish, phrases in English. */
+/** Feedback the coach returns at the end of a session. Explanations in Spanish or English by level. */
 export const FeedbackSchema = z.object({
   summary: z.string().min(1).max(600),
   wellDone: z.array(z.string().min(1).max(300)).min(1).max(5),
@@ -56,8 +56,8 @@ export function parseFeedback(raw: string): Feedback {
 }
 
 export function scoreLabel(score: number): string {
-  if (score >= 85) return "Excelente";
-  if (score >= 70) return "Muy bien";
-  if (score >= 50) return "Vas bien";
-  return "Sigue practicando";
+  if (score >= 85) return "Excellent";
+  if (score >= 70) return "Great job";
+  if (score >= 50) return "Getting there";
+  return "Keep practicing";
 }
