@@ -15,6 +15,7 @@ import * as drill from "./phrases/[id]/drill/route";
 import * as turn from "./practice/[id]/turn/route";
 import * as practice from "./practice/route";
 import * as progress from "./progress/route";
+import * as pronounce from "./pronounce/route";
 import * as telemetry from "./telemetry/route";
 
 const SID = "3f0c2b1e-8a4d-4c6e-9f1a-2b3c4d5e6f70";
@@ -129,5 +130,22 @@ describe("gate and telemetry routes", () => {
   it("rejects an unknown telemetry event", async () => {
     setContext(testContext());
     expect((await telemetry.POST(post("/api/telemetry", { event: "page_view" }))).status).toBe(400);
+  });
+});
+
+describe("sound coach over HTTP", () => {
+  it("guides each word of a sentence without calling the AI", async () => {
+    setContext(testContext());
+    const res = await pronounce.POST(post("/api/pronounce", { text: "I speak with the team." }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.words.map((w: { text: string }) => w.text)).toEqual(["I", "speak", "with", "the", "team."]);
+    expect(body.words[1]).toMatchObject({ respelling: "SPEEK", tips: [{ id: "s_cluster" }] });
+  });
+
+  it("rejects empty or very long text", async () => {
+    setContext(testContext());
+    expect((await pronounce.POST(post("/api/pronounce", { text: "  " }))).status).toBe(400);
+    expect((await pronounce.POST(post("/api/pronounce", { text: "a ".repeat(400) }))).status).toBe(400);
   });
 });

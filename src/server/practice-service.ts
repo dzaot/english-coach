@@ -7,6 +7,7 @@ import {
   validateUserText,
   type Turn,
 } from "@/domain/conversation";
+import { checkClarity, measurePace } from "@/domain/clarity";
 import { compareSaid, isDue, nextSchedule } from "@/domain/drill";
 import { FeedbackParseError, parseFeedback, type Feedback } from "@/domain/feedback";
 import { HelpParseError, helpMessages, parseHelp, type Help } from "@/domain/help";
@@ -116,9 +117,13 @@ export function audioExtension(mime: string): string {
   return "webm";
 }
 
-function transcribeAudio(ai: AiProvider, audio: Blob): Promise<string> {
+function checkAudio(audio: Blob): void {
   if (audio.size === 0) throw new AppError("audio_empty");
   if (audio.size > MAX_AUDIO_BYTES) throw new AppError("audio_too_large");
+}
+
+function transcribeAudio(ai: AiProvider, audio: Blob): Promise<string> {
+  checkAudio(audio);
   return ai.transcribe(audio, `turn.${audioExtension(audio.type)}`);
 }
 
@@ -273,7 +278,8 @@ export async function drillPhrase(
   const phrase = ctx.store.getPhrase(sid, id);
   if (!phrase) throw new AppError("not_found");
   if (!input.audio) throw new AppError("invalid_input");
-  const said = await transcribeAudio(ai, input.audio);
+  checkAudio(input.audio);
+  const { text: said, words: timings } = await ai.transcribeTimed(input.audio, `say.${audioExtension(input.audio.type)}`);
   const result = compareSaid(phrase.better, said);
   let updated = phrase;
   if (result.passed) {
@@ -283,5 +289,12 @@ export async function drillPhrase(
       ctx.store.schedulePhrase(sid, id, { step: next.step, dueDay: next.dueDay, reviewedAt: next.learned ? now.toISOString() : phrase.reviewedAt }) ??
       phrase;
   }
-  return { said, ...result, phrase: publicPhrase(updated) };
+  return {
+    said,
+    ...result,
+    words: checkClarity(phrase.better, said),
+    pace: measurePace(timings),
+    timings,
+    phrase: publicPhrase(updated),
+  };
 }

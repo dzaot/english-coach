@@ -24,6 +24,7 @@ vi.mock("@/lib/api", async (orig) => {
       speech: vi.fn(),
       help: vi.fn(),
       drill: vi.fn(),
+      pronounce: vi.fn().mockResolvedValue({ words: [] }),
     },
   };
 });

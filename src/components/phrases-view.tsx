@@ -13,6 +13,8 @@ interface Props {
   phrases: readonly Phrase[];
   onToggle: (id: string, reviewed: boolean) => void;
   onDrilled?: (phrase: Phrase) => void;
+  /** Sound tips in Spanish (beginner and intermediate levels). */
+  tipsInSpanish?: boolean;
   onBack: () => void;
 }
 
@@ -23,7 +25,7 @@ function rank(p: Phrase, today: string): number {
 }
 
 /** Phrases to review: the better versions from past feedback. Pending ones first. */
-export function PhrasesView({ phrases, onToggle, onDrilled, onBack }: Props) {
+export function PhrasesView({ phrases, onToggle, onDrilled, tipsInSpanish = false, onBack }: Props) {
   const speaker = useSpeaker();
   const today = localToday();
   const sorted = [...phrases].sort((a, b) => rank(a, today) - rank(b, today));
@@ -61,7 +63,7 @@ export function PhrasesView({ phrases, onToggle, onDrilled, onBack }: Props) {
                       <CalendarClock aria-hidden="true" className="size-3.5" /> Due today
                     </p>
                   ) : null}
-                  <p lang="en" className="text-lg font-semibold">{p.better}</p>
+                  {done ? <p lang="en" className="text-lg font-semibold">{p.better}</p> : null}
                   <p className="text-sm text-muted">
                     <span className="font-semibold">Before: </span>
                     <span lang="en">{p.original}</span>
@@ -70,7 +72,7 @@ export function PhrasesView({ phrases, onToggle, onDrilled, onBack }: Props) {
                   {!done && !dueNow && p.dueDay ? (
                     <p className="text-sm text-muted">Next review: {formatDay(`${p.dueDay}T12:00:00Z`)}</p>
                   ) : null}
-                  {!done ? <SayItButton phraseId={p.id} onDrilled={onDrilled} /> : null}
+                  {!done ? <SayItButton phraseId={p.id} text={p.better} tipsInSpanish={tipsInSpanish} onDrilled={onDrilled} /> : null}
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"

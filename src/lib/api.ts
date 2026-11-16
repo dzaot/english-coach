@@ -1,4 +1,4 @@
-import type { DrillResult, FinishResult, GateState, Help, Phrase, PracticeView, Progress, SpeechAudio, TurnResult } from "./types";
+import type { DrillResult, FinishResult, GateState, Help, Phrase, PracticeView, Progress, SpeechAudio, TurnResult, WordGuide } from "./types";
 
 /** Typed calls to our own API. Every failure becomes an ApiError with a Spanish message. */
 
@@ -65,6 +65,7 @@ export const api = {
     form.append("tzOffset", String(tzOffset()));
     return request<DrillResult>(`/api/phrases/${encodeURIComponent(phraseId)}/drill`, { method: "POST", body: form });
   },
+  pronounce: (text: string) => request<{ words: WordGuide[] }>("/api/pronounce", jsonInit("POST", { text })),
   help: (id: string) => request<Help>(`/api/practice/${encodeURIComponent(id)}/help`, jsonInit("POST", {})),
   finish: (id: string) =>
     request<FinishResult>(`/api/practice/${encodeURIComponent(id)}/finish`, jsonInit("POST", { tzOffset: tzOffset() })),

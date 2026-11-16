@@ -1,3 +1,4 @@
+import type { TimedWord } from "@/domain/clarity";
 import { AppError, fromPublikStatus } from "@/server/errors";
 import type { AiProvider, SpeechAudio, Tier } from "./provider";
 
@@ -50,18 +51,30 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): A
     return res;
   }
 
+  async function transcribeWith(audio: Blob, filename: string, timed: boolean): Promise<{ text: string; words: TimedWord[] }> {
+    const form = new FormData();
+    form.append("file", audio, filename);
+    form.append("model", opts.models.transcribe);
+    form.append("language", "en");
+    if (timed) {
+      form.append("response_format", "verbose_json");
+      form.append("timestamp_granularities[]", "word");
+    }
+    const res = await call("/audio/transcriptions", { method: "POST", headers: auth, body: form }, AUDIO_TIMEOUT_MS);
+    report(res, "transcribe", opts.models.transcribe);
+    const body = (await res.json().catch(() => ({}))) as { text?: unknown; words?: unknown };
+    const text = typeof body.text === "string" ? body.text.trim() : "";
+    if (!text) throw new AppError("transcription_empty");
+    return { text, words: parseTimedWords(body.words) };
+  }
+
   return {
     async transcribe(audio, filename) {
-      const form = new FormData();
-      form.append("file", audio, filename);
-      form.append("model", opts.models.transcribe);
-      form.append("language", "en");
-      const res = await call("/audio/transcriptions", { method: "POST", headers: auth, body: form }, AUDIO_TIMEOUT_MS);
-      report(res, "transcribe", opts.models.transcribe);
-      const body = (await res.json().catch(() => ({}))) as { text?: unknown };
-      const text = typeof body.text === "string" ? body.text.trim() : "";
-      if (!text) throw new AppError("transcription_empty");
-      return text;
+      return (await transcribeWith(audio, filename, false)).text;
+    },
+
+    async transcribeTimed(audio, filename) {
+      return transcribeWith(audio, filename, true);
     },
 
     async chat(messages, { tier, maxTokens }) {
@@ -103,4 +116,12 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions): A
       }
     },
   };
+}
+
+function parseTimedWords(raw: unknown): TimedWord[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((w) => {
+    const { word, start, end } = (w ?? {}) as { word?: unknown; start?: unknown; end?: unknown };
+    return typeof word === "string" && typeof start === "number" && typeof end === "number" ? [{ word, start, end }] : [];
+  });
 }

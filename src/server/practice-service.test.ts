@@ -199,7 +199,11 @@ describe("drillPhrase (Dilo tú)", () => {
     await finishPractice(ctx, ai, SID, practice.id, { tzOffset: 0 });
     return { ctx, phrase: ctx.store.listPhrases(SID)[0] };
   }
-  const saying = (text: string): AiProvider => ({ ...ai, transcribe: async () => text });
+  const saying = (text: string): AiProvider => ({
+    ...ai,
+    transcribe: async () => text,
+    transcribeTimed: async () => ({ text, words: text.split(/\s+/).map((word, i) => ({ word, start: i * 0.4, end: i * 0.4 + 0.35 })) }),
+  });
   const audio = new Blob([new Uint8Array(10)], { type: "audio/webm" });
 
   it("schedules new phrases for tomorrow and counts what is due", async () => {
@@ -214,6 +218,10 @@ describe("drillPhrase (Dilo tú)", () => {
     const { ctx, phrase } = await withPhrases();
     const out = await drillPhrase(ctx, saying(phrase.better), SID, phrase.id, { audio, tzOffset: 0 });
     expect(out).toMatchObject({ passed: true, score: 100, missing: [] });
+    expect(out.words.every((w) => w.status === "clear")).toBe(true);
+    expect(out.words.map((w) => w.text).join(" ")).toBe(phrase.better);
+    expect(out.pace?.wordsPerMinute).toBeGreaterThan(0);
+    expect(out.timings.length).toBe(phrase.better.split(/\s+/).length);
     expect(out.phrase).toMatchObject({ step: 1, dueDay: "2026-11-16", reviewedAt: null });
   });
 

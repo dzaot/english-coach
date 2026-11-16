@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, BookOpen, Check, Flame, Home, RotateCcw, Sparkles, Volume2 } from "lucide-react";
+import { getLevel } from "@/domain/levels";
 import { useSpeaker } from "@/lib/hooks/use-speaker";
 import { daysLabel } from "@/lib/format";
 import type { Feedback, Phrase, PracticeView, Streak } from "@/lib/types";
@@ -22,6 +23,7 @@ interface Props {
 
 export function FeedbackView({ practice, feedback, streak, phrases = [], onDrilled, onPracticeAgain, onHome }: Props) {
   const speaker = useSpeaker();
+  const tipsInSpanish = getLevel(practice.level).helpTranslation === "Spanish";
   return (
     <div className="animate-rise space-y-4">
       <TopBar title="Your feedback" onBack={onHome} />
@@ -68,10 +70,12 @@ export function FeedbackView({ practice, feedback, streak, phrases = [], onDrill
                 <span className="font-semibold">You said: </span>
                 <span lang="en" className="line-through decoration-muted/60">{p.original}</span>
               </p>
-              <p className="flex items-start gap-2 text-lg font-semibold">
-                <ArrowRight aria-hidden="true" className="mt-1.5 size-4 shrink-0 text-primary-ink" />
-                <span lang="en">{p.better}</span>
-              </p>
+              {saved ? null : (
+                <p className="flex items-start gap-2 text-lg font-semibold">
+                  <ArrowRight aria-hidden="true" className="mt-1.5 size-4 shrink-0 text-primary-ink" />
+                  <span lang="en">{p.better}</span>
+                </p>
+              )}
               <p className="text-sm text-muted">{p.why}</p>
               <button
                 type="button"
@@ -81,7 +85,7 @@ export function FeedbackView({ practice, feedback, streak, phrases = [], onDrill
                 <Volume2 aria-hidden="true" className="size-4" />
                 Hear how it sounds
               </button>
-              {saved ? <SayItButton phraseId={saved.id} onDrilled={onDrilled} /> : null}
+              {saved ? <SayItButton phraseId={saved.id} text={saved.better} tipsInSpanish={tipsInSpanish} onDrilled={onDrilled} /> : null}
             </Card>
             );
           })}

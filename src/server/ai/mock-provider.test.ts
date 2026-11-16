@@ -10,6 +10,12 @@ describe("mock provider", () => {
     expect(text.length).toBeGreaterThan(10);
   });
 
+  it("times each word of the answer for the sound coach", async () => {
+    const out = await ai.transcribeTimed(new Blob([new Uint8Array(10)]), "a.webm");
+    expect(out.words.length).toBe(out.text.split(/\s+/).length);
+    expect(out.words[1].start).toBeCloseTo(out.words[0].end);
+  });
+
   it("asks a follow-up question in the role-play", async () => {
     const reply = await ai.chat(
       [

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { getLevel } from "@/domain/levels";
 import type { IndustryId, ScenarioId } from "@/domain/scenarios";
 import { ApiError, api } from "@/lib/api";
 import { useGate } from "@/lib/hooks/use-gate";
@@ -171,7 +172,13 @@ export function CoachApp() {
       return (
         <>
           {banner}
-          <PhrasesView phrases={progress?.phrases ?? []} onToggle={(id, r) => void togglePhrase(id, r)} onDrilled={onDrilled} onBack={goHome} />
+          <PhrasesView
+            phrases={progress?.phrases ?? []}
+            onToggle={(id, r) => void togglePhrase(id, r)}
+            onDrilled={onDrilled}
+            tipsInSpanish={getLevel(prefs.level).helpTranslation === "Spanish"}
+            onBack={goHome}
+          />
         </>
       );
     case "history":

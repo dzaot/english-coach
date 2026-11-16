@@ -17,6 +17,22 @@ describe("OpenAI-compatible provider", () => {
     expect((calls[0].init?.headers as Record<string, string>).authorization).toBe("Bearer pk_test");
   });
 
+  it("transcribes with word timings for the sound coach", async () => {
+    const { fetch, calls } = fakeFetch({
+      "/audio/transcriptions": json({ text: " I agree. ", words: [{ word: "I", start: 0, end: 0.2 }, { word: "agree", start: 0.2, end: 0.7 }, { word: 3 }] }),
+    });
+    const out = await make(fetch).transcribeTimed(audio, "say.webm");
+    expect(out).toEqual({ text: "I agree.", words: [{ word: "I", start: 0, end: 0.2 }, { word: "agree", start: 0.2, end: 0.7 }] });
+    const body = calls[0].init?.body as FormData;
+    expect(body.get("response_format")).toBe("verbose_json");
+    expect(body.get("timestamp_granularities[]")).toBe("word");
+  });
+
+  it("returns no timings when the provider sends none", async () => {
+    const { fetch } = fakeFetch({ "/audio/transcriptions": json({ text: "I agree." }) });
+    expect(await make(fetch).transcribeTimed(audio, "say.webm")).toEqual({ text: "I agree.", words: [] });
+  });
+
   it("reports an empty transcription", async () => {
     const { fetch } = fakeFetch({ "/audio/transcriptions": json({ text: "  " }) });
     await expect(make(fetch).transcribe(audio, "a.webm")).rejects.toMatchObject({ code: "transcription_empty" });

@@ -59,10 +59,18 @@ const MOCK_HELP = JSON.stringify({
   tip: "Give one concrete number: it makes your answer more believable.",
 });
 
+/** Seconds per word in mock timings (about 150 words a minute). */
+const MOCK_WORD_SECONDS = 0.4;
+
 export function createMockProvider(): AiProvider {
   return {
     async transcribe(audio) {
       return SAMPLE_ANSWERS[audio.size % SAMPLE_ANSWERS.length];
+    },
+    async transcribeTimed(audio) {
+      const text = SAMPLE_ANSWERS[audio.size % SAMPLE_ANSWERS.length];
+      const words = text.split(/\s+/).map((word, i) => ({ word, start: i * MOCK_WORD_SECONDS, end: (i + 1) * MOCK_WORD_SECONDS }));
+      return { text, words };
     },
     async chat(messages) {
       const system = messages[0]?.content ?? "";
