@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BookmarkCheck, ChevronRight, History, Mic } from "lucide-react";
+import { BookmarkCheck, CalendarClock, ChevronRight, History, Mic } from "lucide-react";
 import { INDUSTRIES, SCENARIOS, type IndustryId, type ScenarioId } from "@/domain/scenarios";
 import type { Progress } from "@/lib/types";
 import { SCENARIO_ICONS } from "./scenario-meta";
@@ -33,6 +33,23 @@ export function HomeView({ progress, starting, onStart, onOpenPhrases, onOpenHis
       </header>
 
       {progress ? <StreakCard progress={progress} /> : null}
+
+      {progress && progress.dueToday > 0 ? (
+        <button
+          type="button"
+          onClick={onOpenPhrases}
+          className="flex w-full cursor-pointer items-center gap-3 rounded-3xl border-2 border-primary bg-primary-soft p-4 text-left transition duration-200 hover:brightness-105"
+        >
+          <CalendarClock aria-hidden="true" className="size-7 shrink-0 text-primary-ink" />
+          <span className="flex-1">
+            <span className="block font-bold">Repaso de hoy</span>
+            <span className="block text-sm">
+              {progress.dueToday === 1 ? "1 frase te espera" : `${progress.dueToday} frases te esperan`}. Dilas en voz alta en 1 minuto.
+            </span>
+          </span>
+          <ChevronRight aria-hidden="true" className="size-5" />
+        </button>
+      ) : null}
 
       <fieldset className="space-y-3">
         <legend className="mb-3 text-lg font-bold">1. ¿Qué quieres practicar?</legend>

@@ -3,7 +3,8 @@
 import { ArrowRight, BookOpen, Check, Flame, Home, RotateCcw, Sparkles, Volume2 } from "lucide-react";
 import { useSpeaker } from "@/lib/hooks/use-speaker";
 import { daysLabel } from "@/lib/format";
-import type { Feedback, PracticeView, Streak } from "@/lib/types";
+import type { Feedback, Phrase, PracticeView, Streak } from "@/lib/types";
+import { SayItButton } from "./say-it-button";
 import { ScoreRing } from "./score-ring";
 import { scenarioTitle } from "./scenario-meta";
 import { Button, Card, TopBar } from "./ui";
@@ -12,11 +13,14 @@ interface Props {
   practice: PracticeView;
   feedback: Feedback;
   streak: Streak | null;
+  /** Saved phrases of this practice, to say them out loud ("Dilo tú"). */
+  phrases?: readonly Phrase[];
+  onDrilled?: (phrase: Phrase) => void;
   onPracticeAgain: () => void;
   onHome: () => void;
 }
 
-export function FeedbackView({ practice, feedback, streak, onPracticeAgain, onHome }: Props) {
+export function FeedbackView({ practice, feedback, streak, phrases = [], onDrilled, onPracticeAgain, onHome }: Props) {
   const speaker = useSpeaker();
   return (
     <div className="animate-rise space-y-4">
@@ -56,7 +60,9 @@ export function FeedbackView({ practice, feedback, streak, onPracticeAgain, onHo
           <Sparkles aria-hidden="true" className="size-5 text-primary-ink" /> Dilo más natural
         </h2>
         <ol className="space-y-3">
-          {feedback.betterPhrases.map((p, i) => (
+          {feedback.betterPhrases.map((p, i) => {
+            const saved = phrases.find((x) => x.better === p.better);
+            return (
             <Card as="li" key={`${i}-${p.original}`} className="space-y-2">
               <p className="text-sm text-muted">
                 <span className="font-semibold">Dijiste: </span>
@@ -75,10 +81,12 @@ export function FeedbackView({ practice, feedback, streak, onPracticeAgain, onHo
                 <Volume2 aria-hidden="true" className="size-4" />
                 Escuchar cómo se dice
               </button>
+              {saved ? <SayItButton phraseId={saved.id} onDrilled={onDrilled} /> : null}
             </Card>
-          ))}
+            );
+          })}
         </ol>
-        <p className="text-sm text-muted">Guardamos estas frases en “Frases para repasar”.</p>
+        <p className="text-sm text-muted">Dilas en voz alta ahora. Mañana te las pedimos de nuevo en “Repaso de hoy”.</p>
       </section>
 
       {feedback.vocabulary.length > 0 ? (

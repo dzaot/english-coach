@@ -22,6 +22,19 @@ CREATE TABLE IF NOT EXISTS phrases (
 CREATE INDEX IF NOT EXISTS phrases_sid ON phrases(sid, created_at);
 `;
 
+/** Columns added after the first release, applied to older databases on open. */
+const PHRASE_MIGRATIONS: Record<string, string> = {
+  step: "ALTER TABLE phrases ADD COLUMN step INTEGER NOT NULL DEFAULT 0",
+  due_day: "ALTER TABLE phrases ADD COLUMN due_day TEXT",
+};
+
+function migrate(db: DatabaseSync): void {
+  const existing = new Set((db.prepare("PRAGMA table_info(phrases)").all() as Row[]).map((c) => String(c.name)));
+  for (const [column, sql] of Object.entries(PHRASE_MIGRATIONS)) {
+    if (!existing.has(column)) db.exec(sql);
+  }
+}
+
 type Row = Record<string, unknown>;
 const str = (v: unknown): string | null => (typeof v === "string" ? v : null);
 
@@ -63,6 +76,8 @@ function toPhrase(r: Row): PhraseRecord {
     whyEs: String(r.why_es),
     createdAt: String(r.created_at),
     reviewedAt: str(r.reviewed_at),
+    step: typeof r.step === "number" ? r.step : Number(r.step ?? 0),
+    dueDay: str(r.due_day),
   };
 }
 
@@ -80,6 +95,9 @@ export function createSqliteStore(path: string): Store {
   const db = new DatabaseSync(path);
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec(SCHEMA);
+  migrate(db);
+  const phraseRow = (sid: string, id: string) =>
+    db.prepare("SELECT * FROM phrases WHERE id = ? AND sid = ?").get(id, sid) as Row | undefined;
 
   const getUser = (sid: string) => db.prepare("SELECT * FROM users WHERE sid = ?").get(sid) as Row | undefined;
   const getPracticeRow = (sid: string, id: string) =>
@@ -138,16 +156,27 @@ export function createSqliteStore(path: string): Store {
         .all(sid) as Row[];
       return rows.map((r) => String(r.local_day));
     },
-    addPhrases(sid, practiceId, phrases, now) {
+    addPhrases(sid, practiceId, phrases, now, dueDay) {
       const insert = db.prepare(
-        "INSERT INTO phrases (id, sid, practice_id, original, better, why_es, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO phrases (id, sid, practice_id, original, better, why_es, created_at, due_day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       );
       const ids = phrases.map((p) => {
         const id = randomUUID();
-        insert.run(id, sid, practiceId, p.original, p.better, p.whyEs, now);
+        insert.run(id, sid, practiceId, p.original, p.better, p.whyEs, now, dueDay);
         return id;
       });
       return ids.map((id) => toPhrase(db.prepare("SELECT * FROM phrases WHERE id = ?").get(id) as Row));
+    },
+    getPhrase(sid, id) {
+      const row = phraseRow(sid, id);
+      return row ? toPhrase(row) : null;
+    },
+    schedulePhrase(sid, id, schedule) {
+      const result = db
+        .prepare("UPDATE phrases SET step = ?, due_day = ?, reviewed_at = ? WHERE id = ? AND sid = ?")
+        .run(schedule.step, schedule.dueDay, schedule.reviewedAt, id, sid);
+      if (Number(result.changes) === 0) return null;
+      return toPhrase(phraseRow(sid, id)!);
     },
     listPhrases(sid) {
       const rows = db.prepare("SELECT * FROM phrases WHERE sid = ? ORDER BY created_at DESC").all(sid) as Row[];

@@ -1,3 +1,7 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createSqliteStore } from "./sqlite-store";
 import type { Store } from "./store";
@@ -58,8 +62,15 @@ describe("SQLite store", () => {
   it("keeps phrases to review and marks them", () => {
     store.getOrCreateUser(SID, "t");
     const p = store.createPractice({ sid: SID, scenarioId: "client_call", industryId: "sales", startedAt: "t", turns: [] });
-    const [phrase] = store.addPhrases(SID, p.id, feedback.betterPhrases, "2026-11-15T10:08:00Z");
+    const [phrase] = store.addPhrases(SID, p.id, feedback.betterPhrases, "2026-11-15T10:08:00Z", "2026-11-16");
     expect(phrase.reviewedAt).toBeNull();
+    expect(phrase.step).toBe(0);
+    expect(phrase.dueDay).toBe("2026-11-16");
+    const scheduled = store.schedulePhrase(SID, phrase.id, { step: 1, dueDay: "2026-11-17", reviewedAt: null });
+    expect(scheduled).toMatchObject({ step: 1, dueDay: "2026-11-17", reviewedAt: null });
+    expect(store.schedulePhrase("other", phrase.id, { step: 2, dueDay: null, reviewedAt: "x" })).toBeNull();
+    expect(store.getPhrase(SID, phrase.id)?.step).toBe(1);
+    expect(store.getPhrase("other", phrase.id)).toBeNull();
     const marked = store.markPhrase(SID, phrase.id, true, "2026-11-16T09:00:00Z");
     expect(marked?.reviewedAt).toBe("2026-11-16T09:00:00Z");
     expect(store.markPhrase(SID, phrase.id, false, "x")?.reviewedAt).toBeNull();
@@ -69,5 +80,18 @@ describe("SQLite store", () => {
 
   it("returns null for a missing user update target", () => {
     expect(() => store.updateUser("ghost", { choice: "publik" })).toThrow(/not found/);
+  });
+});
+
+describe("SQLite store migration", () => {
+  it("adds the review columns to a database made by an older version", () => {
+    const path = join(mkdtempSync(join(tmpdir(), "dilo-")), "old.db");
+    const old = new DatabaseSync(path);
+    old.exec("CREATE TABLE phrases (id TEXT PRIMARY KEY, sid TEXT NOT NULL, practice_id TEXT NOT NULL, original TEXT NOT NULL, better TEXT NOT NULL, why_es TEXT NOT NULL, created_at TEXT NOT NULL, reviewed_at TEXT)");
+    old.exec("INSERT INTO phrases VALUES ('ph1', 's', 'p', 'a', 'b', 'c', 't', NULL)");
+    old.close();
+    const store = createSqliteStore(path);
+    expect(store.listPhrases("s")[0]).toMatchObject({ id: "ph1", step: 0, dueDay: null });
+    expect(createSqliteStore(path).listPhrases("s")).toHaveLength(1);
   });
 });

@@ -48,7 +48,12 @@ export interface PhraseRecord {
   readonly better: string;
   readonly whyEs: string;
   readonly createdAt: string;
+  /** Set when the phrase is learned (manually or after the last spaced review). */
   readonly reviewedAt: string | null;
+  /** Successful say-it reviews so far. */
+  readonly step: number;
+  /** Next review day ("YYYY-MM-DD") in the user's time zone, or null. */
+  readonly dueDay: string | null;
 }
 
 export interface Store {
@@ -69,7 +74,10 @@ export interface Store {
     practiceId: string,
     phrases: readonly { original: string; better: string; whyEs: string }[],
     now: string,
+    dueDay: string,
   ): PhraseRecord[];
+  getPhrase(sid: string, id: string): PhraseRecord | null;
+  schedulePhrase(sid: string, id: string, schedule: { step: number; dueDay: string | null; reviewedAt: string | null }): PhraseRecord | null;
   listPhrases(sid: string): PhraseRecord[];
   markPhrase(sid: string, id: string, reviewed: boolean, now: string): PhraseRecord | null;
 }
