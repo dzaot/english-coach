@@ -17,21 +17,24 @@ export function PartnerPicker({ avatarId, onChange }: { avatarId: AvatarId; onCh
   return (
     <fieldset>
       <legend className="mb-3 font-display text-lg font-bold">{t.home.yourPartner}</legend>
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      {/* Always two columns: four squeezed the cards until the last one overflowed. */}
+      <div className="grid grid-cols-2 gap-2.5">
         {AVATARS.map((a) => {
           const checked = a.id === avatarId;
           return (
             <label
               key={a.id}
-              className={`relative flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 p-3 text-center transition duration-200 ${FOCUS_WITHIN} ${card(checked)}`}
+              className={`flex min-w-0 cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 p-3 text-center transition duration-200 ${FOCUS_WITHIN} ${card(checked)}`}
             >
               <input type="radio" name="avatar" value={a.id} checked={checked} onChange={() => onChange(a.id)} className="sr-only" />
-              {checked ? (
-                <span className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full bg-primary text-on-primary">
-                  <Check aria-hidden="true" className="size-4" strokeWidth={3} />
-                </span>
-              ) : null}
-              <AvatarPortrait avatar={a} size={72} />
+              <span className="relative">
+                <AvatarPortrait avatar={a} size={72} />
+                {checked ? (
+                  <span className="absolute -bottom-0.5 -right-0.5 z-10 flex size-6 items-center justify-center rounded-full bg-primary text-on-primary ring-2 ring-surface">
+                    <Check aria-hidden="true" className="size-4" strokeWidth={3} />
+                  </span>
+                ) : null}
+              </span>
               <span>
                 <span className="block font-semibold">{a.name}</span>
                 <span className="block text-xs text-muted">{t.avatars[a.id].vibe}</span>
