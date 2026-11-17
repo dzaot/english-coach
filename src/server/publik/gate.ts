@@ -125,6 +125,17 @@ export async function resolveAi(ctx: AppContext, sid: string): Promise<AiProvide
   return user.choice === "own_key" ? ownKeyProvider(key, ctx.fetch) : publikProvider(config, key, ctx.fetch);
 }
 
+/**
+ * For routes that save what a person tells us: only someone who signed in with publik and chose how to pay.
+ * A stranger is refused before publik is called, so this never creates an install for them.
+ */
+export async function requireSignedIn(ctx: AppContext, sid: string): Promise<void> {
+  if (!ctx.config.gateEnabled) return;
+  const user = await ctx.store.getOrCreateUser(sid, ctx.now().toISOString());
+  if (!user.choice || !user.installKeySealed) throw new AppError("gate_required");
+  if ((await getGateState(ctx, sid)).state !== "ready") throw new AppError("gate_required");
+}
+
 const MIN_INTERVAL_MS: Record<TelemetryEvent, number> = { app_opened: 60_000, active_session: 25 * 60_000 };
 const lastSent = new Map<string, number>();
 

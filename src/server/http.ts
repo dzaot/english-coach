@@ -7,9 +7,13 @@ import { readSession, sessionCookieHeader } from "./session";
 
 const AI_CALLS_PER_MINUTE = 20;
 const aiLimiter = createRateLimiter({ limit: AI_CALLS_PER_MINUTE, windowMs: 60_000 });
+/** Answers a person saves about themselves (the onboarding): a handful is plenty. */
+const SAVES_PER_MINUTE = 10;
+const saveLimiter = createRateLimiter({ limit: SAVES_PER_MINUTE, windowMs: 60_000 });
 
 export function resetRateLimits(): void {
   aiLimiter.reset();
+  saveLimiter.reset();
 }
 
 export interface HandlerArgs {
@@ -55,14 +59,16 @@ function streamResponse(stream: EventStream): Response {
 export async function handle(
   request: Request,
   fn: (args: HandlerArgs) => Promise<unknown>,
-  opts: { usesAi?: boolean } = {},
+  opts: { usesAi?: boolean; savesAnswers?: boolean } = {},
 ): Promise<Response> {
   const session = readSession(request);
   let res: Response;
   try {
     if (isCrossSiteWrite(request)) throw new AppError("forbidden", { detail: "cross-site request" });
     const ctx = getContext();
-    if (opts.usesAi && !aiLimiter.allow(session.sid, ctx.now().getTime())) throw new AppError("ai_rate_limited");
+    const nowMs = ctx.now().getTime();
+    if (opts.usesAi && !aiLimiter.allow(session.sid, nowMs)) throw new AppError("ai_rate_limited");
+    if (opts.savesAnswers && !saveLimiter.allow(session.sid, nowMs)) throw new AppError("ai_rate_limited");
     const out = await fn({ ctx, sid: session.sid });
     res = out instanceof EventStream ? streamResponse(out) : Response.json(out);
   } catch (e) {
