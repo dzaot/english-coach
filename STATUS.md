@@ -7,6 +7,8 @@
 > - Abre con **Sign in with publik**. Sin sesión, la práctica responde `gate_required`.
 > - El token de la app (`PUBLIK_APP_TOKEN`) solo está en Vercel; publik respondió `installs: 201`.
 
+> **Auditoría (2026-11-16, noche):** un agente revisó toda la app como usuario y crítico (`AUDITORIA-2026-11-16.md`): 1 crítico, 10 altos, 17 medios, 20 bajos. El crítico y los 10 altos quedaron arreglados en el commit `a484ac2` (la voz en iPhone falta verificarla en un teléfono). Quedan medios y bajos.
+
 > **Idiomas (2026-11-16, noche):** la interfaz está en inglés, español, portugués, francés, italiano y alemán.
 > - Un botón arriba (en el inicio y en la pantalla de publik) cambia el idioma. La primera vez se usa el del navegador, y la elección se guarda en el navegador.
 > - La conversación sigue en inglés, que es lo que se practica.
