@@ -8,7 +8,7 @@ import { useI18n } from "@/i18n/provider";
 
 const PART_CLASS: Record<DiffPart["op"], string> = {
   same: "text-accent-ink",
-  del: "rounded-sm bg-error-soft text-error line-through decoration-2",
+  del: "rounded-sm bg-error-soft px-px text-error line-through decoration-2",
   add: "rounded-sm bg-sun px-px text-on-sun underline decoration-2 underline-offset-2",
 };
 
@@ -41,7 +41,7 @@ export function LetterDiff({ said, better, className = "" }: { said: string; bet
 export function DiffLegend() {
   const { t } = useI18n();
   return (
-    <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-muted">
+    <p className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-semibold text-muted">
       <span>
         <span className={PART_CLASS.same}>{t.check.legendGreen}</span> {t.check.legendGreenText}
       </span>

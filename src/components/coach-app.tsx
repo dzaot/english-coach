@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { getLevel, translationLocale } from "@/domain/levels";
-import type { IndustryId, ScenarioId } from "@/domain/scenarios";
+import { GOAL_SCENARIO, type OnboardingAnswers } from "@/domain/onboarding";
+import { OTHER_INDUSTRY, type IndustryId, type ScenarioId } from "@/domain/scenarios";
 import { ApiError, api } from "@/lib/api";
 import { useGate } from "@/lib/hooks/use-gate";
 import { usePreferences } from "@/lib/hooks/use-preferences";
@@ -14,6 +15,7 @@ import { FeedbackView } from "./feedback-view";
 import { GatePanel } from "./gate-panel";
 import { HistoryView } from "./history-view";
 import { HomeView } from "./home-view";
+import { OnboardingView } from "./onboarding/onboarding-view";
 import { PhrasesView } from "./phrases-view";
 import { PracticeView } from "./practice-view";
 import { ErrorBanner, Spinner } from "./ui";
@@ -42,12 +44,13 @@ export function CoachApp() {
 
   const { t, locale } = useI18n();
   const prefs = usePreferences();
-  const { level, avatarId } = prefs;
+  const { level, avatarId, industryOther } = prefs;
   const [view, setView] = useState<View>({ name: "home" });
   const [progress, setProgress] = useState<Progress | null>(null);
   /** What the person typed for their last practice, to repeat it exactly (the stored context may hold a link summary). */
   const [lastChoice, setLastChoice] = useState<{ practiceId: string; context: string } | null>(null);
   const [starting, setStarting] = useState(false);
+  const [firstCall, setFirstCall] = useState<{ scenarioId: ScenarioId; industryId: IndustryId } | null>(null);
   const startingRef = useRef(false);
   const [error, setError] = useState<ShownError | null>(null);
 
@@ -88,7 +91,8 @@ export function CoachApp() {
     setStarting(true);
     setError(null);
     try {
-      const { practice, audio, notice } = await api.start({ scenarioId, industryId, level, avatarId, locale, ...(context ? { context } : {}) });
+      const ownField = industryId === OTHER_INDUSTRY && industryOther.trim() ? { industryOther: industryOther.trim() } : {};
+      const { practice, audio, notice } = await api.start({ scenarioId, industryId, level, avatarId, locale, ...ownField, ...(context ? { context } : {}) });
       setLastChoice({ practiceId: practice.id, context });
       setView({ name: "practice", practice, audio, notice: notice ?? null });
     } catch (e) {
@@ -98,7 +102,7 @@ export function CoachApp() {
       startingRef.current = false;
       setStarting(false);
     }
-  }, [avatarId, level, locale]);
+  }, [avatarId, industryOther, level, locale]);
 
   const openPractice = useCallback(async (id: string) => {
     setError(null);
@@ -109,6 +113,33 @@ export function CoachApp() {
       setError(toShown(e));
     }
   }, []);
+
+  /** The first-run answers set up the app and are saved to learn what people need. Saving never blocks the person. */
+  const finishOnboarding = useCallback(
+    (answers: OnboardingAnswers, startNow: boolean) => {
+      const scenarioId = answers.goal ? GOAL_SCENARIO[answers.goal] : prefs.scenarioId;
+      const industryId = answers.industryId ?? prefs.industryId;
+      prefs.update({
+        onboarded: true,
+        scenarioId,
+        industryId,
+        industryOther: answers.industryOther,
+        ...(answers.level ? { level: answers.level } : {}),
+        ...(answers.avatarId ? { avatarId: answers.avatarId } : {}),
+      });
+      api.onboarding(answers).catch(() => undefined); // their setup is already applied; the survey copy is best effort
+      if (startNow) setFirstCall({ scenarioId, industryId });
+    },
+    [prefs],
+  );
+
+  // Start the first call once the new setup (level, partner, field) is in place.
+  useEffect(() => {
+    if (!firstCall || !prefs.onboarded) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- consumes the one-shot request made by the first-run screen
+    setFirstCall(null);
+    void start(firstCall.scenarioId, firstCall.industryId);
+  }, [firstCall, prefs.onboarded, start]);
 
   const onDrilled = useCallback((phrase: Phrase) => {
     setProgress((p) => (p ? replacePhrase(p, phrase) : p));
@@ -125,7 +156,7 @@ export function CoachApp() {
 
   if (!gate.state) {
     return gate.error ? (
-      <div className="flex flex-1 flex-col justify-center gap-6">
+      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center gap-6">
         <div className="flex items-center justify-between gap-2">
           <BrandMark />
           <LanguageMenu />
@@ -139,6 +170,7 @@ export function CoachApp() {
 
   if (gate.state.state === "screen") {
     return (
+      <Narrow>
       <GatePanel
         gate={gate.state}
         error={gate.error}
@@ -150,6 +182,15 @@ export function CoachApp() {
         onConnect={() => void gate.act({ action: "connect" })}
         onOwnKey={(key) => gate.act({ action: "own_key", key })}
       />
+      </Narrow>
+    );
+  }
+
+  if (!prefs.onboarded) {
+    return (
+      <Narrow>
+        <OnboardingView initial={{ level, avatarId }} onFinish={finishOnboarding} />
+      </Narrow>
     );
   }
 
@@ -160,6 +201,7 @@ export function CoachApp() {
   switch (view.name) {
     case "practice":
       return (
+        <Narrow>
         <PracticeView
           key={view.practice.id}
           initial={view.practice}
@@ -171,9 +213,11 @@ export function CoachApp() {
             void loadProgress();
           }}
         />
+        </Narrow>
       );
     case "feedback":
       return (
+        <Narrow>
         <FeedbackView
           practice={view.practice}
           feedback={view.feedback}
@@ -191,11 +235,12 @@ export function CoachApp() {
             )
           }
         />
+        </Narrow>
       );
     case "phrases":
       return (
-        <>
-          {banner}
+        <Narrow>
+          {banner ? <div className="mb-4">{banner}</div> : null}
           <PhrasesView
             phrases={progress?.phrases ?? []}
             onToggle={(id, r) => void togglePhrase(id, r)}
@@ -203,26 +248,33 @@ export function CoachApp() {
             tipsLocale={translationLocale(getLevel(prefs.level), locale)}
             onBack={goHome}
           />
-        </>
+        </Narrow>
       );
     case "history":
       return (
-        <>
-          {banner}
+        <Narrow>
+          {banner ? <div className="mb-4">{banner}</div> : null}
           <HistoryView history={progress?.history ?? []} onOpen={(id) => void openPractice(id)} onBack={goHome} />
-        </>
+        </Narrow>
       );
     default:
       return (
         <>
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <BrandMark compact />
-            <LanguageMenu />
-          </div>
-          {mode.mode === "demo" ? (
-            <p className="mb-2 inline-flex rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-muted">{t.app.demoMode}</p>
-          ) : null}
           <HomeView
+            top={
+              <>
+                <div className="flex items-center justify-between gap-3">
+                  <BrandMark compact tone="stage" />
+                  <LanguageMenu tone="stage" />
+                </div>
+                {mode.mode === "demo" ? (
+                  <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-stage-soft px-3 py-1 text-sm font-semibold">
+                    <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-night" />
+                    {t.app.demoMode}
+                  </p>
+                ) : null}
+              </>
+            }
             startError={banner}
             lowBalanceUrl={lowBalance}
             showPrice={mode.mode === "publik"}
@@ -231,6 +283,9 @@ export function CoachApp() {
             level={level}
             avatarId={avatarId}
             onChangePrefs={prefs.update}
+            initialScenarioId={prefs.scenarioId}
+            initialIndustryId={prefs.industryId}
+            initialIndustryOther={prefs.industryOther}
             onStart={(s, i, c) => void start(s, i, c)}
             onOpenPhrases={() => setView({ name: "phrases" })}
             onOpenHistory={() => setView({ name: "history" })}
@@ -241,18 +296,34 @@ export function CoachApp() {
   }
 }
 
+/** Every screen but the home is one phone-wide column, centered on larger screens. */
+function Narrow({ children }: { children: ReactNode }) {
+  return <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">{children}</div>;
+}
+
 function AppFooter({ mode, usedPercent, onChangePayment }: { mode: "demo" | "publik" | "own_key"; usedPercent: number | null; onChangePayment: () => void }) {
   const { t } = useI18n();
   return (
-    <footer className="mt-8 space-y-2 border-t border-border pt-4 text-sm text-muted">
-      {usedPercent !== null ? <p className="tabular">{t.app.usedPlan(usedPercent)}</p> : null}
-      {mode !== "demo" ? (
-        <button type="button" onClick={onChangePayment} className="min-h-11 cursor-pointer font-semibold text-ink underline underline-offset-4">
-          {t.app.changePayment}
-        </button>
-      ) : null}
-      <p>
-        {t.app.footer}
+    <footer className="mt-14 text-sm text-muted">
+      <div className="divider-dashed space-y-3 pt-6">
+        {usedPercent !== null ? (
+          <div>
+            <p className="tabular">{t.app.usedPlan(usedPercent)}</p>
+            <div aria-hidden="true" className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.max(0, usedPercent))}%` }} />
+            </div>
+          </div>
+        ) : null}
+        {mode !== "demo" ? (
+          <button type="button" onClick={onChangePayment} className="min-h-11 cursor-pointer font-semibold text-ink underline underline-offset-4">
+            {t.app.changePayment}
+          </button>
+        ) : null}
+        <p className="max-w-[52ch]">{t.app.footer}</p>
+      </div>
+      {/* The wordmark as a watermark: the last thing on the page, barely there. */}
+      <p aria-hidden="true" className="display mt-8 select-none text-[5.5rem] font-black text-surface-2 sm:text-[7rem]">
+        dilo
       </p>
     </footer>
   );

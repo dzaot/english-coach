@@ -1,4 +1,5 @@
 import { runtimeMessages } from "@/i18n/messages";
+import type { OnboardingAnswers } from "@/domain/onboarding";
 import type { DrillResult, FinishResult, GateState, Help, Phrase, PracticeView, Progress, SpeechAudio, TurnEvent, TurnResult, WordGuide } from "./types";
 
 /** Typed calls to our own API. Every failure becomes an ApiError with a Spanish message. */
@@ -83,6 +84,8 @@ const jsonInit = (method: string, body: unknown): RequestInit => ({
   body: JSON.stringify(body),
 });
 
+export type { OnboardingAnswers };
+
 export const tzOffset = (): number => new Date().getTimezoneOffset();
 
 export const api = {
@@ -91,7 +94,7 @@ export const api = {
     request<GateState>("/api/gate", jsonInit("POST", body)),
   telemetry: (event: "app_opened" | "active_session") =>
     request<{ result: string }>("/api/telemetry", jsonInit("POST", { event })),
-  start: (choice: { scenarioId: string; industryId: string; level: string; avatarId: string; context?: string; locale?: string }) =>
+  start: (choice: { scenarioId: string; industryId: string; level: string; avatarId: string; context?: string; locale?: string; industryOther?: string }) =>
     request<{ practice: PracticeView; audio: SpeechAudio | null; notice?: "link_unreadable" | null }>("/api/practice", jsonInit("POST", choice)),
   getPractice: (id: string) => request<{ practice: PracticeView }>(`/api/practice/${encodeURIComponent(id)}`),
   /** One answer, streamed: your words, the marks, the reply and its voice arrive as separate events. */
@@ -115,8 +118,9 @@ export const api = {
   },
   pronounce: (text: string) => request<{ words: WordGuide[] }>("/api/pronounce", jsonInit("POST", { text })),
   help: (id: string) => request<Help>(`/api/practice/${encodeURIComponent(id)}/help`, jsonInit("POST", {})),
-  finish: (id: string) =>
-    request<FinishResult>(`/api/practice/${encodeURIComponent(id)}/finish`, jsonInit("POST", { tzOffset: tzOffset() })),
+  finish: (id: string, powerPhraseId?: string) =>
+    request<FinishResult>(`/api/practice/${encodeURIComponent(id)}/finish`, jsonInit("POST", { tzOffset: tzOffset(), ...(powerPhraseId ? { powerPhraseId } : {}) })),
+  onboarding: (answers: OnboardingAnswers) => request<{ saved: boolean; completed: boolean }>("/api/onboarding", jsonInit("POST", answers)),
   progress: () => request<Progress>(`/api/progress?tz=${tzOffset()}`),
   markPhrase: (id: string, reviewed: boolean) =>
     request<{ phrase: Phrase }>(`/api/phrases/${encodeURIComponent(id)}`, jsonInit("PATCH", { reviewed })),

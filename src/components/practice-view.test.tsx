@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, api } from "@/lib/api";
 import { installAudioStub, installRecorderStub, installSpeechStub } from "@/test/browser-stubs";
 import { finishResult, practice } from "@/test/fixtures";
+import { phraseOfTheDay } from "@/domain/power-phrases";
+import { localToday } from "@/lib/progress";
 import { PracticeView } from "./practice-view";
 
 vi.mock("@/lib/api", async (orig) => {
@@ -73,6 +75,8 @@ describe("PracticeView", () => {
     mocked.turn.mockResolvedValueOnce({ userText: "hi", replyText: "question 0?", check: null, audio: null, practice: afterTurns(1) });
     render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /Type/ }));
+    // Opening the typed answer puts the cursor in it.
+    expect(screen.getByLabelText("Your answer in English")).toHaveFocus();
     await userEvent.type(screen.getByLabelText("Your answer in English"), "hi");
     await userEvent.click(screen.getByRole("button", { name: /Send/ }));
     await waitFor(() => expect(mocked.speech).toHaveBeenCalledWith("p1", 2));
@@ -253,5 +257,50 @@ describe("PracticeView", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Listen" })[0]);
     await userEvent.click(screen.getByRole("button", { name: "Leave the practice" }));
     expect(onExit).toHaveBeenCalled();
+  });
+
+  it("offers a way to answer by itself after a silence, once per question, and stays quiet if it fails", async () => {
+    mocked.help.mockResolvedValueOnce({ translation: "Háblame de ti.", suggestion: "I'm a sales rep.", tip: "Empieza por tu rol." });
+    render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} autoHelpAfterMs={30} />);
+    expect(await screen.findByText("Take your time. Here is one way to answer.")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Help to answer" })).toHaveTextContent("I'm a sales rep.");
+    // Closing it does not bring it back for the same question.
+    await userEvent.click(screen.getByRole("button", { name: "Close help" }));
+    await new Promise((r) => setTimeout(r, 80));
+    expect(mocked.help).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    mocked.help.mockClear();
+    mocked.help.mockRejectedValueOnce(new ApiError("help_invalid", "No pudimos preparar una ayuda."));
+    render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} autoHelpAfterMs={30} />);
+    await waitFor(() => expect(mocked.help).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("does not interrupt someone who has started to answer", async () => {
+    render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} autoHelpAfterMs={60} />);
+    await userEvent.click(screen.getByRole("button", { name: /Type/ }));
+    await userEvent.type(screen.getByLabelText("Your answer in English"), "I");
+    await new Promise((r) => setTimeout(r, 120));
+    expect(mocked.help).not.toHaveBeenCalled();
+  });
+
+  it("shows the phrase of the day, marks the answer that uses it and sends it with the finish", async () => {
+    const phrase = phraseOfTheDay(localToday());
+    const turns = [
+      { role: "counterpart" as const, text: "Tell me about yourself." },
+      { role: "user" as const, text: phrase.example },
+      { role: "counterpart" as const, text: "Go on." },
+      { role: "user" as const, text: "That is all." },
+      { role: "counterpart" as const, text: "Thanks." },
+    ];
+    mocked.finish.mockResolvedValueOnce(finishResult);
+    const onFinished = vi.fn();
+    render(<PracticeView initial={practice({ turns, canFinish: true })} initialAudio={null} onFinished={onFinished} onExit={vi.fn()} />);
+    expect(screen.getByText(`Phrase of the day: ${phrase.phrase}`)).toBeInTheDocument();
+    expect(screen.getAllByText("You used the phrase of the day")).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: /Finish and see my feedback/ }));
+    expect(mocked.finish).toHaveBeenCalledWith("p1", phrase.id);
+    await waitFor(() => expect(onFinished).toHaveBeenCalledWith(finishResult));
   });
 });

@@ -7,6 +7,27 @@
 > - Abre con **Sign in with publik**. Sin sesión, la práctica responde `gate_required`.
 > - El token de la app (`PUBLIK_APP_TOKEN`) solo está en Vercel; publik respondió `installs: 201`.
 
+> **Onboarding, confianza y compartir (2026-11-16, noche), sin desplegar y sin commit:** pedido por David tras ver la marca nueva.
+> - **Onboarding de primera vez (9 pantallas),** después de Sign in with publik: bienvenida con selector de idioma, para qué necesitas el inglés, qué te frena (varias), cuánta confianza sientes hoy (1 a 5), cómo te ayuda Dilo con lo que marcaste, área de trabajo, nivel, compañero y "tu primera llamada está lista". Se puede saltar en cualquier pantalla. Deja preajustados escenario, área, nivel y compañero.
+> - **Las respuestas se guardan** en la tabla `onboarding` (una fila por sesión de navegador, sin nombre ni correo): idioma, objetivo, frenos, confianza inicial, área (y el texto de "Other"), nivel, compañero y si lo terminó. Ruta `POST /api/onboarding`. Para leerlas en Turso: `SELECT goal, pains, confidence, industry_id, industry_other, level, locale, completed, created_at FROM onboarding ORDER BY created_at DESC;`
+> - **Más áreas:** hoteles y restaurantes, finanzas, educación, logística, marketing y "Other" con texto libre (llega a la IA dentro del contexto de la práctica).
+> - **Selector de idioma con banderas** (lista propia, ya no el menú nativo). Español usa la bandera de España y portugués la de Brasil: se cambian en `src/components/brand/flags.tsx`.
+> - **"US coworker" cambió** a "native English speaker" en los 6 idiomas.
+> - **Llamada como videollamada:** la foto ocupa todo el ancho, con nombre y rol encima, tu propio recuadro en la esquina (se pone lima y sigue tu volumen) y marco blanco cuando habla el otro. Las fotos miden 480 px: en teléfonos grandes se ven algo suaves; convendría regenerarlas a 1024 px.
+> - **Ayuda automática:** si pasan 12 s en tu turno sin grabar ni escribir, aparece sola una forma de responder (una vez por pregunta). Cuesta lo mismo que tocar Help me (unos $0,0002).
+> - **Frase del día:** 21 frases de trabajo que suenan seguras, una por día. Aparece en el inicio y en la llamada; si la usas, el puntaje sube 5 puntos (lo suma el servidor al terminar) y lo dice el feedback. Los significados están solo en inglés.
+> - **Compartir:** botón en el inicio y en el feedback, abre la hoja de compartir del teléfono (o copia el enlace) con https://publikhq.com/dilo.
+> - 398 tests, 96,8% de líneas; lint, tipos y build pasan. Revisado en el navegador en modo demo a 375 px: onboarding completo, inicio, selector de idioma y llamada. **Falta:** verlo en un teléfono real, probar la hoja de compartir en un teléfono, revisar los textos nuevos de portugués, francés, italiano y alemán con un nativo, y desplegar.
+
+> **Marca nueva y rediseño (2026-11-16, noche), sin desplegar y sin commit:** dos vueltas. La primera (tema nocturno con vidrio y brillo naranja) no le gustó a David: neutral, fuentes flojas, etiquetas en mayúsculas y brillo "vibe codeado". La segunda es la que queda.
+> - **Marca "tres voces":** color plano en bloques, sin degradados ni desenfoque. Naranja `#FF5A1F` (tú), cobalto `#2B4BFF` (tu colega), lima `#C8F542` (lo dijiste bien), sobre tinta. Reglas en `BRAND.md`, secciones 3 a 5.
+> - **Tipografía:** Unbounded para títulos, nombres y números; Geist para el texto. Nada en mayúsculas.
+> - **Iconografía propia:** 17 stickers con borde troquelado (`src/components/brand/stickers.tsx`) y las barras de voz como recurso gráfico. Logo plano nuevo y favicon.
+> - **Página de marca:** `/brand` muestra logo, colores, tipos, stickers y barras.
+> - **App:** el inicio abre en naranja, la llamada en cobalto (barras de voz detrás del colega, subtítulos con la palabra en lima) y el feedback en lima. La llamada ya abre arriba, en el colega, y el campo de texto recibe el foco al abrirlo.
+> - No cambió ningún texto, flujo ni llamada a la IA. 375 tests, 96,6% de líneas; lint, tipos y build pasan.
+> - Revisado en el navegador en modo demo a 375 px (inicio en inglés, español y alemán, llamada, respuesta escrita, feedback) y el inicio a 1280 px. **Falta:** verlo en un teléfono real, la pantalla de Sign in with publik, frases e historial con la marca nueva, portugués, francés e italiano, y desplegar.
+
 > **Auditoría (2026-11-16, noche):** un agente revisó toda la app como usuario y crítico (`AUDITORIA-2026-11-16.md`): 1 crítico, 10 altos, 17 medios, 20 bajos. El crítico y los 10 altos quedaron arreglados en el commit `a484ac2` (la voz en iPhone falta verificarla en un teléfono). Quedan medios y bajos.
 
 > **Idiomas (2026-11-16, noche):** la interfaz está en inglés, español, portugués, francés, italiano y alemán.

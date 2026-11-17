@@ -33,6 +33,18 @@ describe("startPractice", () => {
     await expect(startPractice(ctx, ai, SID, { scenarioId: "team_meeting", industryId: "tech", level: "expert" })).rejects.toMatchObject({ code: "invalid_input" });
   });
 
+  it("carries the person's own field of work into the practice when the industry is Other", async () => {
+    const ctx = testContext();
+    const own = await startPractice(ctx, ai, SID, { scenarioId: "team_meeting", industryId: "other", industryOther: "  Nursing  " });
+    expect(own.practice.context).toBe("My field of work: Nursing.");
+    const withNotes = await startPractice(ctx, ai, SID, { scenarioId: "team_meeting", industryId: "other", industryOther: "Law", context: "Weekly case review." });
+    expect(withNotes.practice.context).toBe("My field of work: Law.\nWeekly case review.");
+    // A field only counts for Other, and a very long one is rejected at the door.
+    const preset = await startPractice(ctx, ai, SID, { scenarioId: "team_meeting", industryId: "sales", industryOther: "Law" });
+    expect(preset.practice.context).toBeNull();
+    await expect(startPractice(ctx, ai, SID, { scenarioId: "team_meeting", industryId: "other", industryOther: "x".repeat(61) })).rejects.toMatchObject({ code: "invalid_input" });
+  });
+
   it("rejects unknown scenarios", async () => {
     await expect(startPractice(testContext(), ai, SID, { scenarioId: "karaoke", industryId: "sales" })).rejects.toMatchObject({ code: "invalid_input" });
   });
@@ -79,6 +91,27 @@ describe("takeTurn", () => {
 });
 
 describe("finishPractice", () => {
+  it("adds bonus points when the phrase of the day was used, and none otherwise", async () => {
+    const plain = await started();
+    await takeTurn(plain.ctx, ai, SID, plain.practice.id, { text: "I have five years in sales." });
+    await takeTurn(plain.ctx, ai, SID, plain.practice.id, { text: "I am agree with the plan." });
+    const base = await finishPractice(plain.ctx, ai, SID, plain.practice.id, { tzOffset: 480, powerPhraseId: "follow_up" });
+    expect(base.feedback.bonus).toBeUndefined();
+
+    const bonus = await started();
+    await takeTurn(bonus.ctx, ai, SID, bonus.practice.id, { text: "I have five years in sales." });
+    await takeTurn(bonus.ctx, ai, SID, bonus.practice.id, { text: "I always followed up with every client." });
+    const out = await finishPractice(bonus.ctx, ai, SID, bonus.practice.id, { tzOffset: 480, powerPhraseId: "follow_up" });
+    expect(out.feedback.bonus).toEqual({ phrase: "follow up", points: 5 });
+    expect(out.feedback.score).toBe(Math.min(100, base.feedback.score + 5));
+    expect(out.practice.score).toBe(out.feedback.score);
+    // An unknown phrase id is ignored, not an error.
+    const unknown = await started();
+    await takeTurn(unknown.ctx, ai, SID, unknown.practice.id, { text: "I followed up." });
+    await takeTurn(unknown.ctx, ai, SID, unknown.practice.id, { text: "Yes." });
+    expect((await finishPractice(unknown.ctx, ai, SID, unknown.practice.id, { tzOffset: 480, powerPhraseId: "made_up" })).feedback.bonus).toBeUndefined();
+  });
+
   it("needs two answers", async () => {
     const { ctx, practice } = await started();
     await expect(finishPractice(ctx, ai, SID, practice.id, { tzOffset: 480 })).rejects.toMatchObject({ code: "not_enough_turns" });

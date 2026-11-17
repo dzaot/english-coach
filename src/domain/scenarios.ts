@@ -19,6 +19,12 @@ export const INDUSTRY_IDS = [
   "healthcare_admin",
   "construction",
   "tech",
+  "hospitality",
+  "finance",
+  "education",
+  "logistics",
+  "marketing",
+  "other",
 ] as const;
 export type IndustryId = (typeof INDUSTRY_IDS)[number];
 
@@ -109,7 +115,33 @@ export const INDUSTRIES: readonly Industry[] = [
     contextEn: "a construction company: crews, schedules, safety, change orders",
   },
   { id: "tech", label: "Tech", roleEn: "software developer", contextEn: "a software product team with sprints" },
+  { id: "hospitality", label: "Hospitality", roleEn: "hotel and restaurant supervisor", contextEn: "a hotel or restaurant: guests, shifts, bookings, complaints" },
+  { id: "finance", label: "Finance", roleEn: "accounting and finance analyst", contextEn: "a finance team: budgets, invoices, month-end close, audits" },
+  { id: "education", label: "Education", roleEn: "teacher", contextEn: "a school: classes, parents, lesson plans, staff meetings" },
+  { id: "logistics", label: "Logistics", roleEn: "logistics coordinator", contextEn: "a warehouse and delivery operation: shipments, inventory, routes, delays" },
+  { id: "marketing", label: "Marketing", roleEn: "marketing specialist", contextEn: "a marketing team: campaigns, content, budgets, results" },
+  // The person names their own field; it reaches the prompts through the practice's context.
+  { id: "other", label: "Other", roleEn: "this position", contextEn: "the field of work the user describes" },
 ];
+
+/** The person's own field, when none of the presets fits. */
+export const OTHER_INDUSTRY: IndustryId = "other";
+export const MAX_INDUSTRY_OTHER = 60;
+const FIELD_PREFIX = "My field of work: ";
+
+/** The person's own field, read back from a practice's context (for labels). */
+export function ownFieldOf(context: string | null | undefined): string | null {
+  if (!context?.startsWith(FIELD_PREFIX)) return null;
+  const name = context.slice(FIELD_PREFIX.length).split("\n")[0].replace(/\.$/, "").trim();
+  return name || null;
+}
+
+/** Adds the person's own field to what they told us, once, so every prompt of the practice knows it. */
+export function withOwnField(context: string, field: string): string {
+  const name = field.trim().replace(/\s+/g, " ").slice(0, MAX_INDUSTRY_OTHER);
+  if (!name || context.startsWith(FIELD_PREFIX)) return context;
+  return `${FIELD_PREFIX}${name}.${context.trim() ? `\n${context.trim()}` : ""}`;
+}
 
 export function isScenarioId(value: unknown): value is ScenarioId {
   return typeof value === "string" && (SCENARIO_IDS as readonly string[]).includes(value);
@@ -132,7 +164,7 @@ export function getIndustry(id: IndustryId): Industry {
 }
 
 function roleText(industry: Industry): string {
-  return industry.id === "general" ? "this position" : `the ${industry.roleEn} role`;
+  return industry.roleEn === "this position" ? "this position" : `the ${industry.roleEn} role`;
 }
 
 /** The counterpart's first line. Fixed text: no AI call needed to start. */

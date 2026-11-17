@@ -1,78 +1,73 @@
 @import "tailwindcss";
 
-/* Design tokens: Dilo brand "sunset over night" (see BRAND.md). Light by default, dark via prefers-color-scheme.
-   Contrast checked for WCAG 2.1 AA (4.5:1 for normal text). */
+/* Design tokens: Dilo brand "three voices" (see BRAND.md).
+   Flat color in blocks, no gradients and no blur. Ink is the floor; each screen opens on a stage of one loud color:
+   orange is you saying it, cobalt is your coworker, lime is getting it right.
+   Contrast checked for WCAG 2.1 AA on every pair used for text. */
 :root {
-  --bg: #fff8f0;
-  --surface: #ffffff;
-  --surface-2: #f7ede1;
-  --ink: #1a1530;
-  --muted: #5b5470;
-  --border: #eadccb;
-  --primary: #d63a17;
-  --on-primary: #ffffff;
-  --primary-soft: #ffe4da;
-  --primary-ink: #b02e0e;
-  --accent: #12805c;
-  --on-accent: #ffffff;
-  --accent-soft: #d7f5e8;
-  --accent-ink: #0b5e43;
-  --sun: #ffc233;
-  --on-sun: #1a1530;
-  --warn: #8a4b00;
-  --warn-soft: #fff0d1;
-  --sky: #3559e0;
-  --focus: #2457d6;
-  --error: #c4291c;
-  --error-soft: #fde8e6;
-  --night: #1a1530;
-  --on-night: #fbf4ea;
-  --brand-a: #ff5b3a;
-  --brand-b: #ffc233;
-  --shadow: 0 1px 2px rgb(26 21 48 / 0.06), 0 10px 30px rgb(26 21 48 / 0.08);
-}
+  color-scheme: dark;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #120f22;
-    --surface: #1d1933;
-    --surface-2: #29244a;
-    --ink: #fbf4ea;
-    --muted: #bdb5d3;
-    --border: #39335a;
-    --primary: #ff7a55;
-    --on-primary: #1a1530;
-    --primary-soft: #3d2020;
-    --primary-ink: #ffb199;
-    --accent: #4fd6a4;
-    --on-accent: #08261b;
-    --accent-soft: #123a2e;
-    --accent-ink: #8bebc6;
-    --sun: #ffd15c;
-    --on-sun: #1a1530;
-    --warn: #ffc46b;
-    --warn-soft: #3a2a10;
-    --sky: #8fa8ff;
-    --focus: #8fb1ff;
-    --error: #ff8a80;
-    --error-soft: #3d1c1a;
-    --night: #0b0918;
-    --on-night: #fbf4ea;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.3);
-  }
+  /* Floor and panels */
+  --bg: #14110f;
+  --night: #14110f;
+  --surface: #211c19;
+  --surface-2: #2e2723;
+  --surface-solid: #211c19;
+  --well: #0d0b0a;
+  --border: rgb(255 244 228 / 0.14);
+  --border-strong: rgb(255 244 228 / 0.32);
+
+  /* Text on the floor */
+  --ink: #fff4e4;
+  --on-night: #fff4e4;
+  --muted: #bdb2a6;
+
+  /* The three voices */
+  --primary: #ff5a1f;
+  --on-primary: #14110f;
+  --primary-soft: rgb(255 90 31 / 0.16);
+  --primary-ink: #ff7d4d;
+  --cobalt: #2b4bff;
+  --cobalt-deep: #1e38d6;
+  --cobalt-tint: #4a66ff;
+  --on-cobalt: #ffffff;
+  --sky: #9aabff;
+  --accent: #c8f542;
+  --on-accent: #14110f;
+  --accent-soft: rgb(200 245 66 / 0.14);
+  --accent-ink: #c8f542;
+
+  /* States */
+  --sun: #ffd23f;
+  --on-sun: #14110f;
+  --warn: #ffd23f;
+  --warn-soft: rgb(255 210 63 / 0.14);
+  --error: #ff6b86;
+  --error-soft: rgb(255 92 122 / 0.16);
+
+  --focus: #c8f542;
+  --sticker-edge: #fff4e4;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-solid: var(--surface-solid);
+  --color-well: var(--well);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-primary: var(--primary);
   --color-on-primary: var(--on-primary);
   --color-primary-soft: var(--primary-soft);
   --color-primary-ink: var(--primary-ink);
+  --color-cobalt: var(--cobalt);
+  --color-cobalt-deep: var(--cobalt-deep);
+  --color-cobalt-tint: var(--cobalt-tint);
+  --color-on-cobalt: var(--on-cobalt);
   --color-accent: var(--accent);
   --color-on-accent: var(--on-accent);
   --color-accent-soft: var(--accent-soft);
@@ -87,13 +82,21 @@
   --color-error-soft: var(--error-soft);
   --color-night: var(--night);
   --color-on-night: var(--on-night);
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-bricolage), var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
-  --shadow-card: var(--shadow);
+  --color-stage: var(--stage);
+  --color-stage-ink: var(--stage-ink);
+  --color-stage-soft: var(--stage-soft);
+  --color-stage-line: var(--stage-line);
+  --color-stage-pop: var(--stage-pop);
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-unbounded), var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --radius-card: 1.75rem;
+  --radius-tile: 1.25rem;
+  --radius-stage: 2.25rem;
 }
 
 html {
   -webkit-text-size-adjust: 100%;
+  background: var(--bg);
 }
 
 body {
@@ -109,54 +112,135 @@ body {
   outline-offset: 2px;
 }
 
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
 .tabular {
   font-variant-numeric: tabular-nums;
 }
 
+/* A stage: the block of one loud, flat color that opens a screen. It bleeds to the edges on a phone
+   and becomes a rounded block on larger screens. Text on it uses the stage's own ink. */
+@utility stage {
+  margin-inline: -1rem;
+  margin-top: -1rem;
+  padding: 1rem 1rem 2rem;
+  border-radius: 0 0 var(--radius-stage) var(--radius-stage);
+  background: var(--stage);
+  color: var(--stage-ink);
+  @media (width >= 40rem) {
+    margin-inline: -1.5rem;
+    padding: 1rem 1.5rem 2.25rem;
+  }
+  @media (width >= 64rem) {
+    margin-inline: 0;
+    margin-top: 0;
+    padding: 1.5rem 2.25rem 2.5rem;
+    border-radius: var(--radius-stage);
+  }
+}
+.stage-orange {
+  --stage: var(--primary);
+  --stage-ink: var(--night);
+  --stage-soft: rgb(20 17 15 / 0.12);
+  --stage-line: rgb(20 17 15 / 0.32);
+  --stage-pop: #ffffff;
+  --focus: var(--night);
+}
+.stage-cobalt {
+  --stage: var(--cobalt);
+  --stage-ink: #ffffff;
+  --stage-soft: rgb(8 14 90 / 0.4);
+  --stage-line: rgb(255 255 255 / 0.4);
+  --stage-pop: var(--accent);
+  --focus: #ffffff;
+}
+.stage-lime {
+  --stage: var(--accent);
+  --stage-ink: var(--night);
+  --stage-soft: rgb(20 17 15 / 0.1);
+  --stage-line: rgb(20 17 15 / 0.32);
+  --stage-pop: var(--night);
+  --focus: var(--night);
+}
+
+/* A panel on the floor: one flat step up, a hairline, nothing else. */
+@utility panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+/* The bar that floats over the conversation. Solid, not blurred. */
+@utility panel-float {
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 18px 36px -18px rgb(0 0 0 / 0.9);
+}
+
+/* Headlines, names and big numbers: Unbounded, heavy and wide. Never uppercase. */
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+/* Small titles inside a panel: the same voice, quieter. Sentence case. */
+@utility kicker {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.divider-dashed {
+  border-top: 1px dashed var(--border-strong);
+}
+
+/* Stickers: flat brand drawings with a die-cut edge (see components/brand/stickers.tsx). */
+.sticker-cut * {
+  fill: var(--sticker-edge);
+  stroke: var(--sticker-edge);
+  stroke-width: 7px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
 @keyframes rise {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes ring {
-  0% { transform: scale(1); opacity: 0.55; }
-  100% { transform: scale(1.65); opacity: 0; }
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.6); opacity: 0; }
 }
 @keyframes bar {
-  0%, 100% { transform: scaleY(0.35); }
+  0%, 100% { transform: scaleY(0.3); }
   50% { transform: scaleY(1); }
 }
 @keyframes flicker {
-  0%, 100% { transform: rotate(-3deg) scale(1); }
-  50% { transform: rotate(3deg) scale(1.06); }
-}
-
-@keyframes pulse-orb {
-  0%, 100% { transform: scale(1); opacity: 0.9; }
-  50% { transform: scale(1.08); opacity: 1; }
+  0%, 100% { transform: rotate(-4deg) scale(1); }
+  50% { transform: rotate(4deg) scale(1.06); }
 }
 @keyframes pop {
-  0% { transform: scale(0.6); opacity: 0; }
-  60% { transform: scale(1.12); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
 }
 
-/* The brand gradient: coral to sun. Use once per screen. */
-.bg-brand {
-  background-image: linear-gradient(135deg, var(--brand-a), var(--brand-b));
-}
-.text-brand {
-  background-image: linear-gradient(135deg, var(--brand-a), var(--brand-b));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.animate-rise { animation: rise 280ms ease-out both; }
-.animate-orb { animation: pulse-orb 1.2s ease-in-out infinite; }
-.animate-pop { animation: pop 600ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
-.animate-ring { animation: ring 1.4s ease-out infinite; }
+.animate-rise { animation: rise 420ms var(--ease-out) both; }
+.animate-pop { animation: pop 360ms var(--ease-out) both; }
+.animate-ring { animation: ring 1.5s var(--ease-out) infinite; }
 .animate-bar { animation: bar 900ms ease-in-out infinite; transform-origin: center; }
+.animate-bar-up { animation: bar 1000ms ease-in-out infinite; transform-origin: bottom; }
 .animate-flicker { animation: flicker 1.6s ease-in-out infinite; }
+.animate-breathe { animation: breathe 1.6s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

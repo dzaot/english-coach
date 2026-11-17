@@ -7,8 +7,8 @@ export async function POST(request: Request, { params }: IdParams) {
     request,
     async ({ ctx, sid }) => {
       const ai = await resolveAi(ctx, sid);
-      const body = (await readJson(request)) as { tzOffset?: unknown } | null;
-      return finishPractice(ctx, ai, sid, (await params).id, { tzOffset: body?.tzOffset });
+      const body = (await readJson(request)) as { tzOffset?: unknown; powerPhraseId?: unknown } | null;
+      return finishPractice(ctx, ai, sid, (await params).id, { tzOffset: body?.tzOffset, powerPhraseId: body?.powerPhraseId });
     },
     { usesAi: true },
   );

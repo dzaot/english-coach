@@ -22,7 +22,10 @@ export const FeedbackSchema = z.object({
   score: z.number().finite(),
 });
 
-export type Feedback = z.infer<typeof FeedbackSchema>;
+export type Feedback = z.infer<typeof FeedbackSchema> & {
+  /** Points added by the app (not the coach) for using the phrase of the day. */
+  readonly bonus?: { readonly phrase: string; readonly points: number };
+};
 
 export const MAX_BETTER_PHRASES = 3;
 

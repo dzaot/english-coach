@@ -119,8 +119,8 @@ export function SayItButton({ phraseId, text, tipsLocale = "en", onDrilled }: Sa
 
   return (
     <div className="space-y-3">
-      <p className="flex items-center gap-1.5 text-sm font-semibold text-muted">
-        <AudioWaveform aria-hidden="true" className="size-4" /> {t.sayIt.soundCheck}
+      <p className="kicker flex items-center gap-2 text-muted">
+        <AudioWaveform aria-hidden="true" className="size-4 text-accent" /> {t.sayIt.soundCheck}
       </p>
       <SoundWords words={guide} checks={result?.words ?? null} selected={selected} onSelect={(i) => setSelected(i === selected ? null : i)} />
       {result && result.words.some((w) => w.status === "missed") ? <DiffLegend /> : null}
@@ -139,8 +139,8 @@ export function SayItButton({ phraseId, text, tipsLocale = "en", onDrilled }: Sa
         onClick={() => void press()}
         disabled={checking || recorder.status === "starting"}
         aria-pressed={recording}
-        className={`inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-full px-5 font-semibold transition duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${
-          recording ? "bg-ink text-bg" : "bg-accent text-on-accent hover:brightness-110"
+        className={`inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-full px-5 font-semibold transition duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${
+          recording ? "bg-ink text-night" : "bg-accent text-on-accent hover:bg-[#d6ff5c]"
         }`}
       >
         <Icon aria-hidden="true" className={`size-5 ${checking ? "animate-spin motion-reduce:animate-none" : ""}`} />

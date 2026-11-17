@@ -29,33 +29,37 @@ export function RecordButton({
 }) {
   const { t } = useI18n();
   const recording = state === "recording";
+  const waiting = state === "busy" || state === "starting";
+  const face = recording
+    ? "bg-accent text-on-accent"
+    : waiting
+      ? "bg-surface text-ink"
+      : "bg-primary text-on-primary hover:bg-[#ff6e3a]";
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="relative">
         {recording && level > 0 ? (
           <span
             aria-hidden="true"
-            className="absolute inset-0 rounded-full bg-primary/40 transition-transform duration-100"
+            className="absolute inset-0 rounded-full bg-accent/50 transition-transform duration-100"
             style={{ transform: `scale(${1 + level * VOICE_RING_SCALE})` }}
           />
         ) : null}
-        {recording && level === 0 ? <span aria-hidden="true" className="animate-ring absolute inset-0 rounded-full bg-primary" /> : null}
+        {recording && level === 0 ? <span aria-hidden="true" className="animate-ring absolute inset-0 rounded-full bg-accent" /> : null}
         <button
           type="button"
           onClick={onPress}
-          disabled={disabled || state === "busy" || state === "starting"}
+          disabled={disabled || waiting}
           aria-pressed={recording}
           aria-label={recording ? t.mic.stop : t.mic.record}
-          className={`relative flex size-20 cursor-pointer items-center justify-center rounded-full shadow-card transition duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${
-            recording ? "bg-ink text-bg" : "bg-primary text-on-primary hover:brightness-110"
-          }`}
+          className={`relative flex size-20 cursor-pointer items-center justify-center rounded-full ring-4 ring-night transition duration-200 active:scale-95 disabled:cursor-not-allowed disabled:active:scale-100 ${face}`}
         >
-          {state === "busy" || state === "starting" ? (
+          {waiting ? (
             <Loader2 aria-hidden="true" className="size-8 animate-spin motion-reduce:animate-none" />
           ) : recording ? (
             <Square aria-hidden="true" className="size-7" fill="currentColor" />
           ) : (
-            <Mic aria-hidden="true" className="size-8" />
+            <Mic aria-hidden="true" className="size-8" strokeWidth={2.25} />
           )}
         </button>
       </div>

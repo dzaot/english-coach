@@ -14,11 +14,13 @@ describe("usePreferences", () => {
     expect(result.current.level).toBe("intermediate");
     act(() => result.current.update({ level: "beginner", avatarId: "mike" }));
     expect(result.current).toMatchObject({ level: "beginner", avatarId: "mike" });
-    expect(readPreferences()).toEqual({ level: "beginner", avatarId: "mike" });
+    expect(readPreferences()).toEqual({ ...DEFAULT_PREFERENCES, level: "beginner", avatarId: "mike" });
+    act(() => result.current.update({ onboarded: true, industryId: "other", industryOther: "Nursing", scenarioId: "client_call" }));
+    expect(readPreferences()).toMatchObject({ onboarded: true, industryId: "other", industryOther: "Nursing", scenarioId: "client_call" });
   });
 
   it("ignores bad stored values and blocked storage", () => {
-    window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ level: "expert", avatarId: "bob" }));
+    window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ level: "expert", avatarId: "bob", industryId: "farming", industryOther: 7, scenarioId: "karaoke", onboarded: "yes" }));
     expect(readPreferences()).toEqual(DEFAULT_PREFERENCES);
     window.localStorage.setItem(PREFERENCES_KEY, "{not json");
     expect(readPreferences()).toEqual(DEFAULT_PREFERENCES);

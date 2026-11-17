@@ -1,14 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getAvatar } from "./avatars";
-import {
-  INDUSTRIES,
-  SCENARIOS,
-  buildOpener,
-  getIndustry,
-  getScenario,
-  isIndustryId,
-  isScenarioId,
-} from "./scenarios";
+import { INDUSTRIES, SCENARIOS, buildOpener, getIndustry, getScenario, isIndustryId, isScenarioId, withOwnField, MAX_INDUSTRY_OTHER, ownFieldOf } from "./scenarios";
 
 describe("scenarios catalog", () => {
   it("offers the five work scenarios, then your own situation, in a stable order", () => {
@@ -22,7 +14,7 @@ describe("scenarios catalog", () => {
     ]);
   });
 
-  it("offers a general preset plus five industries", () => {
+  it("offers a general preset, ten industries and a way to name your own", () => {
     expect(INDUSTRIES.map((i) => i.id)).toEqual([
       "general",
       "sales",
@@ -30,7 +22,22 @@ describe("scenarios catalog", () => {
       "healthcare_admin",
       "construction",
       "tech",
+      "hospitality",
+      "finance",
+      "education",
+      "logistics",
+      "marketing",
+      "other",
     ]);
+    // The person's own field joins what they told us, once, and is cut to a short name.
+    expect(withOwnField("", "  Nursing  ")).toBe("My field of work: Nursing.");
+    expect(withOwnField("Interview on Monday.", "Real   estate")).toBe("My field of work: Real estate.\nInterview on Monday.");
+    expect(withOwnField("My field of work: Law.\nNotes", "Law")).toBe("My field of work: Law.\nNotes");
+    expect(withOwnField("Notes", "   ")).toBe("Notes");
+    expect(ownFieldOf("My field of work: Real estate.\nInterview on Monday.")).toBe("Real estate");
+    expect(ownFieldOf("Interview on Monday.")).toBeNull();
+    expect(ownFieldOf(null)).toBeNull();
+    expect(withOwnField("", "x".repeat(200))).toHaveLength("My field of work: .".length + MAX_INDUSTRY_OTHER);
   });
 
   it("gives every scenario English copy and a counterpart role", () => {

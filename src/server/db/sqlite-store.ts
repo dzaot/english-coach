@@ -4,7 +4,8 @@ import type { Feedback } from "@/domain/feedback";
 import { isLevelId } from "@/domain/levels";
 import { isLocale } from "@/domain/locales";
 import type { Row, SqlDb } from "./sql";
-import type { NewPractice, PhraseRecord, PracticeRecord, Store, UserPatch, UserRecord } from "./store";
+import { OnboardingSchema } from "@/domain/onboarding";
+import type { NewPractice, OnboardingRecord, PhraseRecord, PracticeRecord, Store, UserPatch, UserRecord } from "./store";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
@@ -21,6 +22,11 @@ CREATE TABLE IF NOT EXISTS phrases (
   better TEXT NOT NULL, why_es TEXT NOT NULL, created_at TEXT NOT NULL, reviewed_at TEXT
 );
 CREATE INDEX IF NOT EXISTS phrases_sid ON phrases(sid, created_at);
+CREATE TABLE IF NOT EXISTS onboarding (
+  sid TEXT PRIMARY KEY, created_at TEXT NOT NULL, locale TEXT NOT NULL, goal TEXT, pains TEXT NOT NULL,
+  confidence INTEGER, industry_id TEXT, industry_other TEXT NOT NULL DEFAULT '', level TEXT, avatar_id TEXT,
+  completed INTEGER NOT NULL DEFAULT 0
+);
 `;
 
 /** Columns added after the first release, applied to older databases on open. */
@@ -93,6 +99,22 @@ function toPhrase(r: Row): PhraseRecord {
     step: Number(r.step ?? 0),
     dueDay: str(r.due_day),
   };
+}
+
+/** A saved row, read back through the same schema that validated it going in. */
+function toOnboarding(r: Row): OnboardingRecord | null {
+  const parsed = OnboardingSchema.safeParse({
+    locale: r.locale,
+    goal: r.goal ?? null,
+    pains: JSON.parse(String(r.pains ?? "[]")),
+    confidence: r.confidence === null || r.confidence === undefined ? null : Number(r.confidence),
+    industryId: r.industry_id ?? null,
+    industryOther: String(r.industry_other ?? ""),
+    level: r.level ?? null,
+    avatarId: r.avatar_id ?? null,
+    completed: Number(r.completed) === 1,
+  });
+  return parsed.success ? { ...parsed.data, sid: String(r.sid), createdAt: String(r.created_at) } : null;
 }
 
 const USER_COLUMNS: Record<keyof UserPatch, string> = {
@@ -222,6 +244,21 @@ export function createSqlStore(open: SqlDb | Promise<SqlDb>): Store {
       if (r.changes === 0) return null;
       const row = await phraseRow(sid, id);
       return row ? toPhrase(row) : null;
+    },
+    async saveOnboarding(sid, answers, now) {
+      await (await ready).run(
+        `INSERT INTO onboarding (sid, created_at, locale, goal, pains, confidence, industry_id, industry_other, level, avatar_id, completed)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(sid) DO UPDATE SET created_at = excluded.created_at, locale = excluded.locale, goal = excluded.goal,
+           pains = excluded.pains, confidence = excluded.confidence, industry_id = excluded.industry_id,
+           industry_other = excluded.industry_other, level = excluded.level, avatar_id = excluded.avatar_id, completed = excluded.completed`,
+        [sid, now, answers.locale, answers.goal, JSON.stringify(answers.pains), answers.confidence, answers.industryId, answers.industryOther, answers.level, answers.avatarId, answers.completed ? 1 : 0],
+      );
+      return { ...answers, sid, createdAt: now };
+    },
+    async getOnboarding(sid) {
+      const row = await (await ready).get("SELECT * FROM onboarding WHERE sid = ?", [sid]);
+      return row ? toOnboarding(row) : null;
     },
   };
 }

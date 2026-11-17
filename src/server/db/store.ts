@@ -3,6 +3,7 @@ import type { Turn } from "@/domain/conversation";
 import type { Feedback } from "@/domain/feedback";
 import type { AvatarId } from "@/domain/avatars";
 import type { LevelId } from "@/domain/levels";
+import type { OnboardingAnswers } from "@/domain/onboarding";
 import type { IndustryId, ScenarioId } from "@/domain/scenarios";
 
 /** Persistence port. The app depends on this interface; SQLite is one implementation. */
@@ -69,6 +70,12 @@ export interface PhraseRecord {
   readonly dueDay: string | null;
 }
 
+/** What a person answered in the first-run questions. One per browser session; answering again replaces it. */
+export interface OnboardingRecord extends OnboardingAnswers {
+  readonly sid: string;
+  readonly createdAt: string;
+}
+
 /** Persistence. Async so it can run on a local SQLite file or a hosted database. */
 export interface Store {
   getOrCreateUser(sid: string, now: string): Promise<UserRecord>;
@@ -102,4 +109,6 @@ export interface Store {
   ): Promise<PhraseRecord | null>;
   listPhrases(sid: string): Promise<PhraseRecord[]>;
   markPhrase(sid: string, id: string, reviewed: boolean, now: string): Promise<PhraseRecord | null>;
+  saveOnboarding(sid: string, answers: OnboardingAnswers, now: string): Promise<OnboardingRecord>;
+  getOnboarding(sid: string): Promise<OnboardingRecord | null>;
 }

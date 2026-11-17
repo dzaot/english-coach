@@ -36,32 +36,32 @@ export function ResultsCard({ stats }: { stats: ProgressStats }) {
   ];
 
   return (
-    <section aria-labelledby="results-title" className="rounded-3xl border border-border bg-surface p-5 shadow-card">
-      <h2 id="results-title" className="font-display text-lg font-bold">
+    <section aria-labelledby="results-title" className="panel rounded-card p-5">
+      <h2 id="results-title" className="kicker text-muted">
         {t.results.title}
       </h2>
-      <dl className="mt-3 grid grid-cols-3 gap-2">
-        {tiles.map((t) => (
-          <div key={t.label} className="rounded-2xl bg-surface-2 px-3 py-2.5">
-            <dt className="text-xs font-medium text-muted">{t.label}</dt>
-            <dd className="tabular font-display text-2xl font-extrabold leading-tight">{t.value}</dd>
+      <dl className="mt-4 grid grid-cols-3">
+        {tiles.map((t, index) => (
+          <div key={t.label} className={`flex flex-col-reverse justify-end gap-1.5 ${index > 0 ? "border-l border-border pl-4" : "pr-2"}`}>
+            <dt className="text-xs font-medium leading-snug text-muted">{t.label}</dt>
+            <dd className="display tabular text-[1.75rem]">{t.value}</dd>
           </div>
         ))}
       </dl>
       {delta !== null ? (
-        <div className="mt-4 flex items-center gap-4">
+        <div className="divider-dashed mt-5 flex items-center gap-4 pt-5">
           <svg
             viewBox={`0 0 ${CHART_W} ${CHART_H}`}
             preserveAspectRatio="none"
             role="img"
             aria-label={t.results.chart(scores.length, scores.join(", "))}
-            className="h-12 flex-1 overflow-visible text-primary"
+            className="h-12 flex-1 overflow-visible"
           >
-            <polyline points={sparklinePoints(scores)} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            <polyline points={sparklinePoints(scores)} fill="none" stroke="var(--primary)" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           </svg>
           <p className="shrink-0 text-right text-sm">
-            <span className="flex items-center justify-end gap-1 font-semibold">
-              <TrendingUp aria-hidden="true" className="size-4 text-accent-ink" />
+            <span className="flex items-center justify-end gap-1.5 text-lg font-bold">
+              <TrendingUp aria-hidden="true" className="size-4 text-accent" />
               <span className="tabular">
                 {first} → {last}
               </span>

@@ -2,9 +2,7 @@ import { Snail, Volume2 } from "lucide-react";
 import type { Turn } from "@/domain/conversation";
 import { AnswerCheck, MarkedAnswer } from "./answer-check";
 import { useI18n } from "@/i18n/provider";
-
-const LISTEN_BUTTON =
-  "inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full px-2 text-sm font-semibold text-primary-ink transition duration-200 hover:bg-surface-2";
+import { SparkSticker } from "./brand/stickers";
 
 export function ChatBubble({
   turn,
@@ -15,6 +13,7 @@ export function ChatBubble({
   checking,
   onListenAlternative,
   playingAlternative,
+  usedPowerPhrase = false,
 }: {
   turn: Turn;
   speakerName: string;
@@ -25,37 +24,46 @@ export function ChatBubble({
   checking?: boolean;
   onListenAlternative?: (index: number) => void;
   playingAlternative?: number | null;
+  /** Your answer used the phrase of the day. */
+  usedPowerPhrase?: boolean;
 }) {
   const { t } = useI18n();
   const mine = turn.role === "user";
   return (
-    <li className={`animate-rise flex flex-col gap-2 ${mine ? "items-end" : "items-start"}`}>
-      <div
-        className={`max-w-[85%] rounded-3xl px-4 py-3 ${mine ? "rounded-br-lg bg-primary-soft" : "rounded-bl-lg border border-border bg-surface shadow-card"}`}
-      >
-        <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-muted">{mine ? t.practice.you : speakerName}</p>
-        <p lang="en" className="text-[1.0625rem] leading-relaxed">
+    <li className={`animate-rise flex flex-col gap-2.5 ${mine ? "items-end" : "items-start"}`}>
+      {/* Cobalt is your coworker's voice; yours sits on the floor so its corrections can be read. */}
+      <div className={`max-w-[88%] px-4 py-3.5 ${mine ? "rounded-[1.5rem] rounded-br-md bg-surface-2" : "rounded-[1.5rem] rounded-bl-md bg-cobalt-deep text-on-cobalt"}`}>
+        <p className={`mb-1 text-sm font-bold ${mine ? "text-primary-ink" : ""}`}>{mine ? t.practice.you : speakerName}</p>
+        <p lang="en" className="text-lg leading-relaxed">
           {mine ? <MarkedAnswer text={turn.text} check={turn.check} /> : turn.text}
         </p>
         {!mine && onListen ? (
-          <div className="mt-1 -ml-2 flex flex-wrap gap-1">
-            <button type="button" onClick={onListen} className={LISTEN_BUTTON}>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={onListen} className={BUBBLE_ACTION}>
               <Volume2 aria-hidden="true" className="size-4" />
               {speaking ? t.practice.playing : t.practice.listen}
             </button>
             {onListenSlow ? (
-              <button type="button" onClick={onListenSlow} className={LISTEN_BUTTON}>
+              <button type="button" onClick={onListenSlow} className={BUBBLE_ACTION}>
                 <Snail aria-hidden="true" className="size-4" /> {t.practice.slower}
               </button>
             ) : null}
           </div>
         ) : null}
       </div>
+      {mine && usedPowerPhrase ? (
+        <p className="animate-pop inline-flex items-center gap-2 rounded-full bg-accent py-1 pl-1.5 pr-3.5 text-sm font-bold text-on-accent">
+          <SparkSticker size={24} className="[--sticker-edge:var(--night)]" /> {t.power.used}
+        </p>
+      ) : null}
       {mine ? (
-        <div className="w-full max-w-[92%]">
+        <div className="w-full max-w-[94%]">
           <AnswerCheck check={turn.check} checking={checking} onListenAlternative={onListenAlternative} playingAlternative={playingAlternative} />
         </div>
       ) : null}
     </li>
   );
 }
+
+const BUBBLE_ACTION =
+  "inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full bg-white/15 px-4 text-sm font-semibold text-white transition duration-200 hover:bg-white/25 active:scale-[0.97]";

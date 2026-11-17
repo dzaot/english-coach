@@ -23,6 +23,15 @@ describe("CallStage", () => {
     expect(now).toHaveTextContent("about");
   });
 
+  it("looks like a video call: their picture, their name and role, and your own tile", () => {
+    render(<CallStage {...base} state="idle" />);
+    expect(screen.getByRole("img", { name: avatar.alt })).toHaveAttribute("width", "480");
+    expect(screen.getByText("Emily")).toBeInTheDocument();
+    expect(screen.getByText("Hiring manager")).toBeInTheDocument();
+    expect(screen.getByText("You")).toBeInTheDocument();
+    expect(screen.getByText("Live practice")).toBeInTheDocument();
+  });
+
   it("grows the glow with your voice while you talk", () => {
     const { container } = render(<CallStage {...base} state="listening" micLevel={1} />);
     expect((container.querySelector('[style*="scale"]') as HTMLElement).style.transform).toBe("scale(1.35)");

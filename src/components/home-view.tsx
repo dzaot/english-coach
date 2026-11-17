@@ -3,16 +3,22 @@
 import { useState, type ReactNode } from "react";
 import { MAX_CONTEXT_INPUT, MIN_CUSTOM_CONTEXT } from "@/domain/limits";
 import Image from "next/image";
-import { BookmarkCheck, CalendarClock, ChevronDown, ChevronRight, History, Mic, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ChevronDown, Mic, SlidersHorizontal } from "lucide-react";
 import { getAvatar, type AvatarId } from "@/domain/avatars";
 import type { LevelId } from "@/domain/levels";
-import { CUSTOM_SCENARIO, SCENARIOS, type IndustryId, type ScenarioId } from "@/domain/scenarios";
+import { CUSTOM_SCENARIO, OTHER_INDUSTRY, SCENARIOS, type IndustryId, type ScenarioId } from "@/domain/scenarios";
+import type { Preferences } from "@/lib/hooks/use-preferences";
+import { localToday } from "@/lib/progress";
 import type { Progress } from "@/lib/types";
+import { phraseOfTheDay } from "@/domain/power-phrases";
 import { FOCUS_WITHIN, IndustryPicker, LevelPicker, PartnerPicker } from "./home-pickers";
+import { PowerPhraseCard } from "./power-phrase-card";
 import { ResultsCard } from "./results-card";
+import { ShareCard } from "./share-card";
 import { SCENARIO_ICONS } from "./scenario-meta";
 import { StreakCard } from "./streak-card";
-import { Button } from "./ui";
+import { BookmarkSticker, CalendarSticker, ClockSticker, MicSticker, QuoteSticker, SparkSticker } from "./brand/stickers";
+import { Button, FIELD } from "./ui";
 import type { Messages } from "@/i18n/messages";
 import { useI18n } from "@/i18n/provider";
 
@@ -21,7 +27,11 @@ interface HomeViewProps {
   starting: boolean;
   level: LevelId;
   avatarId: AvatarId;
-  onChangePrefs: (patch: { level?: LevelId; avatarId?: AvatarId }) => void;
+  onChangePrefs: (patch: Partial<Preferences>) => void;
+  /** Where the pickers start: what the person chose before (or in the first-run questions). */
+  initialScenarioId?: ScenarioId;
+  initialIndustryId?: IndustryId;
+  initialIndustryOther?: string;
   onStart: (scenarioId: ScenarioId, industryId: IndustryId, context: string) => void;
   /** An error from starting, shown right above the Start button (where the person is looking). */
   startError?: ReactNode;
@@ -29,6 +39,8 @@ interface HomeViewProps {
   lowBalanceUrl?: string | null;
   /** The price line, for people paying through publik. */
   showPrice?: boolean;
+  /** The app's top row (logo, language), shown inside the orange stage. */
+  top?: ReactNode;
   onOpenPhrases: () => void;
   onOpenHistory: () => void;
 }
@@ -56,9 +68,29 @@ export function HomeView({
   startError,
   lowBalanceUrl,
   showPrice = false,
+  top,
+  initialScenarioId = "job_interview",
+  initialIndustryId = "general",
+  initialIndustryOther = "",
 }: HomeViewProps) {
-  const [scenarioId, setScenarioId] = useState<ScenarioId>("job_interview");
-  const [industryId, setIndustryId] = useState<IndustryId>("general");
+  const [scenarioId, setScenarioIdState] = useState<ScenarioId>(initialScenarioId);
+  const [industryId, setIndustryIdState] = useState<IndustryId>(initialIndustryId);
+  const [industryOther, setIndustryOtherState] = useState(initialIndustryOther);
+  // Each choice is also remembered, so the next visit (and the next call) starts from it.
+  const setScenarioId = (id: ScenarioId) => {
+    setScenarioIdState(id);
+    onChangePrefs({ scenarioId: id });
+  };
+  const setIndustryId = (id: IndustryId) => {
+    setIndustryIdState(id);
+    onChangePrefs({ industryId: id });
+  };
+  const setIndustryOther = (text: string) => {
+    setIndustryOtherState(text);
+    onChangePrefs({ industryOther: text });
+  };
+  const industryName = industryId === OTHER_INDUSTRY && industryOther.trim() ? industryOther.trim() : null;
+  const powerPhrase = phraseOfTheDay(localToday());
   const [details, setDetails] = useState("");
   // Open the first time only; progress arrives after the first paint, so decide when it does.
   const [customizingChoice, setCustomizing] = useState<boolean | null>(null);
@@ -70,61 +102,72 @@ export function HomeView({
   const hasLink = /https?:\/\//i.test(details);
 
   return (
-    <div className="animate-rise space-y-5">
-      <header className="space-y-2 pt-1">
-        <h1 className="font-display text-[2rem] font-extrabold leading-[1.1] tracking-tight">
-          {t.home.titleStart} <span className="text-primary-ink">{t.home.titleEnd}</span>
-        </h1>
-        <p className="text-muted">{t.home.subtitle}</p>
-      </header>
+    <div className="animate-rise space-y-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] lg:items-start lg:gap-x-10 lg:space-y-0">
+      <div className="space-y-8">
+        {/* The stage: one flat block of orange with the promise and who you are about to call. */}
+        <div className="stage stage-orange relative overflow-hidden">
+          {top}
+          <h1 className="display relative mt-8 text-balance text-[2.5rem] font-black sm:text-6xl">
+            {t.home.titleStart} <span className="text-stage-pop">{t.home.titleEnd}</span>
+          </h1>
+          <p className="relative mt-5 max-w-[32ch] font-medium">{t.home.subtitle}</p>
 
-      <section aria-labelledby="next-call" className="relative overflow-hidden rounded-[2rem] bg-night p-5 text-on-night shadow-card">
-        <span aria-hidden="true" className="bg-brand absolute -right-16 -top-16 size-48 rounded-full opacity-40 blur-3xl" />
-        <div className="relative flex items-center gap-3">
-          <div className="relative shrink-0">
-            <span aria-hidden="true" className="bg-brand absolute -inset-1.5 rounded-full opacity-80" />
-            <Image src={avatar.image} alt={t.avatars[avatar.id].alt} width={PARTNER_PHOTO} height={PARTNER_PHOTO} priority className="relative rounded-full object-cover ring-2 ring-night" />
-          </div>
-          <div className="min-w-0">
-            <h2 id="next-call" className="font-display text-xl font-bold leading-tight">
-              {t.home.yourCallWith(avatar.name)}
-            </h2>
-            <p className="text-sm text-on-night/80">
-              {t.levels[level].label} · {t.industries[industryId]}
-            </p>
-          </div>
+          <section aria-labelledby="next-call" className="relative mt-16 flex items-center gap-4 rounded-card bg-night p-4 text-ink">
+            <div aria-hidden="true" className="pointer-events-none absolute bottom-full right-3 -mb-2.5 flex items-end">
+              <SparkSticker size={34} className="-rotate-12" />
+              <QuoteSticker size={40} className="-ml-1 mb-3 rotate-6" />
+              <MicSticker size={64} className="-ml-2 rotate-12" />
+            </div>
+            <div className="relative shrink-0">
+              <Image
+                src={avatar.image}
+                alt={t.avatars[avatar.id].alt}
+                width={PARTNER_PHOTO}
+                height={PARTNER_PHOTO}
+                priority
+                className="rounded-full object-cover ring-[3px] ring-primary"
+              />
+              <span aria-hidden="true" className="absolute bottom-0 right-0 size-4 rounded-full bg-accent ring-[3px] ring-night" />
+            </div>
+            <div className="min-w-0">
+              <h2 id="next-call" className="display text-lg leading-tight">
+                {t.home.yourCallWith(avatar.name)}
+              </h2>
+              <p className="mt-1.5 text-sm font-medium text-muted">
+                {t.levels[level].label} · {industryName ?? t.industries[industryId]}
+              </p>
+            </div>
+          </section>
         </div>
 
-        <fieldset className="relative mt-4">
-          <legend className="mb-2 text-sm font-semibold text-on-night/80">{t.home.whatToPractice}</legend>
-          <div className="grid gap-2">
+        <fieldset>
+          <legend className="kicker mb-3 text-base">{t.home.whatToPractice}</legend>
+          <div className="grid grid-cols-2 gap-2">
             {SCENARIOS.map((s) => {
               const Icon = SCENARIO_ICONS[s.id];
               const checked = s.id === scenarioId;
               return (
                 <label
                   key={s.id}
-                  className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2 transition duration-200 ${FOCUS_WITHIN} ${
-                    checked ? "bg-on-night text-night" : "bg-on-night/10 hover:bg-on-night/15"
+                  className={`flex min-h-16 cursor-pointer items-center gap-2.5 rounded-tile px-3 py-2.5 text-sm font-semibold leading-tight transition duration-200 active:scale-[0.98] ${FOCUS_WITHIN} ${
+                    checked ? "bg-ink text-night" : "bg-surface hover:bg-surface-2"
                   }`}
                 >
                   <input type="radio" name="scenario" value={s.id} checked={checked} onChange={() => setScenarioId(s.id)} className="sr-only" />
-                  <Icon aria-hidden="true" className="size-5 shrink-0" />
-                  <span className="min-w-0">
-                    <span className="block font-semibold">{t.scenarios[s.id].title}</span>
-                    {checked ? <span className="block text-sm opacity-80">{t.scenarios[s.id].description}</span> : null}
-                  </span>
+                  <Icon size={34} className={checked ? "[--sticker-edge:var(--night)]" : ""} />
+                  <span className="min-w-0 hyphens-auto [overflow-wrap:anywhere]">{t.scenarios[s.id].title}</span>
                 </label>
               );
             })}
           </div>
+          <p className="mt-3 text-sm text-muted">{t.scenarios[scenarioId].description}</p>
         </fieldset>
 
-        <div className="relative mt-4 space-y-1.5">
-          <label htmlFor="practice-details" className="block text-sm font-semibold">
+        <div className="space-y-1.5">
+          <label htmlFor="practice-details" className="kicker block text-base">
             {copy.label}
           </label>
-          <p id="practice-details-hint" className="text-sm text-on-night/80">
+          <p id="practice-details-hint" className="text-sm text-muted">
             {copy.hint}
           </p>
           <textarea
@@ -135,86 +178,110 @@ export function HomeView({
             maxLength={MAX_DETAILS}
             rows={3}
             placeholder={copy.placeholder}
-            className="w-full rounded-2xl border border-on-night/30 bg-on-night/10 p-3 text-base text-on-night placeholder:text-on-night/70"
+            className={`${FIELD} mt-1.5`}
           />
         </div>
 
         {lowBalanceUrl ? (
-          <p role="status" className="relative mt-4 rounded-2xl bg-warn-soft p-3 text-sm text-ink">
+          <p role="status" className="rounded-tile border border-warn bg-[#33290f] p-3.5 text-sm text-ink">
             {t.home.lowBalance}{" "}
-            <a href={lowBalanceUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-ink underline underline-offset-4">
+            <a href={lowBalanceUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-sun underline underline-offset-4">
               {t.ui.topUp}
             </a>
           </p>
         ) : null}
-        {startError ? <div className="relative mt-4">{startError}</div> : null}
+        {startError ? <div>{startError}</div> : null}
 
-        <Button size="lg" className="relative mt-4 w-full" disabled={starting || needsDetails} onClick={() => onStart(scenarioId, industryId, details.trim())}>
-          <Mic aria-hidden="true" className="size-5" />
-          {starting ? (hasLink ? t.home.readingJob : t.home.gettingReady) : t.home.startTalking}
-        </Button>
-        <p className="relative mt-2 text-center text-sm text-on-night/80">{t.home.duration}</p>
-        {showPrice ? <p className="relative mt-1 text-center text-sm text-on-night/80">{t.home.price}</p> : null}
-      </section>
+        <div>
+          <Button size="lg" className="w-full" disabled={starting || needsDetails} onClick={() => onStart(scenarioId, industryId, details.trim())}>
+            <span aria-hidden="true" className="-ml-3 flex size-10 items-center justify-center rounded-full bg-night text-primary">
+              <Mic className="size-5" />
+            </span>
+            {starting ? (hasLink ? t.home.readingJob : t.home.gettingReady) : t.home.startTalking}
+          </Button>
+          <p className="mt-3 text-center text-sm text-muted">{t.home.duration}</p>
+          {showPrice ? <p className="mt-1 text-center text-sm text-muted">{t.home.price}</p> : null}
+        </div>
 
-      {progress && progress.dueToday > 0 ? (
-        <button
-          type="button"
-          onClick={onOpenPhrases}
-          className="flex w-full cursor-pointer items-center gap-3 rounded-3xl border-2 border-primary bg-primary-soft p-4 text-left transition duration-200 hover:brightness-105"
-        >
-          <CalendarClock aria-hidden="true" className="size-7 shrink-0 text-primary-ink" />
-          <span className="flex-1">
-            <span className="block font-bold">{t.home.todaysReview}</span>
-            <span className="block text-sm">{t.home.phrasesWaiting(progress.dueToday)}</span>
-          </span>
-          <ChevronRight aria-hidden="true" className="size-5" />
-        </button>
-      ) : null}
+        <PowerPhraseCard phrase={powerPhrase} />
 
-      <section aria-label={t.home.customizeSection} className="rounded-3xl border border-border bg-surface">
-        <button
-          type="button"
-          aria-expanded={customizing}
-          aria-controls="customize-panel"
-          onClick={() => setCustomizing(!customizing)}
-          className="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-3xl px-4 text-left font-semibold transition duration-200 hover:bg-surface-2"
-        >
-          <SlidersHorizontal aria-hidden="true" className="size-5 text-primary-ink" />
-          <span className="flex-1">{t.home.customize}</span>
-          <ChevronDown aria-hidden="true" className={`size-5 transition duration-200 ${customizing ? "rotate-180" : ""}`} />
-        </button>
-        {customizing ? (
-          <div id="customize-panel" className="space-y-5 px-4 pb-5 pt-1">
-            <PartnerPicker avatarId={avatarId} onChange={(id) => onChangePrefs({ avatarId: id })} />
-            <IndustryPicker industryId={industryId} onChange={setIndustryId} />
-            <LevelPicker level={level} onChange={(id) => onChangePrefs({ level: id })} />
-          </div>
+        {progress && progress.dueToday > 0 ? (
+          <button
+            type="button"
+            onClick={onOpenPhrases}
+            className="stage-cobalt flex w-full cursor-pointer items-center gap-4 rounded-card bg-cobalt p-5 text-left text-on-cobalt transition duration-200 hover:bg-cobalt-deep active:scale-[0.99]"
+          >
+            <CalendarSticker size={52} className="-rotate-6" />
+            <span className="min-w-0 flex-1">
+              <span className="display block text-lg leading-tight">{t.home.todaysReview}</span>
+              <span className="mt-1.5 block text-sm font-medium">{t.home.phrasesWaiting(progress.dueToday)}</span>
+            </span>
+            <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-night">
+              <ArrowRight className="size-5" />
+            </span>
+          </button>
         ) : null}
-      </section>
+      </div>
 
-      {progress && progress.stats.practices > 0 ? <ResultsCard stats={progress.stats} /> : null}
-      {progress ? <StreakCard progress={progress} /> : null}
+      <div className="space-y-8">
+        <section aria-label={t.home.customizeSection} className="panel rounded-card">
+          <button
+            type="button"
+            aria-expanded={customizing}
+            aria-controls="customize-panel"
+            onClick={() => setCustomizing(!customizing)}
+            className="flex min-h-16 w-full cursor-pointer items-center gap-3 rounded-card px-5 text-left font-semibold transition duration-200 hover:bg-surface-2"
+          >
+            <SlidersHorizontal aria-hidden="true" className="size-5 shrink-0 text-primary" />
+            <span className="flex-1">{t.home.customize}</span>
+            <ChevronDown aria-hidden="true" className={`size-5 shrink-0 text-muted transition duration-300 ${customizing ? "rotate-180" : ""}`} />
+          </button>
+          {customizing ? (
+            <div id="customize-panel" className="animate-rise space-y-7 px-5 pb-6 pt-2">
+              <PartnerPicker avatarId={avatarId} onChange={(id) => onChangePrefs({ avatarId: id })} />
+              <IndustryPicker industryId={industryId} onChange={setIndustryId} other={industryOther} onOtherChange={setIndustryOther} />
+              <LevelPicker level={level} onChange={(id) => onChangePrefs({ level: id })} />
+            </div>
+          ) : null}
+        </section>
 
-      <nav aria-label={t.home.progressNav} className="grid gap-2.5">
-        <NavRow icon={<BookmarkCheck aria-hidden="true" className="size-5" />} label={t.home.phrasesToReview} count={progress?.toReview ?? 0} onClick={onOpenPhrases} />
-        <NavRow icon={<History aria-hidden="true" className="size-5" />} label={t.home.practiceHistory} count={progress?.history.length ?? 0} onClick={onOpenHistory} />
-      </nav>
+        {progress ? <StreakCard progress={progress} /> : null}
+        {progress && progress.stats.practices > 0 ? <ResultsCard stats={progress.stats} /> : null}
+
+        <nav aria-label={t.home.progressNav} className="grid grid-cols-2 gap-3">
+          <NavTile icon={<BookmarkSticker size={44} className="-rotate-6" />} label={t.home.phrasesToReview} count={progress?.toReview ?? 0} onClick={onOpenPhrases} />
+          <NavTile icon={<ClockSticker size={44} className="rotate-6" />} label={t.home.practiceHistory} count={progress?.history.length ?? 0} onClick={onOpenHistory} />
+        </nav>
+
+        <ShareCard />
+      </div>
     </div>
   );
 }
 
-function NavRow({ icon, label, count, onClick }: { icon: React.ReactNode; label: string; count: number; onClick: () => void }) {
+interface NavTileProps {
+  icon: ReactNode;
+  label: string;
+  count: number;
+  onClick: () => void;
+}
+
+/** A way into a list: how many are in it, big, and where it leads. */
+function NavTile({ icon, label, count, onClick }: NavTileProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border border-border bg-surface px-4 text-left font-semibold transition duration-200 hover:bg-surface-2"
+      className="panel group flex min-h-36 cursor-pointer flex-col justify-between rounded-card p-4 text-left transition duration-200 hover:bg-surface-2 active:scale-[0.98]"
     >
-      <span className="text-primary-ink">{icon}</span>
-      <span className="flex-1">{label}</span>
-      <span className="tabular rounded-full bg-surface-2 px-2.5 py-0.5 text-sm">{count}</span>
-      <ChevronRight aria-hidden="true" className="size-5 text-muted" />
+      <span className="flex items-start justify-between">
+        {icon}
+        <ArrowUpRight aria-hidden="true" className="size-5 text-muted transition duration-200 group-hover:text-ink" />
+      </span>
+      <span>
+        <span className="display tabular block text-[2rem]">{count}</span>
+        <span className="mt-2 block text-sm font-semibold leading-snug text-muted">{label}</span>
+      </span>
     </button>
   );
 }

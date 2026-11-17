@@ -3,6 +3,7 @@ import { diffLetters } from "@/domain/diff";
 import { soundLetters } from "@/domain/sounds";
 import type { WordCheck, WordGuide } from "@/lib/types";
 import { DiffParts } from "./letter-diff";
+import { QUIET_ACTION } from "./ui";
 import type { Locale } from "@/domain/locales";
 import { MESSAGES, type Messages } from "@/i18n/messages";
 import { useI18n } from "@/i18n/provider";
@@ -16,7 +17,7 @@ const WATCH = "rounded-sm bg-sun px-px text-on-sun underline decoration-dotted d
 
 /** A word's letters, colored by what was heard (or by the sound to watch when nothing was said yet). */
 function WordLetters({ word, check }: { word: WordGuide; check: WordCheck | undefined }) {
-  if (check?.status === "clear") return <span className="text-accent-ink">{word.text}</span>;
+  if (check?.status === "clear") return <span>{word.text}</span>;
   if (check?.status === "missed") {
     if (!check.heardAs) return <span className="text-error line-through decoration-2">{word.text}</span>;
     const bare = word.text.replace(/[^\p{L}\p{N}'’-]/gu, "");
@@ -57,11 +58,11 @@ export function SoundWords({ words, checks, selected, onSelect }: SoundWordsProp
         const check = checks?.[i];
         const tone =
           check?.status === "clear"
-            ? "bg-accent-soft text-accent-ink"
+            ? "bg-accent text-on-accent"
             : check?.status === "missed"
-              ? "bg-surface-2 text-ink ring-1 ring-error"
+              ? "bg-error-soft text-ink ring-1 ring-error"
               : w.focus
-                ? "bg-warn-soft text-ink"
+                ? "bg-warn-soft text-ink ring-1 ring-warn/40"
                 : "bg-surface-2";
         return (
           <li key={`${w.text}-${i}`}>
@@ -71,8 +72,8 @@ export function SoundWords({ words, checks, selected, onSelect }: SoundWordsProp
               aria-pressed={selected === i}
               aria-label={wordLabel(w, check, t)}
               onClick={() => onSelect(i)}
-              className={`inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-xl px-2.5 font-display text-xl font-bold transition duration-200 hover:brightness-95 ${tone} ${
-                selected === i ? "ring-2 ring-ink ring-offset-2 ring-offset-surface" : ""
+              className={`inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-xl px-3 text-xl font-bold transition duration-200 hover:brightness-125 active:scale-[0.97] ${tone} ${
+                selected === i ? "ring-2 ring-ink" : ""
               }`}
             >
               {check?.status === "clear" ? <Check aria-hidden="true" className="size-4" strokeWidth={3} /> : null}
@@ -101,9 +102,9 @@ export function WordDetail({ word, check, tipsLocale, onHearIt, onHearMine }: Wo
   const { t } = useI18n();
   const tips = MESSAGES[tipsLocale].sounds;
   return (
-    <div className="animate-rise space-y-3 rounded-2xl border border-border bg-surface p-4" aria-live="polite">
+    <div className="animate-rise space-y-3 rounded-tile bg-well p-4" aria-live="polite">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <p lang="en" className="font-display text-2xl font-extrabold">
+        <p lang="en" className="display text-2xl">
           {word.text.replace(/[^\p{L}'’-]/gu, "")}
         </p>
         {word.respelling ? (
@@ -121,7 +122,7 @@ export function WordDetail({ word, check, tipsLocale, onHearIt, onHearMine }: Wo
         </p>
       ) : null}
       {check?.status === "missed" && check.heardAs ? (
-        <p lang="en" className="font-display text-xl font-bold" aria-hidden="true">
+        <p lang="en" className="text-xl font-bold" aria-hidden="true">
           <WordLetters word={word} check={check} />
         </p>
       ) : null}
@@ -140,11 +141,11 @@ export function WordDetail({ word, check, tipsLocale, onHearIt, onHearMine }: Wo
         <p className="text-sm text-muted">{t.sayIt.noTricky}</p>
       )}
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={onHearIt} className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full bg-surface-2 px-4 text-sm font-semibold transition duration-200 hover:brightness-95">
+        <button type="button" onClick={onHearIt} className={QUIET_ACTION}>
           <Snail aria-hidden="true" className="size-4" /> {t.sayIt.hearSlowly}
         </button>
         {onHearMine ? (
-          <button type="button" onClick={onHearMine} className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full bg-surface-2 px-4 text-sm font-semibold transition duration-200 hover:brightness-95">
+          <button type="button" onClick={onHearMine} className={QUIET_ACTION}>
             <Ear aria-hidden="true" className="size-4" /> {t.sayIt.hearYours}
           </button>
         ) : null}

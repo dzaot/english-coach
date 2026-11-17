@@ -25,7 +25,11 @@ describe("HomeView", () => {
   it("starts the chosen scenario and industry", async () => {
     const onStart = vi.fn();
     render(<HomeView level="intermediate" avatarId="sarah" onChangePrefs={vi.fn()} progress={progress()} starting={false} onStart={onStart} onOpenPhrases={vi.fn()} onOpenHistory={vi.fn()} />);
+    // The chosen scenario explains itself under the grid.
+    expect(screen.getByText(/Introduce yourself/)).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText(/Salary negotiation/));
+    expect(screen.getByText(/Ask for what you are worth/)).toBeInTheDocument();
+    expect(screen.queryByText(/Introduce yourself/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Construction")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Change partner, industry or level/ }));
     await userEvent.click(screen.getByLabelText("Construction"));
@@ -55,12 +59,36 @@ describe("HomeView", () => {
     expect(screen.getByRole("button", { name: /Reading the job post/ })).toBeDisabled();
   });
 
+  it("starts from the saved setup, and lets the person name their own field of work", async () => {
+    const onChangePrefs = vi.fn();
+    render(
+      <HomeView level="intermediate" avatarId="sarah" onChangePrefs={onChangePrefs} progress={progress()} starting={false} onStart={vi.fn()} onOpenPhrases={vi.fn()} onOpenHistory={vi.fn()} initialScenarioId="client_call" initialIndustryId="finance" />,
+    );
+    expect(screen.getByLabelText(/Client call/)).toBeChecked();
+    expect(screen.getByText(/Intermediate · Finance/)).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText(/Presentation/));
+    expect(onChangePrefs).toHaveBeenCalledWith({ scenarioId: "presentation" });
+    await userEvent.click(screen.getByRole("button", { name: /Change partner, industry or level/ }));
+    expect(screen.queryByLabelText("Your field")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText("Other"));
+    expect(onChangePrefs).toHaveBeenCalledWith({ industryId: "other" });
+    await userEvent.type(screen.getByLabelText("Your field"), "Law");
+    expect(onChangePrefs).toHaveBeenLastCalledWith({ industryOther: "Law" });
+    expect(screen.getByText(/Intermediate · Law/)).toBeInTheDocument();
+    // The phrase of the day and the way to share are always on the home screen.
+    expect(screen.getByRole("heading", { name: "Phrase of the day" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Share Dilo/ })).toBeInTheDocument();
+  });
+
   it("lets the person pick a partner and a level", async () => {
     const onChangePrefs = vi.fn();
     render(<HomeView level="intermediate" avatarId="sarah" onChangePrefs={onChangePrefs} progress={progress()} starting={false} onStart={vi.fn()} onOpenPhrases={vi.fn()} onOpenHistory={vi.fn()} />);
     expect(screen.getByRole("heading", { name: "Your call with Sarah" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Change partner, industry or level/ }));
     expect(screen.getByAltText(/Emily, a woman/)).toBeInTheDocument();
+    // Only the chosen partner's style is spelled out, under the four faces.
+    expect(screen.getByText(/Warm and encouraging/)).toBeInTheDocument();
+    expect(screen.queryByText(/Calm and direct/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByLabelText(/James/));
     expect(onChangePrefs).toHaveBeenCalledWith({ avatarId: "james" });
     await userEvent.click(screen.getByLabelText(/Beginner/));

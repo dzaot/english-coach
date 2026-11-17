@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, api } from "@/lib/api";
 import { installAudioStub, installSpeechStub } from "@/test/browser-stubs";
 import { feedback, finishResult, practice, progress } from "@/test/fixtures";
+import { PREFERENCES_KEY, readPreferences } from "@/lib/hooks/use-preferences";
 import { CoachApp } from "./coach-app";
 
 vi.mock("@/lib/api", async (orig) => {
@@ -25,6 +26,7 @@ vi.mock("@/lib/api", async (orig) => {
       help: vi.fn(),
       drill: vi.fn(),
       pronounce: vi.fn().mockResolvedValue({ words: [] }),
+      onboarding: vi.fn().mockResolvedValue({ saved: true, completed: true }),
     },
   };
 });
@@ -32,6 +34,9 @@ const mocked = vi.mocked(api);
 const demo = { state: "ready", mode: "demo", account: null, usedPercent: null } as const;
 
 beforeEach(() => {
+  // Most tests start after the first-run questions.
+  window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ onboarded: true }));
+  mocked.onboarding.mockResolvedValue({ saved: true, completed: true });
   installSpeechStub();
   installAudioStub();
   mocked.telemetry.mockResolvedValue({ result: "skipped" });
@@ -40,6 +45,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
   vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
@@ -137,5 +143,70 @@ describe("CoachApp", () => {
     mocked.progress.mockRejectedValue(new Error("Progreso no disponible."));
     render(<CoachApp />);
     expect(await screen.findByRole("alert")).toHaveTextContent("Progreso no disponible.");
+  });
+
+  it("asks the first-run questions, saves the answers and starts the first call with that setup", async () => {
+    window.localStorage.clear();
+    mocked.gate.mockResolvedValue(demo);
+    mocked.start.mockResolvedValue({ practice: practice({ scenarioId: "client_call", avatarId: "james" }), audio: null });
+    render(<CoachApp />);
+    expect(await screen.findByRole("heading", { name: "Speak English at work without freezing." })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Get started/ }));
+    // Each question has to be answered before going on.
+    expect(screen.getByRole("button", { name: /Continue/ })).toBeDisabled();
+    await userEvent.click(screen.getByLabelText(/Calls with clients/));
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
+    await userEvent.click(screen.getByLabelText(/I go blank mid-sentence/));
+    await userEvent.click(screen.getByLabelText(/I worry about my accent/));
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
+    await userEvent.click(screen.getByLabelText("2 of 5: A little"));
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
+    // What they said gets in the way comes back with the part of Dilo that answers it.
+    expect(screen.getByText(/get a phrase to say/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
+    await userEvent.click(screen.getByLabelText("Other"));
+    expect(screen.getByRole("button", { name: /Continue/ })).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("Your field"), "Nursing");
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
+    await userEvent.click(screen.getByLabelText(/Beginner/));
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
+    await userEvent.click(screen.getByLabelText(/James/));
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /Start my first call/ }, { timeout: 4000 }));
+
+    expect(mocked.onboarding).toHaveBeenCalledWith({
+      locale: "en",
+      goal: "clients",
+      pains: ["blank", "pronunciation"],
+      confidence: 2,
+      industryId: "other",
+      industryOther: "Nursing",
+      level: "beginner",
+      avatarId: "james",
+      completed: true,
+    });
+    await waitFor(() =>
+      expect(mocked.start).toHaveBeenCalledWith({ scenarioId: "client_call", industryId: "other", level: "beginner", avatarId: "james", locale: "en", industryOther: "Nursing" }),
+    );
+    expect(readPreferences()).toMatchObject({ onboarded: true, scenarioId: "client_call", industryId: "other", industryOther: "Nursing", level: "beginner", avatarId: "james" });
+    expect(await screen.findByRole("button", { name: "Leave the practice" })).toBeInTheDocument();
+  });
+
+  it("lets the person skip the questions, saving what they answered so far", async () => {
+    window.localStorage.clear();
+    mocked.gate.mockResolvedValue(demo);
+    mocked.onboarding.mockRejectedValue(new ApiError("offline", "No hay conexión."));
+    render(<CoachApp />);
+    await userEvent.click(await screen.findByRole("button", { name: /Get started/ }));
+    await userEvent.click(screen.getByLabelText(/A job interview/));
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByLabelText(/A job interview/)).toBeChecked();
+    await userEvent.click(screen.getByRole("button", { name: "Skip" }));
+    expect(mocked.onboarding).toHaveBeenCalledWith(expect.objectContaining({ goal: "interview", pains: [], confidence: null, level: null, avatarId: null, completed: false }));
+    // A survey that could not be saved never keeps anyone out of the app.
+    expect(await screen.findByRole("button", { name: /Start talking/ })).toBeInTheDocument();
+    expect(mocked.start).not.toHaveBeenCalled();
+    expect(readPreferences().onboarded).toBe(true);
   });
 });

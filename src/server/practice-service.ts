@@ -18,7 +18,8 @@ import { cleanDashes } from "@/domain/text";
 import { AVATAR_IDS, getAvatar } from "@/domain/avatars";
 import { LEVEL_IDS, getLevel } from "@/domain/levels";
 import { LOCALES } from "@/domain/locales";
-import { CUSTOM_SCENARIO, INDUSTRY_IDS, SCENARIO_IDS, buildOpener, getIndustry, getScenario } from "@/domain/scenarios";
+import { CUSTOM_SCENARIO, INDUSTRY_IDS, MAX_INDUSTRY_OTHER, OTHER_INDUSTRY, SCENARIO_IDS, buildOpener, getIndustry, getScenario, withOwnField } from "@/domain/scenarios";
+import { POWER_PHRASE_BONUS, getPowerPhrase, usesPhrase } from "@/domain/power-phrases";
 import { addDays, computeStreak, localDay, type Streak } from "@/domain/streak";
 import type { AiProvider, SpeechAudio, Tier } from "./ai/provider";
 import type { AppContext } from "./context";
@@ -108,6 +109,8 @@ const StartSchema = z.object({
   avatarId: z.enum(AVATAR_IDS).default("sarah"),
   context: z.string().max(MAX_CONTEXT_INPUT).default(""),
   locale: z.enum(LOCALES).default("es"),
+  /** The person's own field of work, when the industry is "other". */
+  industryOther: z.string().trim().max(MAX_INDUSTRY_OTHER).default(""),
 });
 const TzSchema = z.number().int().min(-840).max(840);
 
@@ -139,13 +142,16 @@ async function situationFrom(ctx: AppContext, ai: AiProvider, notes: string): Pr
 export async function startPractice(ctx: AppContext, ai: AiProvider, sid: string, input: unknown) {
   const parsed = StartSchema.safeParse(input);
   if (!parsed.success) throw new AppError("invalid_input");
-  const { context: notes, ...choice } = parsed.data;
+  const { context: notes, industryOther, ...choice } = parsed.data;
   if (choice.scenarioId === CUSTOM_SCENARIO && notes.trim().length < MIN_CUSTOM_CONTEXT) throw new AppError("context_required");
   const scenario = getScenario(choice.scenarioId);
   const industry = getIndustry(choice.industryId);
   const avatar = getAvatar(choice.avatarId);
-  const { context, linkUnreadable } = await situationFrom(ctx, ai, notes);
-  if (choice.scenarioId === CUSTOM_SCENARIO && (context?.length ?? 0) < MIN_CUSTOM_CONTEXT) throw new AppError("link_unreadable");
+  const situation = await situationFrom(ctx, ai, notes);
+  const { linkUnreadable } = situation;
+  if (choice.scenarioId === CUSTOM_SCENARIO && (situation.context?.length ?? 0) < MIN_CUSTOM_CONTEXT) throw new AppError("link_unreadable");
+  // Their own field of work travels with the situation, so the opener, the replies and the feedback all know it.
+  const context = choice.industryId === OTHER_INDUSTRY && industryOther ? withOwnField(situation.context ?? "", industryOther).slice(0, MAX_CONTEXT_CHARS) : situation.context;
   const fixed = buildOpener(scenario, industry, avatar);
   // With their real situation, the first line is written for it; the fixed line is the fallback.
   const opener = context
@@ -339,14 +345,21 @@ function parseTz(value: unknown): number {
   return tz.data;
 }
 
-export async function finishPractice(ctx: AppContext, ai: AiProvider, sid: string, id: string, input: { tzOffset: unknown }) {
+/** Using the phrase of the day in any answer adds a few points to the score, and says so. */
+function withPowerPhraseBonus(feedback: Feedback, practice: PracticeRecord, phraseId: unknown): Feedback {
+  const phrase = getPowerPhrase(phraseId);
+  if (!phrase || !practice.turns.some((t) => t.role === "user" && usesPhrase(t.text, phrase))) return feedback;
+  return { ...feedback, score: Math.min(100, feedback.score + POWER_PHRASE_BONUS), bonus: { phrase: phrase.phrase, points: POWER_PHRASE_BONUS } };
+}
+
+export async function finishPractice(ctx: AppContext, ai: AiProvider, sid: string, id: string, input: { tzOffset: unknown; powerPhraseId?: unknown }) {
   const tzOffset = parseTz(input.tzOffset);
   const practice = await load(ctx, sid, id);
   if (practice.finishedAt && practice.feedback) {
     return { practice: view(practice), feedback: practice.feedback, streak: await streakFor(ctx, sid, tzOffset) };
   }
   if (!canFinish(practice.turns)) throw new AppError("not_enough_turns");
-  const feedback = await generateFeedback(ai, practice);
+  const feedback = withPowerPhraseBonus(await generateFeedback(ai, practice), practice, input.powerPhraseId);
   const now = ctx.now();
   const done = await ctx.store.finishPractice(sid, id, { feedback, finishedAt: now.toISOString(), localDay: localDay(now, tzOffset) });
   await ctx.store.addPhrases(sid, id, feedback.betterPhrases, now.toISOString(), addDays(localDay(now, tzOffset), 1));
