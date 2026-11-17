@@ -107,11 +107,40 @@ describe("HomeView", () => {
     expect(screen.getAllByText("1 day")).toHaveLength(2);
   });
 
-  it("renders without progress yet, with the choices open for a first call", () => {
-    render(<HomeView level="intermediate" avatarId="sarah" onChangePrefs={vi.fn()} progress={null} starting={false} onStart={vi.fn()} onOpenPhrases={vi.fn()} onOpenHistory={vi.fn()} />);
+  it("opens the choices only for a first call, once progress has loaded", () => {
+    const props = { level: "intermediate" as const, avatarId: "sarah" as const, onChangePrefs: vi.fn(), starting: false, onStart: vi.fn(), onOpenPhrases: vi.fn(), onOpenHistory: vi.fn() };
+    const { rerender } = render(<HomeView {...props} progress={null} />);
     expect(screen.queryByText("Your streak")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Change partner/ })).toHaveAttribute("aria-expanded", "true");
     expect(screen.queryByText("Your results")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Change partner/ })).toHaveAttribute("aria-expanded", "false");
+    rerender(<HomeView {...props} progress={progress({ history: [] })} />);
+    expect(screen.getByRole("button", { name: /Change partner/ })).toHaveAttribute("aria-expanded", "true");
+    rerender(<HomeView {...props} progress={progress()} />);
+    expect(screen.getByRole("button", { name: /Change partner/ })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("warns about a low balance and shows start errors next to the button", () => {
+    render(
+      <HomeView
+        level="intermediate"
+        avatarId="sarah"
+        onChangePrefs={vi.fn()}
+        progress={progress()}
+        starting={false}
+        onStart={vi.fn()}
+        onOpenPhrases={vi.fn()}
+        onOpenHistory={vi.fn()}
+        lowBalanceUrl="https://publikhq.com/wallet"
+        showPrice
+        startError={<p role="alert">Could not start</p>}
+      />,
+    );
+    expect(screen.getByText(/may not cover a full practice/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Top up on publik" })).toHaveAttribute("href", "https://publikhq.com/wallet");
+    expect(screen.getByText(/about \$0\.08 of AI per practice/)).toBeInTheDocument();
+    const alert = screen.getByRole("alert");
+    const start = screen.getByRole("button", { name: /Start talking/ });
+    expect(alert.compareDocumentPosition(start) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("shows your results once you have practiced", () => {
@@ -122,6 +151,11 @@ describe("HomeView", () => {
 });
 
 describe("FeedbackView", () => {
+  it("waits on Practice again while the next practice loads", () => {
+    render(<FeedbackView practice={finishResult.practice} feedback={feedback} streak={null} starting onPracticeAgain={vi.fn()} onHome={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /Getting ready/ })).toBeDisabled();
+  });
+
   it("shows the score, the three better phrases and the vocabulary", async () => {
     const onAgain = vi.fn();
     const onHome = vi.fn();

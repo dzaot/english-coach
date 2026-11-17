@@ -7,7 +7,7 @@ const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: [
 
 export const metadata: Metadata = {
   title: "Dilo · Practice your work English out loud",
-  description: "Practice your job interview in English, out loud, free. Instant feedback, a daily streak and phrases to review.",
+  description: "Practice your job interview in English, out loud, for cents per practice. Instant feedback, a daily streak and phrases to review.",
 };
 
 export const viewport: Viewport = {

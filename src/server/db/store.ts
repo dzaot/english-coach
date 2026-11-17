@@ -75,7 +75,11 @@ export interface Store {
   updateUser(sid: string, patch: UserPatch): Promise<UserRecord>;
   createPractice(input: NewPractice): Promise<PracticeRecord>;
   getPractice(sid: string, id: string): Promise<PracticeRecord | null>;
-  savePracticeTurns(sid: string, id: string, turns: readonly Turn[]): Promise<PracticeRecord>;
+  /**
+   * Saves the turns. With expectedCount, saves only if the practice still has that many turns
+   * (so two answers sent at once cannot both land); returns null when it changed.
+   */
+  savePracticeTurns(sid: string, id: string, turns: readonly Turn[], expectedCount?: number): Promise<PracticeRecord | null>;
   finishPractice(
     sid: string,
     id: string,

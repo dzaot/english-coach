@@ -58,7 +58,8 @@ describe("CoachApp", () => {
     expect(await screen.findByText("Your feedback")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Practice again/ }));
     await waitFor(() => expect(mocked.start).toHaveBeenCalledTimes(2));
-    expect(mocked.start).toHaveBeenLastCalledWith({ scenarioId: "job_interview", industryId: "general", level: "intermediate", avatarId: "sarah", locale: "en" });
+    // Repeats the practice on screen (the fixture's practice is a sales interview).
+    expect(mocked.start).toHaveBeenLastCalledWith({ scenarioId: "job_interview", industryId: "sales", level: "intermediate", avatarId: "sarah", locale: "en" });
     await userEvent.click(await screen.findByRole("button", { name: "Leave the practice" }));
     expect(await screen.findByRole("button", { name: /Start talking/ })).toBeInTheDocument();
   });

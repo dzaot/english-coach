@@ -152,9 +152,17 @@ export function createSqlStore(open: SqlDb | Promise<SqlDb>): Store {
       const row = await practiceRow(sid, id);
       return row ? toPractice(row) : null;
     },
-    async savePracticeTurns(sid, id, turns) {
-      await (await ready).run("UPDATE practices SET turns = ? WHERE id = ? AND sid = ?", [JSON.stringify(turns), id, sid]);
-      return requirePractice(sid, id);
+    async savePracticeTurns(sid, id, turns, expectedCount) {
+      const db = await ready;
+      if (expectedCount === undefined) {
+        await db.run("UPDATE practices SET turns = ? WHERE id = ? AND sid = ?", [JSON.stringify(turns), id, sid]);
+        return requirePractice(sid, id);
+      }
+      const { changes } = await db.run(
+        "UPDATE practices SET turns = ? WHERE id = ? AND sid = ? AND json_array_length(turns) = ?",
+        [JSON.stringify(turns), id, sid, expectedCount],
+      );
+      return changes > 0 ? requirePractice(sid, id) : null;
     },
     async finishPractice(sid, id, result) {
       await requirePractice(sid, id);

@@ -51,6 +51,14 @@ export function GatePanel({ gate, error, waiting, timedOut, busy, onRetry, onWai
         <BrandMark />
         <LanguageMenu />
       </div>
+      {/* What Dilo is and what it costs, before asking anyone to sign in. */}
+      <header className="space-y-2">
+        <p className="font-display text-[1.75rem] font-extrabold leading-[1.1] tracking-tight">
+          {t.home.titleStart} <span className="text-primary-ink">{t.home.titleEnd}</span>
+        </p>
+        <p className="text-muted">{t.home.subtitle}</p>
+        <p className="text-sm font-semibold">{t.home.price}</p>
+      </header>
       <Card className="space-y-4">
         <h1 lang="en" className="text-2xl font-extrabold">{screen.title}</h1>
         <p lang="en" className="text-muted">{screen.body}</p>

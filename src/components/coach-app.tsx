@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getLevel, translationLocale } from "@/domain/levels";
 import type { IndustryId, ScenarioId } from "@/domain/scenarios";
 import { ApiError, api } from "@/lib/api";
@@ -19,10 +19,12 @@ import { PracticeView } from "./practice-view";
 import { ErrorBanner, Spinner } from "./ui";
 import { useI18n } from "@/i18n/provider";
 import { LanguageMenu } from "./language-menu";
+import { MAX_CONTEXT_INPUT } from "@/domain/limits";
+import { unlockAudio } from "@/lib/audio-unlock";
 
 type View =
   | { name: "home" }
-  | { name: "practice"; practice: Practice; audio: SpeechAudio | null }
+  | { name: "practice"; practice: Practice; audio: SpeechAudio | null; notice: "link_unreadable" | null }
   | { name: "feedback"; practice: Practice; feedback: Feedback; streak: Streak | null }
   | { name: "phrases" }
   | { name: "history" };
@@ -43,8 +45,10 @@ export function CoachApp() {
   const { level, avatarId } = prefs;
   const [view, setView] = useState<View>({ name: "home" });
   const [progress, setProgress] = useState<Progress | null>(null);
-  const [lastChoice, setLastChoice] = useState<{ scenarioId: ScenarioId; industryId: IndustryId; context: string } | null>(null);
+  /** What the person typed for their last practice, to repeat it exactly (the stored context may hold a link summary). */
+  const [lastChoice, setLastChoice] = useState<{ practiceId: string; context: string } | null>(null);
   const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
   const [error, setError] = useState<ShownError | null>(null);
 
   const loadProgress = useCallback(async () => {
@@ -78,16 +82,20 @@ export function CoachApp() {
   }, [loadProgress]);
 
   const start = useCallback(async (scenarioId: ScenarioId, industryId: IndustryId, context = "") => {
+    if (startingRef.current) return; // a second tap while the first one loads
+    startingRef.current = true;
+    unlockAudio(); // inside the tap, so the partner's voice can play on iPhone
     setStarting(true);
     setError(null);
-    setLastChoice({ scenarioId, industryId, context });
     try {
-      const { practice, audio } = await api.start({ scenarioId, industryId, level, avatarId, locale, ...(context ? { context } : {}) });
-      setView({ name: "practice", practice, audio });
+      const { practice, audio, notice } = await api.start({ scenarioId, industryId, level, avatarId, locale, ...(context ? { context } : {}) });
+      setLastChoice({ practiceId: practice.id, context });
+      setView({ name: "practice", practice, audio, notice: notice ?? null });
     } catch (e) {
       setError(toShown(e));
       setView({ name: "home" });
     } finally {
+      startingRef.current = false;
       setStarting(false);
     }
   }, [avatarId, level, locale]);
@@ -147,6 +155,7 @@ export function CoachApp() {
 
   const mode = gate.state;
   const banner = error ? <ErrorBanner message={error.message} topUpUrl={error.topUpUrl} /> : null;
+  const lowBalance = mode.state === "ready" && mode.lowBalance ? (mode.topUpUrl ?? null) : null;
 
   switch (view.name) {
     case "practice":
@@ -155,6 +164,7 @@ export function CoachApp() {
           key={view.practice.id}
           initial={view.practice}
           initialAudio={view.audio}
+          notice={view.notice}
           onExit={goHome}
           onFinished={(r) => {
             setView({ name: "feedback", practice: r.practice, feedback: r.feedback, streak: r.streak });
@@ -171,8 +181,14 @@ export function CoachApp() {
           phrases={progress?.phrases.filter((p) => p.practiceId === view.practice.id)}
           onDrilled={onDrilled}
           onHome={goHome}
+          starting={starting}
           onPracticeAgain={() =>
-            void start(lastChoice?.scenarioId ?? view.practice.scenarioId, lastChoice?.industryId ?? view.practice.industryId, lastChoice?.context ?? view.practice.context?.slice(0, 2000) ?? "")
+            // Repeat the practice on screen: what was typed for it when known, else its saved details.
+            void start(
+              view.practice.scenarioId,
+              view.practice.industryId,
+              lastChoice?.practiceId === view.practice.id ? lastChoice.context : (view.practice.context?.slice(0, MAX_CONTEXT_INPUT) ?? ""),
+            )
           }
         />
       );
@@ -206,8 +222,10 @@ export function CoachApp() {
           {mode.mode === "demo" ? (
             <p className="mb-2 inline-flex rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-muted">{t.app.demoMode}</p>
           ) : null}
-          {banner ? <div className="mb-4">{banner}</div> : null}
           <HomeView
+            startError={banner}
+            lowBalanceUrl={lowBalance}
+            showPrice={mode.mode === "publik"}
             progress={progress}
             starting={starting}
             level={level}

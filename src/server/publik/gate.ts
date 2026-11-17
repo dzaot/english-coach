@@ -11,8 +11,19 @@ import { gateScreen, provisionInstall, readWallet, sendTelemetry, type GateScree
 /** Sign in with publik for a hosted web app: one publik install per browser session, keys sealed server side. */
 
 export type GateState =
-  | { state: "ready"; mode: "demo" | "publik" | "own_key"; account: string | null; usedPercent: number | null }
+  | {
+      state: "ready";
+      mode: "demo" | "publik" | "own_key";
+      account: string | null;
+      usedPercent: number | null;
+      /** A publik balance (no plan) that may not cover a whole practice. Never shown as money. */
+      lowBalance?: boolean;
+      topUpUrl?: string | null;
+    }
   | { state: "screen"; screen: GateScreen; links: { signIn?: string; getPlan?: string } };
+
+/** A 10-minute practice with HD voices costs about $0.07 to $0.09 (measured); below this, warn before starting. */
+export const PRACTICE_COST_MICROS = 100_000;
 
 const OFFLINE_RE = /fetch failed|abort|timeout|network/i;
 
@@ -71,7 +82,8 @@ export async function getGateState(ctx: AppContext, sid: string): Promise<GateSt
   if (!user.choice || (user.choice === "own_key" && !user.ownKeySealed)) {
     return { state: "screen", screen: gateScreen("choose", w), links: { getPlan: w.top_up_url } };
   }
-  return { state: "ready", mode: user.choice, account: w.account?.handle ?? null, usedPercent: w.used_percent };
+  const lowBalance = user.choice === "publik" && w.plan.kind !== "plan" && w.balance_micros < PRACTICE_COST_MICROS;
+  return { state: "ready", mode: user.choice, account: w.account?.handle ?? null, usedPercent: w.used_percent, lowBalance, topUpUrl: w.top_up_url };
 }
 
 const ActionSchema = z.discriminatedUnion("action", [

@@ -18,9 +18,11 @@ interface Props {
   onDrilled?: (phrase: Phrase) => void;
   onPracticeAgain: () => void;
   onHome: () => void;
+  /** A new practice is loading: the button waits instead of starting a second one. */
+  starting?: boolean;
 }
 
-export function FeedbackView({ practice, feedback, streak, phrases = [], onDrilled, onPracticeAgain, onHome }: Props) {
+export function FeedbackView({ practice, feedback, streak, phrases = [], onDrilled, onPracticeAgain, onHome, starting = false }: Props) {
   const { t } = useI18n();
   const speaker = useSpeaker();
   // The tips follow the practice's own language, so an old practice keeps its language.
@@ -111,8 +113,8 @@ export function FeedbackView({ practice, feedback, streak, phrases = [], onDrill
       ) : null}
 
       <div className="grid gap-2 pt-2">
-        <Button size="lg" onClick={onPracticeAgain}>
-          <RotateCcw aria-hidden="true" className="size-5" /> {t.feedback.again}
+        <Button size="lg" onClick={onPracticeAgain} disabled={starting}>
+          <RotateCcw aria-hidden="true" className="size-5" /> {starting ? t.home.gettingReady : t.feedback.again}
         </Button>
         <Button variant="secondary" onClick={onHome}>
           <Home aria-hidden="true" className="size-4" /> {t.feedback.home}

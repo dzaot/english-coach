@@ -125,6 +125,44 @@ describe("PracticeView", () => {
     await waitFor(() => expect(audios.at(-1)?.src).toBe("data:audio/mpeg;base64,DD"));
   });
 
+  it("sends an answer once even if Send is tapped twice", async () => {
+    let finish: () => void = () => undefined;
+    mocked.turn.mockImplementation(
+      () => new Promise((resolve) => (finish = () => resolve({ userText: "hi", replyText: "question 0?", check: null, audio: null, practice: afterTurns(1) }))),
+    );
+    render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /Type/ }));
+    await userEvent.type(screen.getByLabelText("Your answer in English"), "hi");
+    const send = screen.getByRole("button", { name: /Send/ });
+    fireEvent.click(send);
+    fireEvent.click(send);
+    await act(async () => finish());
+    expect(mocked.turn).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a spoken answer that could not be sent, ready to send again", async () => {
+    mocked.turn.mockImplementationOnce(async (_id, _answer, onEvent) => {
+      onEvent?.({ type: "heard", text: "I worked in sales.", turnIndex: 1 });
+      throw new ApiError("ai_balance", "Your publik AI balance has run out.", "https://publikhq.com/wallet");
+    });
+    render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /Type/ }));
+    await userEvent.type(screen.getByLabelText("Your answer in English"), "x");
+    await userEvent.click(screen.getByRole("button", { name: /Send/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("balance has run out");
+    expect(screen.getByLabelText("Your answer in English")).toHaveValue("I worked in sales.");
+    expect(screen.getByText(/Your answer was not sent/)).toBeInTheDocument();
+    expect(screen.queryByText("YOU")).not.toBeInTheDocument();
+    expect(screen.getByText(/0\/12 answers/)).toBeInTheDocument();
+  });
+
+  it("says when a pasted link could not be read, and lets you close it", async () => {
+    render(<PracticeView initial={practice()} initialAudio={null} notice="link_unreadable" onFinished={vi.fn()} onExit={vi.fn()} />);
+    expect(screen.getByText(/couldn't read the link/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Close help" }));
+    expect(screen.queryByText(/couldn't read the link/)).not.toBeInTheDocument();
+  });
+
   it("helps when the person is stuck: translation, suggested answer and tip", async () => {
     mocked.help.mockResolvedValueOnce({ translation: "Háblame de ti.", suggestion: "I'm a sales rep.", tip: "Empieza por tu rol." });
     render(<PracticeView initial={practice()} initialAudio={null} onFinished={vi.fn()} onExit={vi.fn()} />);

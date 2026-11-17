@@ -14,13 +14,20 @@ export function contextBlock(context: string | null | undefined): string {
 }
 
 /** System prompt for the AI counterpart in the role-play. */
-export function counterpartSystemPrompt(scenario: Scenario, industry: Industry, avatar: Avatar, level: Level, context?: string | null): string {
+export function counterpartSystemPrompt(
+  scenario: Scenario,
+  industry: Industry,
+  avatar: Avatar,
+  level: Level,
+  context?: string | null,
+  locale: Locale = "es",
+): string {
   const role = industry.roleEn === "this position" ? "professional" : industry.roleEn;
   const situation = contextBlock(context);
   return [
     `You are ${avatar.name}, ${scenario.id === "my_situation" ? "the other person in the situation described below" : `a ${scenario.counterpart.roleEn}`}. Personality: ${avatar.vibe.toLowerCase()}. Setting: ${industry.contextEn}. The other person works as a ${role}.`,
     `Your goal in this role-play: ${scenario.goalEn}.`,
-    "The other person is a Spanish-speaking professional practicing spoken English for work.",
+    `The other person is ${speakerOf(locale)}, a professional practicing spoken English for work.`,
     "Rules:",
     "- Speak only in English. Only if they actually speak Spanish, gently ask them to try in English. If an answer is unclear, ask a natural follow-up question instead.",
     "- Reply in 1 to 3 short sentences, like a real person talking. No lists, no markdown, no emojis.",
@@ -33,9 +40,9 @@ export function counterpartSystemPrompt(scenario: Scenario, industry: Industry, 
 }
 
 /** Asks for the counterpart's first line when the person described their situation. */
-export function openerMessages(scenario: Scenario, industry: Industry, avatar: Avatar, level: Level, context: string): ChatMessage[] {
+export function openerMessages(scenario: Scenario, industry: Industry, avatar: Avatar, level: Level, context: string, locale: Locale = "es"): ChatMessage[] {
   return [
-    { role: "system", content: counterpartSystemPrompt(scenario, industry, avatar, level, context) },
+    { role: "system", content: counterpartSystemPrompt(scenario, industry, avatar, level, context, locale) },
     { role: "user", content: "(Start the conversation now with your first line, in character: greet them and ask your first question. 1 to 3 short sentences.)" },
   ];
 }

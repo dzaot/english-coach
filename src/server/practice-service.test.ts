@@ -216,15 +216,19 @@ describe("drillPhrase (Dilo tú)", () => {
     expect((await getProgress(ctx, SID, 0)).dueToday).toBe(1);
   });
 
-  it("moves the phrase ahead when it was said right", async () => {
-    const { ctx, phrase } = await withPhrases();
+  it("moves the phrase ahead when it was said right on its review day, not before", async () => {
+    const { ctx: sameDay, phrase } = await withPhrases();
+    const early = await drillPhrase(sameDay, saying(phrase.better), SID, phrase.id, { audio, tzOffset: 0 });
+    expect(early.passed).toBe(true);
+    expect(early.phrase).toMatchObject({ step: 0, dueDay: "2026-11-16" });
+    const ctx = { ...sameDay, now: () => new Date("2026-11-16T18:00:00Z") };
     const out = await drillPhrase(ctx, saying(phrase.better), SID, phrase.id, { audio, tzOffset: 0 });
     expect(out).toMatchObject({ passed: true, score: 100, missing: [] });
     expect(out.words.every((w) => w.status === "clear")).toBe(true);
     expect(out.words.map((w) => w.text).join(" ")).toBe(phrase.better);
     expect(out.pace?.wordsPerMinute).toBeGreaterThan(0);
     expect(out.timings.length).toBe(phrase.better.split(/\s+/).length);
-    expect(out.phrase).toMatchObject({ step: 1, dueDay: "2026-11-16", reviewedAt: null });
+    expect(out.phrase).toMatchObject({ step: 1, dueDay: "2026-11-17", reviewedAt: null });
   });
 
   it("keeps the schedule and lists missing words when it was not", async () => {
@@ -357,10 +361,40 @@ describe("startPractice with your situation", () => {
     expect(out.practice.context).toContain("From the link: Sales Manager at Acme Corp");
   });
 
-  it("asks you to paste the text when the link cannot be read", async () => {
+  it("goes on with your notes when the link cannot be read, and says so", async () => {
+    const out = await startPractice(testContext(), ai, SID, {
+      scenarioId: "job_interview",
+      industryId: "sales",
+      context: "Sales role at a bank https://127.0.0.1/admin",
+    });
+    expect(out.notice).toBe("link_unreadable");
+    expect(out.practice.context).toBe("Sales role at a bank");
+    const onlyLink = await startPractice(testContext(), ai, SID, { scenarioId: "job_interview", industryId: "sales", context: "https://127.0.0.1/admin" });
+    expect(onlyLink.practice.context).toBeNull();
     await expect(
-      startPractice(testContext(), ai, SID, { scenarioId: "job_interview", industryId: "sales", context: "https://127.0.0.1/admin" }),
+      startPractice(testContext(), ai, SID, { scenarioId: "my_situation", industryId: "general", context: "https://127.0.0.1/admin" }),
     ).rejects.toMatchObject({ code: "link_unreadable" });
+  });
+
+  it("keeps a long spoken answer, cut at a whole word", async () => {
+    const { ctx, practice } = await started();
+    const long = Array.from({ length: 300 }, () => "word").join(" ");
+    const talker = { ...ai, transcribe: async () => long };
+    const out = await takeTurn(ctx, talker, SID, practice.id, { audio: new Blob([new Uint8Array(5)], { type: "audio/webm" }) });
+    expect(out.userText.length).toBeLessThanOrEqual(1201);
+    expect(out.userText.endsWith("word…")).toBe(true);
+  });
+
+  it("refuses a second answer sent while the first is being saved", async () => {
+    const { ctx, practice } = await started();
+    const [a, b] = await Promise.allSettled([
+      takeTurn(ctx, ai, SID, practice.id, { text: "First answer." }),
+      takeTurn(ctx, ai, SID, practice.id, { text: "First answer." }),
+    ]);
+    expect([a.status, b.status].sort()).toEqual(["fulfilled", "rejected"]);
+    const rejected = [a, b].find((r) => r.status === "rejected") as PromiseRejectedResult;
+    expect(rejected.reason).toMatchObject({ code: "turn_in_progress" });
+    expect((await getPractice(ctx, SID, practice.id)).turns).toHaveLength(3);
   });
 
   it("falls back to the fixed first line when the AI fails, but not when the balance is empty", async () => {

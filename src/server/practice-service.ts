@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   appendTurn,
   canFinish,
+  clipSpokenText,
   isTurnLimitReached,
   toChatMessages,
   validateUserText,
@@ -24,6 +25,7 @@ import type { AppContext } from "./context";
 import type { PhraseRecord, PracticeRecord } from "./db/store";
 import { AppError } from "./errors";
 import { findLink, readLinkText } from "./link-reader";
+import { MAX_CONTEXT_INPUT, MIN_CUSTOM_CONTEXT } from "@/domain/limits";
 
 /** Use cases of a practice session. Route handlers only parse HTTP and call these. */
 
@@ -34,9 +36,7 @@ const HELP_MAX_TOKENS = 300;
 const CHECK_MAX_TOKENS = 450;
 const OPENER_MAX_TOKENS = 120;
 const BRIEF_MAX_TOKENS = 260;
-/** What the person can type about their situation. A pasted link adds a short summary on top. */
-export const MAX_CONTEXT_INPUT = 2000;
-const MIN_CUSTOM_CONTEXT = 10;
+export { MAX_CONTEXT_INPUT };
 const HISTORY_LIMIT = 30;
 /** Practices counted for lifetime stats. */
 const STATS_LIMIT = 1000;
@@ -115,14 +115,25 @@ const TzSchema = z.number().int().min(-840).max(840);
 const mustSurface = (e: unknown) => e instanceof AppError && (e.code === "ai_balance" || e.code === "ai_auth");
 
 /** The person's notes, plus a short summary of the page when they pasted a link (a job post). */
-async function situationFrom(ctx: AppContext, ai: AiProvider, notes: string): Promise<string | null> {
+/**
+ * The person's notes, plus a short summary of the page when they pasted a link (a job post). A link that
+ * cannot be read (many job sites need a login) never blocks the practice: it goes on with the notes.
+ */
+async function situationFrom(ctx: AppContext, ai: AiProvider, notes: string): Promise<{ context: string | null; linkUnreadable: boolean }> {
   const text = notes.trim();
-  if (!text) return null;
+  if (!text) return { context: null, linkUnreadable: false };
   const link = findLink(text);
-  if (!link) return text;
-  const page = await readLinkText(link, ctx.fetch);
+  if (!link) return { context: text, linkUnreadable: false };
+  let page: string;
+  try {
+    page = await readLinkText(link, ctx.fetch);
+  } catch (e) {
+    if (!(e instanceof AppError && e.code === "link_unreadable")) throw e;
+    const rest = text.replace(link, "").trim();
+    return { context: rest || null, linkUnreadable: true };
+  }
   const brief = cleanDashes(await ai.chat(linkBriefMessages(page), { tier: "fast", maxTokens: BRIEF_MAX_TOKENS }));
-  return `${text}\n\nFrom the link: ${brief}`.slice(0, MAX_CONTEXT_CHARS);
+  return { context: `${text}\n\nFrom the link: ${brief}`.slice(0, MAX_CONTEXT_CHARS), linkUnreadable: false };
 }
 
 export async function startPractice(ctx: AppContext, ai: AiProvider, sid: string, input: unknown) {
@@ -133,12 +144,13 @@ export async function startPractice(ctx: AppContext, ai: AiProvider, sid: string
   const scenario = getScenario(choice.scenarioId);
   const industry = getIndustry(choice.industryId);
   const avatar = getAvatar(choice.avatarId);
-  const context = await situationFrom(ctx, ai, notes);
+  const { context, linkUnreadable } = await situationFrom(ctx, ai, notes);
+  if (choice.scenarioId === CUSTOM_SCENARIO && (context?.length ?? 0) < MIN_CUSTOM_CONTEXT) throw new AppError("link_unreadable");
   const fixed = buildOpener(scenario, industry, avatar);
   // With their real situation, the first line is written for it; the fixed line is the fallback.
   const opener = context
     ? await ai
-        .chat(openerMessages(scenario, industry, avatar, getLevel(choice.level), context), { tier: ctx.config.replyTier, maxTokens: OPENER_MAX_TOKENS })
+        .chat(openerMessages(scenario, industry, avatar, getLevel(choice.level), context, choice.locale), { tier: ctx.config.replyTier, maxTokens: OPENER_MAX_TOKENS })
         .then(cleanDashes)
         .catch((e: unknown) => {
           if (mustSurface(e)) throw e;
@@ -149,7 +161,7 @@ export async function startPractice(ctx: AppContext, ai: AiProvider, sid: string
   await ctx.store.getOrCreateUser(sid, now);
   const practice = await ctx.store.createPractice({ sid, ...choice, context, startedAt: now, turns: [{ role: "counterpart", text: opener }] });
   // Speech is fetched separately (speakTurn) so the text shows without waiting for audio.
-  return { practice: view(practice), audio: null };
+  return { practice: view(practice), audio: null, notice: linkUnreadable ? ("link_unreadable" as const) : null };
 }
 
 export async function getPractice(ctx: AppContext, sid: string, id: string): Promise<PracticeView> {
@@ -177,7 +189,7 @@ function transcribeAudio(ai: AiProvider, audio: Blob): Promise<string> {
 }
 
 async function userTextFrom(ai: AiProvider, input: { audio?: Blob | null; text?: string | null }): Promise<string> {
-  if (input.audio) return transcribeAudio(ai, input.audio);
+  if (input.audio) return clipSpokenText(await transcribeAudio(ai, input.audio));
   if (typeof input.text === "string") return input.text;
   throw new AppError("invalid_input");
 }
@@ -239,7 +251,7 @@ export async function takeTurn(
   emit({ type: "heard", text: said.text, turnIndex: userIndex });
 
   const avatar = getAvatar(practice.avatarId);
-  const system = counterpartSystemPrompt(getScenario(practice.scenarioId), getIndustry(practice.industryId), avatar, getLevel(practice.level), practice.context);
+  const system = counterpartSystemPrompt(getScenario(practice.scenarioId), getIndustry(practice.industryId), avatar, getLevel(practice.level), practice.context, practice.locale);
   const withUser = appendTurn(practice.turns, { role: "user", text: said.text });
   const replyP = ai.chat(toChatMessages(system, withUser), { tier: ctx.config.replyTier, maxTokens: REPLY_MAX_TOKENS }).then((raw) => {
     const text = cleanDashes(raw);
@@ -260,11 +272,13 @@ export async function takeTurn(
   });
 
   const [replyText, check] = await Promise.all([replyP, checkP]);
-  const saved = await ctx.store.savePracticeTurns(sid, id, [
-    ...practice.turns,
-    { role: "user", text: said.text, check },
-    { role: "counterpart", text: replyText },
-  ]);
+  const saved = await ctx.store.savePracticeTurns(
+    sid,
+    id,
+    [...practice.turns, { role: "user", text: said.text, check }, { role: "counterpart", text: replyText }],
+    practice.turns.length,
+  );
+  if (!saved) throw new AppError("turn_in_progress");
   const audio = await voiceP;
   return { userText: said.text, replyText, check, audio, practice: view(saved) };
 }
@@ -426,7 +440,8 @@ export async function drillPhrase(
   const { text: said, words: timings } = await ai.transcribeTimed(input.audio, `say.${audioExtension(input.audio.type)}`);
   const result = compareSaid(phrase.better, said);
   let updated = phrase;
-  if (result.passed) {
+  // Only a review that is due moves the schedule; extra tries the same day are free practice.
+  if (result.passed && isDue(phrase, localDay(ctx.now(), tzOffset))) {
     const now = ctx.now();
     const next = nextSchedule(phrase, localDay(now, tzOffset));
     updated =

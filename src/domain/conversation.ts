@@ -43,6 +43,15 @@ export function toChatMessages(system: string, turns: readonly Turn[]): ChatMess
 
 export type TextCheck = { ok: true; text: string } | { ok: false; reason: "empty" | "too_long" };
 
+/** Spoken answers are kept, cut at the last whole word before the limit, instead of rejected. */
+export function clipSpokenText(input: string): string {
+  const text = input.replace(/\s+/g, " ").trim();
+  if (text.length <= MAX_USER_TEXT_CHARS) return text;
+  const cut = text.slice(0, MAX_USER_TEXT_CHARS);
+  const space = cut.lastIndexOf(" ");
+  return `${space > MAX_USER_TEXT_CHARS / 2 ? cut.slice(0, space) : cut}…`;
+}
+
 export function validateUserText(input: string): TextCheck {
   const text = input.replace(/\s+/g, " ").trim();
   if (text.length === 0) return { ok: false, reason: "empty" };

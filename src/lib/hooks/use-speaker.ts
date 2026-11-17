@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { sharedAudio } from "@/lib/audio-unlock";
 import type { SpeechAudio } from "@/lib/types";
 
 /** Plays the counterpart's voice: server audio when there is some, else the browser's English voice. */
@@ -90,7 +91,10 @@ export function useSpeaker() {
         speakWithBrowser(id, text, rate);
         return;
       }
-      const el = new Audio(`data:${audio.mime};base64,${audio.base64}`);
+      // One shared element: on iPhone it stays allowed to play after the first tap unlocked it.
+      const el = sharedAudio();
+      el.pause();
+      el.src = `data:${audio.mime};base64,${audio.base64}`;
       el.playbackRate = rate;
       audioRef.current = el;
       el.onended = () => {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { MAX_CONTEXT_INPUT, MIN_CUSTOM_CONTEXT } from "@/domain/limits";
 import Image from "next/image";
 import { BookmarkCheck, CalendarClock, ChevronDown, ChevronRight, History, Mic, SlidersHorizontal } from "lucide-react";
 import { getAvatar, type AvatarId } from "@/domain/avatars";
@@ -22,14 +23,19 @@ interface HomeViewProps {
   avatarId: AvatarId;
   onChangePrefs: (patch: { level?: LevelId; avatarId?: AvatarId }) => void;
   onStart: (scenarioId: ScenarioId, industryId: IndustryId, context: string) => void;
+  /** An error from starting, shown right above the Start button (where the person is looking). */
+  startError?: ReactNode;
+  /** publik's top-up link when the balance may not cover a practice. */
+  lowBalanceUrl?: string | null;
+  /** The price line, for people paying through publik. */
+  showPrice?: boolean;
   onOpenPhrases: () => void;
   onOpenHistory: () => void;
 }
 
 const PARTNER_PHOTO = 64;
-/** Matches the server's limit on what you can type about your situation. */
-const MAX_DETAILS = 2000;
-const MIN_CUSTOM_DETAILS = 10;
+const MAX_DETAILS = MAX_CONTEXT_INPUT;
+const MIN_CUSTOM_DETAILS = MIN_CUSTOM_CONTEXT;
 
 /** What to ask for, by scenario: a job post for interviews, the situation itself for "Your situation". */
 function detailsCopy(id: ScenarioId, t: Messages): { label: string; hint: string; placeholder: string } {
@@ -38,12 +44,25 @@ function detailsCopy(id: ScenarioId, t: Messages): { label: string; hint: string
   return t.home.details.other;
 }
 
-export function HomeView({ progress, starting, level, avatarId, onChangePrefs, onStart, onOpenPhrases, onOpenHistory }: HomeViewProps) {
+export function HomeView({
+  progress,
+  starting,
+  level,
+  avatarId,
+  onChangePrefs,
+  onStart,
+  onOpenPhrases,
+  onOpenHistory,
+  startError,
+  lowBalanceUrl,
+  showPrice = false,
+}: HomeViewProps) {
   const [scenarioId, setScenarioId] = useState<ScenarioId>("job_interview");
   const [industryId, setIndustryId] = useState<IndustryId>("general");
   const [details, setDetails] = useState("");
-  const firstTime = !progress || progress.history.length === 0;
-  const [customizing, setCustomizing] = useState(firstTime);
+  // Open the first time only; progress arrives after the first paint, so decide when it does.
+  const [customizingChoice, setCustomizing] = useState<boolean | null>(null);
+  const customizing = customizingChoice ?? (progress !== null && progress.history.length === 0);
   const { t } = useI18n();
   const avatar = getAvatar(avatarId);
   const copy = detailsCopy(scenarioId, t);
@@ -120,11 +139,22 @@ export function HomeView({ progress, starting, level, avatarId, onChangePrefs, o
           />
         </div>
 
+        {lowBalanceUrl ? (
+          <p role="status" className="relative mt-4 rounded-2xl bg-warn-soft p-3 text-sm text-ink">
+            {t.home.lowBalance}{" "}
+            <a href={lowBalanceUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-ink underline underline-offset-4">
+              {t.ui.topUp}
+            </a>
+          </p>
+        ) : null}
+        {startError ? <div className="relative mt-4">{startError}</div> : null}
+
         <Button size="lg" className="relative mt-4 w-full" disabled={starting || needsDetails} onClick={() => onStart(scenarioId, industryId, details.trim())}>
           <Mic aria-hidden="true" className="size-5" />
           {starting ? (hasLink ? t.home.readingJob : t.home.gettingReady) : t.home.startTalking}
         </Button>
         <p className="relative mt-2 text-center text-sm text-on-night/80">{t.home.duration}</p>
+        {showPrice ? <p className="relative mt-1 text-center text-sm text-on-night/80">{t.home.price}</p> : null}
       </section>
 
       {progress && progress.dueToday > 0 ? (
@@ -147,7 +177,7 @@ export function HomeView({ progress, starting, level, avatarId, onChangePrefs, o
           type="button"
           aria-expanded={customizing}
           aria-controls="customize-panel"
-          onClick={() => setCustomizing((v) => !v)}
+          onClick={() => setCustomizing(!customizing)}
           className="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-3xl px-4 text-left font-semibold transition duration-200 hover:bg-surface-2"
         >
           <SlidersHorizontal aria-hidden="true" className="size-5 text-primary-ink" />

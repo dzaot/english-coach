@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Flag, Keyboard, LifeBuoy, Mic, Send } from "lucide-react";
+import { Flag, Keyboard, LifeBuoy, Mic, Send, X } from "lucide-react";
 import { MAX_USER_TURNS, countUserTurns } from "@/domain/conversation";
 import { getAvatar } from "@/domain/avatars";
 import { getLevel, translationLocale } from "@/domain/levels";
@@ -20,10 +20,13 @@ import { HelpCard } from "./help-card";
 import { RecordButton, micLabel, type MicState } from "./record-button";
 import { Button, ErrorBanner, TopBar } from "./ui";
 import { useI18n } from "@/i18n/provider";
+import { unlockAudio } from "@/lib/audio-unlock";
 
 interface Props {
   initial: Practice;
   initialAudio: SpeechAudio | null;
+  /** Something to tell the person as the practice opens (a pasted link that could not be read). */
+  notice?: "link_unreadable" | null;
   onFinished: (result: FinishResult) => void;
   onExit: () => void;
 }
@@ -36,7 +39,7 @@ const altKey = (turn: number, alt: number) => `alt-${turn}-${alt}`;
 /** If the voice is slow, show the reply's text anyway after this long. */
 const REVEAL_WITHOUT_VOICE_MS = 7000;
 
-export function PracticeView({ initial, initialAudio, onFinished, onExit }: Props) {
+export function PracticeView({ initial, initialAudio, notice = null, onFinished, onExit }: Props) {
   const [practice, setPractice] = useState(initial);
   const [phase, setPhase] = useState<Phase>("ready");
   const [error, setError] = useState<{ message: string; topUpUrl: string | null } | null>(null);
@@ -48,6 +51,11 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
   const [checkingTurn, setCheckingTurn] = useState<number | null>(null);
   const altAudio = useRef(new Map<string, SpeechAudio | null>());
   const revealed = useRef(new Set<number>());
+  const sendingRef = useRef(false);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [panelHeight, setPanelHeight] = useState(0);
+  const [showNotice, setShowNotice] = useState(notice !== null);
+  const [kept, setKept] = useState(false);
   const { t } = useI18n();
   const speaker = useSpeaker();
   const { play, stop: stopSpeaking } = speaker;
@@ -92,16 +100,22 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
 
   const submit = useCallback(
     async (answer: { audio: Blob } | { text: string }) => {
+      if (sendingRef.current) return; // a second tap on Send while the first answer is on its way
+      sendingRef.current = true;
+      unlockAudio();
+      setKept(false);
       setPhase("sending");
       setStage("hearing");
       setError(null);
       setHelp(null);
       setAnnouncement(t.practice.sending);
       let reply: { index: number; text: string } | null = null;
+      let heard: { index: number; text: string } | null = null;
       let timer: ReturnType<typeof setTimeout> | null = null;
       const onEvent = (event: TurnEvent) => {
         switch (event.type) {
           case "heard":
+            heard = { index: event.turnIndex, text: event.text };
             setPractice((p) => ({ ...p, turns: [...p.turns, { role: "user", text: event.text }] }));
             setCheckingTurn(event.turnIndex);
             setStage("thinking");
@@ -140,10 +154,22 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
       } catch (e) {
         setError({ message: e instanceof Error ? e.message : String(e), topUpUrl: e instanceof ApiError ? e.topUpUrl : null });
         setAnnouncement("");
+        // Nothing was saved: take the answer off the conversation and keep its words, so it can be sent again
+        // (for example after topping up the balance).
+        const lost = heard as { index: number; text: string } | null;
+        if (lost) {
+          setPractice((p) => (p.turns.length > lost.index ? { ...p, turns: p.turns.slice(0, lost.index) } : p));
+          setDraft(lost.text);
+          setTyping(true);
+          setKept(true);
+        } else if ("text" in answer) {
+          setDraft(answer.text);
+        }
       } finally {
         if (timer) clearTimeout(timer);
         setCheckingTurn(null);
         setPhase("ready");
+        sendingRef.current = false;
       }
     },
     [name, practice.id, reveal, t, voice],
@@ -175,7 +201,15 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
 
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ block: "end" });
-  }, [practice.turns.length, phase]);
+  }, [practice.turns.length, phase, help]);
+
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setPanelHeight(el.offsetHeight));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const pressMic = useCallback(async () => {
     if (recorder.status === "recording") {
@@ -183,6 +217,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
       if (audio) await submit({ audio });
       return;
     }
+    unlockAudio();
     silence();
     if (await recorder.start()) setAnnouncement(t.practice.recordingNow);
   }, [recorder, silence, submit, t]);
@@ -237,7 +272,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
   return (
     <div className="flex min-h-[calc(100dvh-3rem)] flex-col">
       <TopBar
-        title={scenario.title}
+        title={t.scenarios[scenario.id].title}
         onBack={() => {
           recorder.cancel();
           silence();
@@ -297,15 +332,34 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
             </span>
           </li>
         ) : null}
-        <li ref={endRef} aria-hidden="true" className="scroll-mb-72" />
+        {help ? (
+          <li>
+            <HelpCard
+              help={help}
+              translationLocale={translationLocale(getLevel(practice.level), practice.locale)}
+              onListen={() => speaker.play("help", help.suggestion)}
+              onClose={() => setHelp(null)}
+            />
+          </li>
+        ) : null}
+        {/* Keeps the newest line above the answer panel, whatever its height. */}
+        <li ref={endRef} aria-hidden="true" style={{ scrollMarginBottom: panelHeight + 16 }} />
       </ol>
 
       <p role="status" aria-live="polite" className="sr-only">
         {announcement}
       </p>
 
-      <div className="sticky bottom-0 -mx-4 space-y-3 border-t border-border bg-bg/95 px-4 pb-4 pt-3 backdrop-blur">
-        {help ? <HelpCard help={help} translationLocale={translationLocale(getLevel(practice.level), practice.locale)} onListen={() => speaker.play("help", help.suggestion)} onClose={() => setHelp(null)} /> : null}
+      <div ref={panelRef} className="sticky bottom-0 -mx-4 space-y-3 border-t border-border bg-bg/95 px-4 pb-4 pt-3 backdrop-blur">
+        {showNotice ? (
+          <div role="status" className="flex items-start gap-2 rounded-2xl bg-warn-soft p-3 text-sm text-ink">
+            <p className="flex-1">{t.practice.linkUnreadable}</p>
+            <button type="button" onClick={() => setShowNotice(false)} aria-label={t.help.close} className="-m-2 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-surface">
+              <X aria-hidden="true" className="size-4" />
+            </button>
+          </div>
+        ) : null}
+        {kept ? <p role="status" className="text-sm font-semibold">{t.practice.answerKept}</p> : null}
         {error || recorder.error ? <ErrorBanner message={error?.message ?? recorder.error ?? ""} topUpUrl={error?.topUpUrl} /> : null}
         {practice.limitReached ? <p className="text-center font-semibold">{t.practice.limitReached}</p> : null}
 
@@ -325,7 +379,7 @@ export function PracticeView({ initial, initialAudio, onFinished, onExit }: Prop
               lang="en"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              rows={3}
+              rows={2}
               maxLength={1200}
               className="w-full rounded-2xl border border-border bg-surface p-3 text-base text-ink"
             />

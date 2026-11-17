@@ -46,7 +46,10 @@ describe("SQLite store", () => {
     expect(p.level).toBe("beginner");
     expect(p.avatarId).toBe("emily");
     const withTurn = await store.savePracticeTurns(SID, p.id, [...p.turns, { role: "user", text: "Hello" }]);
-    expect(withTurn.turns).toHaveLength(2);
+    expect(withTurn?.turns).toHaveLength(2);
+    // A save that expects the old turn count is refused once another answer landed.
+    expect(await store.savePracticeTurns(SID, p.id, [...p.turns, { role: "user", text: "Again" }], 1)).toBeNull();
+    expect(await store.savePracticeTurns(SID, p.id, [...p.turns, { role: "user", text: "Hello" }, { role: "user", text: "Next" }], 2)).not.toBeNull();
     const done = await store.finishPractice(SID, p.id, { feedback, finishedAt: "2026-11-15T10:08:00Z", localDay: "2026-11-15" });
     expect(done.score).toBe(70);
     expect(done.feedback?.summary).toBe("Bien");

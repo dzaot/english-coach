@@ -92,7 +92,7 @@ export const api = {
   telemetry: (event: "app_opened" | "active_session") =>
     request<{ result: string }>("/api/telemetry", jsonInit("POST", { event })),
   start: (choice: { scenarioId: string; industryId: string; level: string; avatarId: string; context?: string; locale?: string }) =>
-    request<{ practice: PracticeView; audio: SpeechAudio | null }>("/api/practice", jsonInit("POST", choice)),
+    request<{ practice: PracticeView; audio: SpeechAudio | null; notice?: "link_unreadable" | null }>("/api/practice", jsonInit("POST", choice)),
   getPractice: (id: string) => request<{ practice: PracticeView }>(`/api/practice/${encodeURIComponent(id)}`),
   /** One answer, streamed: your words, the marks, the reply and its voice arrive as separate events. */
   turn: (id: string, answer: { audio: Blob } | { text: string }, onEvent: (event: TurnEvent) => void = () => undefined) => {

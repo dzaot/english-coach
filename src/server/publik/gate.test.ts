@@ -28,13 +28,22 @@ describe("getGateState", () => {
     expect(JSON.stringify(state)).not.toContain("pk_live_abc");
   });
 
+  it("warns, without showing money, when a balance may not cover a practice", async () => {
+    const { fetch } = fakeFetch({ "/api/v1/installs": installs, "/api/v1/wallet": claimed({ balance_micros: 50_000 }) });
+    const ctx = testContext({ env: GATE_ENV, fetch });
+    const state = await applyGateAction(ctx, SID, { action: "connect" });
+    expect(state).toMatchObject({ state: "ready", lowBalance: true });
+    expect(JSON.stringify(state)).not.toContain("50000");
+  });
+
   it("shows the plan choice once signed in, then ready after Connect", async () => {
     const { fetch, calls } = fakeFetch({ "/api/v1/installs": installs, "/api/v1/wallet": claimed({ plan: { kind: "plan", label: "Basic" }, used_percent: 12.5 }) });
     const ctx = testContext({ env: GATE_ENV, fetch });
     const first = await getGateState(ctx, SID);
     expect(first).toMatchObject({ state: "screen", screen: { id: "choose", title: "Connect your plan" }, links: { getPlan: "https://publikhq.com/wallet" } });
     const after = await applyGateAction(ctx, SID, { action: "connect" });
-    expect(after).toEqual({ state: "ready", mode: "publik", account: "ana", usedPercent: 12.5 });
+    expect(after).toMatchObject({ state: "ready", mode: "publik", account: "ana", usedPercent: 12.5 });
+    expect(after).toMatchObject({ lowBalance: false, topUpUrl: "https://publikhq.com/wallet" });
     expect(calls.filter((c) => c.url.includes("/installs"))).toHaveLength(1);
   });
 

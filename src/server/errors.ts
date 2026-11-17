@@ -19,6 +19,7 @@ const CATALOG = {
   feedback_invalid: { status: 502, msg: "We couldn't prepare your feedback. Please try again." },
   help_invalid: { status: 502, msg: "We couldn't prepare a hint. Please try again." },
   context_required: { status: 400, msg: "Tell us a little about your situation first, so your partner can play it." },
+  turn_in_progress: { status: 409, msg: "Your previous answer is still being saved. Wait a moment and try again." },
   link_unreadable: { status: 422, msg: "We couldn't read that link. Paste the text of the job post instead." },
   internal: { status: 500, msg: "Something went wrong on our side. Please try again." },
 } as const;
