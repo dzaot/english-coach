@@ -1,6 +1,14 @@
-# Dilo: practice your work English out loud
+<p align="center"><img src="docs/listing/hero.png" alt="Dilo: say it out loud before it matters. Three phone screens: pick a situation, a video call with Sarah, and your feedback score." width="100%"></p>
 
-> "Practice your job interview in English, out loud, for cents per practice."
+# Dilo: say it out loud before it matters
+
+**Practice your work English on a call with a native English speaker. Feedback on every phrase. Pay cents per practice, no subscription.**
+
+<p align="center">
+  <img src="docs/listing/1-pick-a-situation.png" alt="Pick a real situation: job interview, team meeting, client call, salary talk, or your own." width="32%">
+  <img src="docs/listing/2-talk-on-a-call.png" alt="Talk on a real call: every mistake fixed letter by letter, with better ways to say it." width="32%">
+  <img src="docs/listing/3-better-words.png" alt="Leave with better words: a score, phrases to say more naturally, and a daily streak." width="32%">
+</p>
 
 Dilo (Spanish for "say it") is a daily speaking practice for Spanish-speaking professionals who work or job-hunt in English. No subscription: you pay only the AI you use through publik, about $0.07 to $0.09 for a 10-minute practice. It focuses on work, where apps like Speak, Praktika and Cambly are general.
 

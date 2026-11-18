@@ -5,9 +5,16 @@ import "./globals.css";
 const geist = Geist({ variable: "--font-geist", subsets: ["latin", "latin-ext"] });
 const unbounded = Unbounded({ variable: "--font-unbounded", subsets: ["latin", "latin-ext"] });
 
+const TITLE = "Dilo · Say it out loud before it matters";
+const DESCRIPTION =
+  "Practice your work English on a call with a native English speaker. Feedback on every phrase, for cents per practice.";
+
 export const metadata: Metadata = {
-  title: "Dilo · Practice your work English out loud",
-  description: "Practice your job interview in English, out loud, for cents per practice. Instant feedback, a daily streak and phrases to review.",
+  title: TITLE,
+  description: DESCRIPTION,
+  applicationName: "Dilo",
+  openGraph: { title: TITLE, description: DESCRIPTION, siteName: "Dilo", type: "website" },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };
 
 export const viewport: Viewport = {
